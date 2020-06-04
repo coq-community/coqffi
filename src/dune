@@ -1,0 +1,3 @@
+(executable
+  (name bindgen)
+  (libraries compiler-libs.common str))
