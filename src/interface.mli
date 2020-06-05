@@ -2,6 +2,7 @@ exception UnsupportedOcaml of string
 
 type type_tree =
   | ArrowNode of (type_tree * type_tree)
+  | ProdNode of (type_tree list)
   | TypeLeaf of type_leaf
 and type_leaf = (string * type_tree list)
 

@@ -9,6 +9,7 @@ exception UnsupportedOcaml of string
 
 type type_tree =
   | ArrowNode of (type_tree * type_tree)
+  | ProdNode of (type_tree list)
   | TypeLeaf of type_leaf
 and type_leaf = (string * type_tree list)
 
@@ -57,6 +58,8 @@ let rec poly_vars (t : type_expr) : string list =
        List.merge String.compare (poly_vars t1) (poly_vars t2)
      | Tconstr (_, types, _) ->
        List.concat_map (fun x -> poly_vars x) types
+     | Ttuple(l) ->
+       List.concat_map poly_vars l
      | _ ->
        fprintf str_formatter "Cannot find polymorphic types in: %a"
          Printtyp.raw_type_expr t;
@@ -69,6 +72,8 @@ let rec to_type_tree (t : type_expr) : type_tree =
     let i1 = to_type_tree t1 in
     let i2 = to_type_tree t2 in
     ArrowNode (i1, i2)
+  | Ttuple(l) ->
+    ProdNode(List.map to_type_tree l)
   | Tconstr (name, types, _) ->
     TypeLeaf (Path.name name, (List.map (fun x -> to_type_tree x) types))
   | _ ->

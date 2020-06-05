@@ -22,6 +22,14 @@ let rec print_type_tree ~param fmt = function
       (print_type_tree ~param:true) l
       (print_type_tree ~param:true) r
       close_parens param
+  | ProdNode(x :: l) ->
+    fprintf fmt "%a%a%a%a"
+      open_parens param
+      (print_type_tree ~param:true) x
+      (fun fmt -> List.iter (fun x -> fprintf fmt " * %a"
+                                (print_type_tree ~param:true) x)) l
+      close_parens param
+  | ProdNode(_) -> assert false (* a tuple with no element? *)
   | TypeLeaf leaf ->
     print_type_leaf ~param:param fmt leaf
 
