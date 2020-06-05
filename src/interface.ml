@@ -4,35 +4,88 @@ open Cmi_format
 
 (* Types *)
 
-type coq_ident = string
+type type_tree =
+  | ArrowNode of (type_tree * type_tree)
+  | TypeLeaf of type_leaf
+and type_leaf = (string * type_tree list)
 
-type type_desc  = {
-  name : Ident.t;
-  coq_model : coq_ident option
+type type_info = {
+  poly_vars : string list;
+  domain_types : type_tree;
+  codomain_type : type_leaf;
 }
 
-type function_desc = {
+type type_entry  = {
   name : Ident.t;
-  coq_model : coq_ident option
+  coq_model : string option
 }
 
-type primitive_desc = {
+type function_entry = {
   name : Ident.t;
+  coq_model : string option;
+  type_sig : type_info;
 }
 
-type entry_desc =
-  | Primitive of primitive_desc
-  | Function of function_desc
-  | Type of type_desc
+type primitive_entry = {
+  name : Ident.t;
+  type_sig : type_info;
+}
 
-type interface_desc = {
+type entry =
+  | Primitive of primitive_entry
+  | Function of function_entry
+  | Type of type_entry
+
+type interface = {
   module_path : string list;
-  primitives : primitive_desc list;
-  functions : function_desc list;
-  types : type_desc list;
+  primitives : primitive_entry list;
+  functions : function_entry list;
+  types : type_entry list;
 }
 
 (* Functions *)
+
+let rec poly_vars = function
+  | Tvar (Some x) -> [x]
+  | Tarrow (_, t1, t2, _) ->
+    List.sort_uniq
+      String.compare
+      (List.merge String.compare (poly_vars t1.desc) (poly_vars t2.desc))
+  | Tconstr (_, types, _) ->
+    List.sort_uniq
+      String.compare
+      (List.concat_map (fun x -> poly_vars x.desc) types)
+  | _ -> assert false
+
+let rec to_type_tree = function
+  | Tvar (Some x) -> TypeLeaf (x, [])
+  | Tarrow (_ , t1, t2, _) ->
+    let i1 = to_type_tree t1.desc in
+    let i2 = to_type_tree t2.desc in
+    ArrowNode (i1, i2)
+  | Tconstr (name, types, _) ->
+    TypeLeaf (Path.name name, (List.map (fun x -> to_type_tree x.desc) types))
+  | _ -> assert false
+
+let to_type_leaf = function
+  | Tconstr (name, types, _) ->
+    Some (Path.name name, (List.map (fun x -> to_type_tree x.desc) types))
+  | Tvar (Some x) -> Some (x, [])
+  | _ -> None
+
+let to_type_info t =
+  let rec split_arrow t =
+    match t.desc with
+    | Tarrow (_, t1, t2, _) -> (match split_arrow t2 with
+        | (Some x, r) -> (Some (ArrowNode (to_type_tree t1.desc, x)), r)
+        | (None, r) -> (Some (to_type_tree t1.desc), r))
+    | x -> (match to_type_leaf x with
+        | Some leaf -> (None, leaf)
+        | None -> assert false) in
+  let poly = poly_vars t.desc in
+  match split_arrow t with
+  | (Some x, r) -> { poly_vars = poly; domain_types = x; codomain_type = r }
+  | (_, _) -> assert false
 
 let empty modname =
   let modpath = Str.split (Str.regexp "__") modname in {
@@ -65,10 +118,20 @@ let find_coq_model =
 let entry_of_signature = function
   | Sig_value (ident, desc, Exported) ->
     if has_ffi_pure desc.val_attributes
-    then Function { name = ident; coq_model = find_coq_model desc.val_attributes }
-    else Primitive { name = ident }
+    then Function {
+        name = ident;
+        coq_model = find_coq_model desc.val_attributes;
+        type_sig = to_type_info desc.val_type;
+      }
+    else Primitive {
+        name = ident;
+        type_sig = to_type_info desc.val_type;
+      }
   | Sig_type (ident, desc, _, Exported) ->
-    Type { name = ident; coq_model = find_coq_model desc.type_attributes }
+    Type {
+      name = ident;
+      coq_model = find_coq_model desc.type_attributes;
+    }
   | _ -> assert false
 
 let input_of_cmi_infos x =
