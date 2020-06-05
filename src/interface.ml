@@ -16,7 +16,7 @@ and type_leaf = (string * type_tree list)
 type type_info = {
   poly_vars : string list;
   domain_types : type_tree;
-  codomain_type : type_leaf;
+  codomain_type : type_tree;
 }
 
 type type_entry  = {
@@ -81,11 +81,11 @@ let rec to_type_tree (t : type_expr) : type_tree =
       Printtyp.raw_type_expr t;
     raise (UnsupportedOcaml (flush_str_formatter ()))
 
-let to_type_leaf (t : type_expr) : type_leaf option =
+let to_type_leaf (t : type_expr) : type_tree option =
   match t.desc with
   | Tconstr (name, types, _) ->
-    Some (Path.name name, (List.map (fun x -> to_type_tree x) types))
-  | Tvar (Some x) -> Some (x, [])
+    Some (TypeLeaf (Path.name name, (List.map (fun x -> to_type_tree x) types)))
+  | Tvar (Some x) -> Some (TypeLeaf (x, []))
   | _ -> None
 
 let to_type_info (t : type_expr) : type_info =
@@ -183,7 +183,7 @@ and coq_type_leaf_of_ocaml polys tbl (x, l) =
 let coq_type_sig_of_ocaml tbl s = {
   s with
   domain_types = coq_type_tree_of_ocaml s.poly_vars tbl s.domain_types;
-  codomain_type = coq_type_leaf_of_ocaml s.poly_vars tbl s.codomain_type;
+  codomain_type = coq_type_tree_of_ocaml s.poly_vars tbl s.codomain_type;
 }
 
 let coq_primitives_of_ocaml tbl : primitive_entry list -> primitive_entry list =

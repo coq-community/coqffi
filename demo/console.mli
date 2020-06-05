@@ -1,7 +1,6 @@
 open Coqbase
 
-val echo : Bytestring.t -> unit
-
+val echo : 'a -> unit
 val scan : unit -> Bytestring.t
 
 val head : 'a list -> 'a option

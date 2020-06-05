@@ -55,7 +55,7 @@ let print_type fmt t =
   end;
   fprintf fmt "%a -> %a"
     (print_type_tree ~param:true) t.domain_types
-    (print_type_leaf ~param:false) t.codomain_type
+    (print_type_tree ~param:false) t.codomain_type
 
 let print_coq_type fmt (t : type_entry) =
   let name = Ident.name t.name in
@@ -85,11 +85,9 @@ let print_coq_function fmt (t : function_entry) =
 
 let print_coq_primitive iname fmt p =
   let pname = String.capitalize_ascii @@ Ident.name p.name in
-  fprintf fmt "\n| %s : %a -> %s %a"
+  fprintf fmt "\n| %s : %a"
     pname
-    (print_type_tree ~param:true) p.type_sig.domain_types
-    iname
-    (print_type_leaf ~param:true) p.type_sig.codomain_type
+    print_type { p.type_sig with codomain_type = TypeLeaf (iname, [p.type_sig.codomain_type])}
 
 let print_coq_primitives fmt i =
   let name = String.uppercase_ascii (last i.module_path) in
@@ -112,10 +110,9 @@ let print_coq_extraction_functions fmt i =
 
 let print_coq_extraction_primitive modname fmt (p : primitive_entry) =
   let name = Ident.name p.name in
-  fprintf fmt "  Axiom (ocaml_%s : %a -> %a).\n"
+  fprintf fmt "  Axiom (ocaml_%s : %a).\n"
     name
-    (print_type_tree ~param:true) p.type_sig.domain_types
-    (print_type_leaf ~param:true) p.type_sig.codomain_type;
+    print_type p.type_sig;
   fprintf fmt "  Extract Constant ocaml_%s => \"%s\".\n"
     name
     (String.concat "." modname ^ "." ^ name)

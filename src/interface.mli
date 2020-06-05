@@ -9,7 +9,7 @@ and type_leaf = (string * type_tree list)
 type type_info = {
   poly_vars : string list;
   domain_types : type_tree;
-  codomain_type : type_leaf;
+  codomain_type : type_tree;
 }
 
 type type_entry  = {
