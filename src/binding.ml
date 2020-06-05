@@ -103,7 +103,7 @@ let print_coq_functions fmt i =
 let print_coq_extraction_function modname fmt (f : function_entry) =
   let modname = modname in
   let name = Ident.name f.name in
-  fprintf fmt "Extract Constant %s => \"%s\".\n"
+  fprintf fmt "  Extract Constant %s => \"%s\".\n"
     name
     (String.concat "." modname ^ "." ^ name)
 
@@ -111,18 +111,41 @@ let print_coq_extraction_functions fmt i =
   List.iter (print_coq_extraction_function i.module_path fmt) i.functions
 
 let print_coq_extraction_primitive modname fmt (p : primitive_entry) =
-  let modname = modname in
   let name = Ident.name p.name in
-  fprintf fmt "Axiom (ocaml_%s : %a -> %a).\n"
+  fprintf fmt "  Axiom (ocaml_%s : %a -> %a).\n"
     name
     (print_type_tree ~param:true) p.type_sig.domain_types
     (print_type_leaf ~param:true) p.type_sig.codomain_type;
-  fprintf fmt "Extract Constant ocaml_%s => \"%s\".\n"
+  fprintf fmt "  Extract Constant ocaml_%s => \"%s\".\n"
     name
     (String.concat "." modname ^ "." ^ name)
 
+let arg_list (t : type_tree) : string =
+  let rec aux n = function
+    | ArrowNode (_, t) -> sprintf " arg%d" n ^ aux (n+1) t
+    | _ -> sprintf " arg%d" n
+  in aux 0 t
+
 let print_coq_extraction_primitives fmt i =
-  List.iter (print_coq_extraction_primitive i.module_path fmt) i.primitives
+  let modname = i.module_path in
+  let semantics_name = String.lowercase_ascii (last modname) in
+  let interface_name = String.uppercase_ascii (last modname) in
+  List.iter (print_coq_extraction_primitive modname fmt) i.primitives;
+  fprintf fmt "\n";
+  fprintf fmt {|  Definition %s : semantics %s :=
+    bootstrap (fun a e =>
+                 local match e in %s a return a with|}
+    semantics_name
+    interface_name
+    interface_name;
+  List.iter (fun p ->
+      let args = arg_list p.type_sig.domain_types in
+      fprintf fmt "\n                 | %s%s => ocaml_%s%s"
+        (String.capitalize_ascii (Ident.name p.name))
+        args
+        (Ident.name p.name)
+        args) i.primitives;
+  fprintf fmt "\n                 end).\n"
 
 let print_coq_interface fmt i =
   fprintf fmt "%s\n%a\n%a\n%a\n"
