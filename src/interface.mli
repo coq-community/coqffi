@@ -1,3 +1,5 @@
+exception UnsupportedOcaml of string
+
 type type_tree =
   | ArrowNode of (type_tree * type_tree)
   | TypeLeaf of type_leaf
@@ -37,4 +39,4 @@ type interface = {
   types : type_entry list;
 }
 
-val input_of_cmi_infos : Cmi_format.cmi_infos -> interface
+val input_of_cmi_infos : Format.formatter -> Cmi_format.cmi_infos -> interface

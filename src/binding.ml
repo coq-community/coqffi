@@ -83,7 +83,7 @@ let print_coq_primitives fmt i =
   let rec last = function
     | [x] -> x
     | _ :: rst -> last rst
-    | _ -> assert false in
+    | _ -> raise (UnsupportedOcaml "Found an empty ident") in
   let name = String.uppercase_ascii (last i.module_path) in
   fprintf fmt "Inductive %s : interface :=%a.\n"
     name
