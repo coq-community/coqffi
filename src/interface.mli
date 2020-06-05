@@ -41,3 +41,4 @@ type interface = {
 }
 
 val input_of_cmi_infos : Format.formatter -> Cmi_format.cmi_infos -> interface
+val coq_of_ocaml_types : (string, string) Hashtbl.t -> interface -> interface

@@ -4,8 +4,8 @@ val echo : Bytestring.t -> unit
 
 val scan : unit -> Bytestring.t
 
-val check : ('a -> 'b) -> int
-[@@ffi_pure] [@@coq_model "Data.Test.check"]
+val head : 'a list -> 'a option
+[@@ffi_pure] [@@coq_model "Coq.Lists.List.hd_error"]
 
-val uncheck : 'a -> int
+val tail : 'a list -> 'a list
 [@@ffi_pure]
