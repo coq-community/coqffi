@@ -46,6 +46,31 @@ and print_type_leaf ~param fmt (name, ts) =
   List.iter (fun x -> fprintf fmt " %a" (print_type_tree ~param:true) x) ts;
   close_parens fmt with_parens
 
+let print_type_tree_function_args fmt =
+  let rec aux idx fmt = function
+  | ArrowNode(l,r) ->
+    fprintf fmt "%a %a"
+      (aux idx) l
+      (aux (idx + 1)) r
+  | x ->
+    fprintf fmt "(arg%d : %a)"
+      idx
+      (print_type_tree ~param:false) x
+    in
+  aux 0 fmt
+
+let print_type_tree_function_call fmt =
+  let rec aux idx fmt = function
+  | ArrowNode(l,r) ->
+    fprintf fmt "%a %a"
+      (aux idx) l
+      (aux (idx + 1)) r
+  | _ ->
+    fprintf fmt "arg%d"
+      idx
+    in
+  aux 0 fmt
+
 let print_type fmt t =
   if is_not_empty t.poly_vars
   then begin
@@ -144,12 +169,26 @@ let print_coq_extraction_primitives fmt i =
         args) i.primitives;
   fprintf fmt "\n                 end).\n"
 
+let print_coq_primitives_helpers fmt i =
+  let modname = i.module_path in
+  let interface_name = String.uppercase_ascii (last modname) in
+  List.iter (fun p ->
+      fprintf fmt "Definition %s `{Provide ix %s}%a %a : impure ix %a :=  request (%s %a).\n"
+        (Ident.name p.name)
+        interface_name
+        (fun fmt -> List.iter (fprintf fmt " (%s : Type)")) p.type_sig.poly_vars
+        print_type_tree_function_args p.type_sig.domain_types
+        (print_type_tree ~param:true) p.type_sig.codomain_type
+        (String.capitalize_ascii (Ident.name p.name))
+        print_type_tree_function_call p.type_sig.domain_types) i.primitives
+
 let print_coq_interface fmt i =
-  fprintf fmt "%s\n%a\n%a\n%a\n"
+  fprintf fmt "%s\n%a\n%a\n%a\n%a\n"
     header
     print_coq_types i
     print_coq_functions i
-    print_coq_primitives i;
+    print_coq_primitives i
+    print_coq_primitives_helpers i;
   let name = String.capitalize_ascii (last i.module_path) in
   fprintf fmt "Module %sExtr.\n%a\n%aEnd %sExtr.\n"
     name
