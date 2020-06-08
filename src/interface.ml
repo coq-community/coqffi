@@ -165,47 +165,45 @@ let input_of_cmi_infos log_fmt x =
     (empty x.cmi_name)
     x.cmi_sign
 
-let rec coq_type_tree_of_ocaml polys tbl = function
+let rec coq_type_tree_of_ocaml types polys tbl = function
   | ArrowNode(t1, t2) ->
-    ArrowNode(coq_type_tree_of_ocaml polys tbl t1, coq_type_tree_of_ocaml polys tbl t2)
+    ArrowNode(coq_type_tree_of_ocaml types polys tbl t1, coq_type_tree_of_ocaml types polys tbl t2)
   | ProdNode(l) ->
-    ProdNode(List.map (coq_type_tree_of_ocaml polys tbl) l)
+    ProdNode(List.map (coq_type_tree_of_ocaml types polys tbl) l)
   | TypeLeaf(x) ->
-    TypeLeaf(coq_type_leaf_of_ocaml polys tbl x)
-and coq_type_leaf_of_ocaml polys tbl (x, l) =
+    TypeLeaf(coq_type_leaf_of_ocaml types polys tbl x)
+and coq_type_leaf_of_ocaml types polys tbl (x, l) =
   match Hashtbl.find_opt tbl x with
-  | Some(y) -> (y, List.map (coq_type_tree_of_ocaml polys tbl) l)
+  | Some(y) -> (y, List.map (coq_type_tree_of_ocaml types polys tbl) l)
   | None ->
-    if List.exists (fun v -> String.equal v x) polys
-    then (x, List.map (coq_type_tree_of_ocaml polys tbl) l)
+    let exists = List.exists (fun v -> String.equal v x) in
+    if exists polys || exists types
+    then (x, List.map (coq_type_tree_of_ocaml types polys tbl) l)
     else raise (UnsupportedOcaml (sprintf "Unknown type: %s" x))
 
-let coq_type_sig_of_ocaml tbl s = {
+let coq_type_sig_of_ocaml types tbl s = {
   s with
-  domain_types = coq_type_tree_of_ocaml s.poly_vars tbl s.domain_types;
-  codomain_type = coq_type_tree_of_ocaml s.poly_vars tbl s.codomain_type;
+  domain_types = coq_type_tree_of_ocaml types s.poly_vars tbl s.domain_types;
+  codomain_type = coq_type_tree_of_ocaml types s.poly_vars tbl s.codomain_type;
 }
 
-let coq_primitives_of_ocaml tbl : primitive_entry list -> primitive_entry list =
+let coq_primitives_of_ocaml types tbl : primitive_entry list -> primitive_entry list =
   let aux (p : primitive_entry) = {
     p with
-    type_sig = coq_type_sig_of_ocaml tbl p.type_sig
+    type_sig = coq_type_sig_of_ocaml types tbl p.type_sig
   } in
   List.map aux
 
-let coq_functions_of_ocaml tbl : function_entry list -> function_entry list =
+let coq_functions_of_ocaml types tbl : function_entry list -> function_entry list =
   let aux (f : function_entry) = {
     f with
-    type_sig = coq_type_sig_of_ocaml tbl f.type_sig
+    type_sig = coq_type_sig_of_ocaml types tbl f.type_sig
   } in
   List.map aux
 
-let coq_types_of_ocaml _tbl : type_entry list -> type_entry list =
-  let aux t = t in
-  List.map aux
-
-let coq_of_ocaml_types tbl i = { i with
-  primitives = coq_primitives_of_ocaml tbl i.primitives;
-  functions = coq_functions_of_ocaml tbl i.functions;
-  types = coq_types_of_ocaml tbl i.types
-}
+let coq_of_ocaml_types tbl i =
+  let types = List.map (fun (t : type_entry) -> Ident.name t.name) i.types in {
+    i with
+    primitives = coq_primitives_of_ocaml types tbl i.primitives;
+    functions = coq_functions_of_ocaml types tbl i.functions;
+  }
