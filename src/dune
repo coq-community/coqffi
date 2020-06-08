@@ -1,3 +1,4 @@
 (executable
-  (name bindgen)
+  (name coqffi)
+  (public_name coqffi)
   (libraries compiler-libs.common str))
