@@ -12,7 +12,12 @@ let types_table =
   map
 
 let _ =
-  read_cmi "./_build/default/demo/.demo.objs/byte/demo__Console.cmti"
+  let input = Sys.argv.(1) in
+  let output = Sys.argv.(2) in
+  let ochannel = if output = "-"
+    then Format.std_formatter
+    else open_out output |> Format.formatter_of_out_channel in
+  read_cmi input
   |> input_of_cmi_infos Format.err_formatter
   |> coq_of_ocaml_types types_table
-  |> Binding.print_coq_interface Format.std_formatter
+  |> Binding.print_coq_interface ochannel
