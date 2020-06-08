@@ -71,12 +71,12 @@ let print_type_tree_function_call fmt =
     in
   aux 0 fmt
 
-let print_type fmt t =
+let print_type fmt (t : type_info) =
   if is_not_empty t.poly_vars
   then begin
     fprintf fmt "forall%a, "
       (fun fmt -> List.iter (fun x -> fprintf fmt " (%s : Type)" x))
-      t.poly_vars;
+      t.poly_vars
   end;
   fprintf fmt "%a -> %a"
     (print_type_tree ~param:true) t.domain_types
@@ -86,9 +86,26 @@ let print_coq_type fmt (t : type_entry) =
   let name = Ident.name t.name in
   match t.coq_model with
   | Some ident ->
-    fprintf fmt "Definition %s : Type := %@%s.\n" name ident
+    fprintf fmt "Definition %s : %aType := %@%s.\n"
+      name
+      (fun fmt polys ->
+         if is_not_empty polys
+         then begin
+           fprintf fmt "forall%a, "
+             (fun fmt -> List.iter (fun x -> fprintf fmt " (%s : Type)" x))
+             polys
+         end) t.poly_vars
+      ident
   | None ->
-    fprintf fmt "Axiom (%s : Type).\n" name
+    fprintf fmt "Axiom (%s : %aType).\n"
+      name
+      (fun fmt polys ->
+         if is_not_empty polys
+         then begin
+           fprintf fmt "forall%a, "
+             (fun fmt -> List.iter (fun x -> fprintf fmt " (%s : Type)" x))
+             polys
+         end) t.poly_vars
 
 let print_coq_types fmt i =
   List.iter (print_coq_type fmt) i.types

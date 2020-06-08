@@ -20,6 +20,7 @@ type type_info = {
 }
 
 type type_entry  = {
+  poly_vars : string list;
   name : Ident.t;
   coq_model : string option
 }
@@ -148,6 +149,7 @@ let entry_of_signature log_fmt = function
       })
   | Sig_type (ident, desc, _, Exported) ->
     Some (Type {
+      poly_vars = List.sort_uniq String.compare (List.concat_map poly_vars desc.type_params);
       name = ident;
       coq_model = find_coq_model log_fmt desc.type_attributes;
     })
@@ -181,7 +183,7 @@ and coq_type_leaf_of_ocaml types polys tbl (x, l) =
     then (x, List.map (coq_type_tree_of_ocaml types polys tbl) l)
     else raise (UnsupportedOcaml (sprintf "Unknown type: %s" x))
 
-let coq_type_sig_of_ocaml types tbl s = {
+let coq_type_sig_of_ocaml types tbl (s : type_info) = {
   s with
   domain_types = coq_type_tree_of_ocaml types s.poly_vars tbl s.domain_types;
   codomain_type = coq_type_tree_of_ocaml types s.poly_vars tbl s.codomain_type;

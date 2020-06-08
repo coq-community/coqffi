@@ -13,6 +13,7 @@ type type_info = {
 }
 
 type type_entry  = {
+  poly_vars : string list;
   name : Ident.t;
   coq_model : string option
 }
