@@ -11,12 +11,10 @@ let types_table =
   |> Translation.add "Coqbase.Bytestring.t" "Base.Data.Bytestring.bytestring"
 
 let process input ochannel =
-  let _ = read_cmi input
+  read_cmi input
   |> input_module_of_cmi_infos
   |> translate types_table
-  |> pp_input_module ochannel in
-  Format.pp_print_newline ochannel ()
-
+  |> pp_input_module ochannel
 
 let _ =
   let input = Sys.argv.(1) in

@@ -199,7 +199,7 @@ let pp_interface_handlers_decl (fmt : formatter) (m : input_module) =
 let pp_functions_decl (fmt : formatter) (m : input_module) =
   let pp_function_decl (fmt : formatter) (f : function_entry) =
     match f.func_model with
-    | Some model -> fprintf fmt "Definition %s : %a := @%s."
+    | Some model -> fprintf fmt "Definition %s : %a := %s."
                       f.func_name
                       pp_type_repr_arrows f.func_type
                       model
@@ -221,7 +221,7 @@ let pp_types_decl (fmt : formatter) (m : input_module) =
 
   let pp_type_decl (fmt : formatter) (t : type_entry) =
     match t.type_model with
-    | Some model -> fprintf fmt "Definition %s : %a := @%s."
+    | Some model -> fprintf fmt "Definition %s : %a := %s."
                       t.type_name
                       pp_type_param t.type_params
                       model
@@ -251,17 +251,28 @@ let pp_interface_handlers_extract_decl (fmt : formatter) (m : input_module) =
 
   pp_print_list ~pp_sep:pp_print_space
     (fun fmt prim ->
-      fprintf fmt "Extract Constant ocaml_%s => \"%s.%s.%s\"."
-        prim.prim_name
-        (String.concat "." m.module_namespace)
-        m.module_name
-        prim.prim_name) fmt prims
+       fprintf fmt "@[<hov 2>Extract Constant ocaml_%s@ => \"%s.%s.%s\".@]"
+         prim.prim_name
+         (String.concat "." m.module_namespace)
+         m.module_name
+         prim.prim_name) fmt prims
 
 let pp_types_extract_decl (fmt : formatter) (m : input_module) =
+  let print_args_list = pp_print_list (fun fmt x -> fprintf fmt " \"'%s\"" x) in
+
+  let print_args_prod fmt = function
+    | [] -> ()
+    | [x] -> fprintf fmt "'%s " x
+    | args -> fprintf fmt "(%a) "
+                (pp_print_list ~pp_sep:(fun fmt _ -> pp_print_text fmt ", ")
+                   (fun fmt -> fprintf fmt "'%s")) args in
+
   pp_print_list ~pp_sep:pp_print_space
     (fun fmt t ->
-       fprintf fmt "Extract Constant %s => \"%s.%s.%s\"."
+       fprintf fmt "@[<hov 2>Extract Constant %s%a@ => \"%a%s.%s.%s\".@]"
          t.type_name
+         print_args_list t.type_params
+         print_args_prod t.type_params
          (String.concat "." m.module_namespace)
          m.module_name
          t.type_name) fmt m.module_types
@@ -269,7 +280,7 @@ let pp_types_extract_decl (fmt : formatter) (m : input_module) =
 let pp_functions_extract_decl (fmt : formatter) (m : input_module) =
   pp_print_list ~pp_sep:pp_print_space
     (fun fmt f ->
-       fprintf fmt "Extract Constant %s => \"%s.%s.%s\"."
+       fprintf fmt "@[<hov 2>Extract Constant %s@ => \"%s.%s.%s\".@]"
          f.func_name
          (String.concat "." m.module_namespace)
          m.module_name
