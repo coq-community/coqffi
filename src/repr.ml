@@ -169,7 +169,7 @@ let pp_type_repr_prototype (fmt : formatter) = function
 let pp_mono_type_repr_arg_list fmt typ_list =
   let rec to_list = function
     | TLambda (t1, t2) -> t1 :: to_list t2
-    | t -> [t] in
+    | _ -> [] in
 
   let n = ref 0 in
 
