@@ -114,13 +114,13 @@ let pp_mono_type_repr_arrows (fmt : formatter) mono =
 
   let rec pp_mono_type_repr_arrows_aux ~(pos : type_pos) (fmt : formatter) = function
     | TLambda (t1, t2) ->
-      fprintf fmt "%s%a -> %a%s"
+      fprintf fmt "%s@[<hov>%a@ -> %a@]%s"
         (open_paren pos CArrow)
         (pp_mono_type_repr_arrows_aux ~pos:PArrowLeft) t1
         (pp_mono_type_repr_arrows_aux ~pos:PArrowRight) t2
         (close_paren pos CArrow)
     | TProd typ_list ->
-      fprintf fmt "%s%a%s"
+      fprintf fmt "%s@[%a@]%s"
         (open_paren pos CProd)
         (pp_print_list
            ~pp_sep:(fun fmt _ -> pp_print_text fmt " * ")
@@ -129,10 +129,10 @@ let pp_mono_type_repr_arrows (fmt : formatter) mono =
     | TParam (name, []) ->
       pp_print_text fmt name
     | TParam (name, args) ->
-      fprintf fmt "%s%s %a%s"
+      fprintf fmt "%s@[<hv 2>%s@ %a@]%s"
         (open_paren pos CParam)
         name
-        (pp_print_list ~pp_sep:(fun fmt _ -> pp_print_text fmt " ")
+        (pp_print_list ~pp_sep:pp_print_space
            (pp_mono_type_repr_arrows_aux ~pos:PParam)) args
         (close_paren pos CParam) in
 
@@ -141,7 +141,7 @@ let pp_mono_type_repr_arrows (fmt : formatter) mono =
 let pp_type_repr_arrows (fmt : formatter) = function
   | TMono typ -> pp_mono_type_repr_arrows fmt typ
   | TPoly (polys, typ) ->
-    fprintf fmt "forall %a, %a"
+    fprintf fmt "@[<hov 2>@[<hov 2>forall %a@],@ %a@]"
       (pp_print_list ~pp_sep:pp_print_space
          (fun fmt -> fprintf fmt "(%s : Type)"))
       polys
@@ -150,7 +150,7 @@ let pp_type_repr_arrows (fmt : formatter) = function
 let pp_mono_type_repr_prototype =
   let rec pp_mono_type_repr_prototype_aux (n : int) (fmt : formatter) = function
     | TLambda (t1, t2) ->
-      fprintf fmt "(x%n : %a) %a" n
+      fprintf fmt "(x%n : %a)@ %a" n
         pp_mono_type_repr_arrows t1
         (pp_mono_type_repr_prototype_aux @@ n+1) t2
     | t -> fprintf fmt ": %a"
@@ -160,21 +160,24 @@ let pp_mono_type_repr_prototype =
 
 let pp_type_repr_prototype (fmt : formatter) = function
   | TPoly (polys, mono) ->
-    fprintf fmt "%a %a"
-      (pp_print_list ~pp_sep:(fun fmt _ -> pp_print_text fmt " ")
+    fprintf fmt "%a@ %a"
+      (pp_print_list ~pp_sep:pp_print_space
          (fun fmt typ -> fprintf fmt "(%s : Type)" typ)) polys
       pp_mono_type_repr_prototype mono
   | TMono mono -> pp_mono_type_repr_prototype fmt mono
 
-let pp_mono_type_repr_arg_list =
-  let rec pp_mono_type_repr_arg_list_aux n fmt = function
-  | TLambda (_, t2) ->
-    fprintf fmt "x%d %a"
-      n
-      (pp_mono_type_repr_arg_list_aux @@ n + 1) t2
-  | _ -> () in
+let pp_mono_type_repr_arg_list fmt typ_list =
+  let rec to_list = function
+    | TLambda (t1, t2) -> t1 :: to_list t2
+    | t -> [t] in
 
-  pp_mono_type_repr_arg_list_aux 0
+  let n = ref 0 in
+
+  pp_open_hbox fmt ();
+  pp_print_list ~pp_sep:(fun fmt _ -> pp_print_text fmt " ") (fun fmt _ ->
+      fprintf fmt "x%d" !n;
+      n := !n + 1) fmt (to_list typ_list);
+  pp_close_box fmt ()
 
 let pp_type_repr_arg_list fmt = function
   | TPoly (_, mono) -> pp_mono_type_repr_arg_list fmt mono
