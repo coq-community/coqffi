@@ -199,7 +199,7 @@ let pp_interface_handlers_decl (fmt : formatter) (m : input_module) =
 let pp_functions_decl (fmt : formatter) (m : input_module) =
   let pp_function_decl (fmt : formatter) (f : function_entry) =
     match f.func_model with
-    | Some model -> fprintf fmt "Definition %s : %a := %s."
+    | Some model -> fprintf fmt "@[<v 2>@[<hov 2>Definition %s@ : %a :=@]@ %s.@]"
                       f.func_name
                       pp_type_repr_arrows f.func_type
                       model
@@ -215,7 +215,7 @@ let pp_types_decl (fmt : formatter) (m : input_module) =
   let pp_type_param (fmt : formatter) (params : string list) =
     match params with
     | [] -> pp_print_text fmt "Type"
-    | _ -> fprintf fmt "forall %a, Type"
+    | _ -> fprintf fmt "@[<hov 2>@[<hv 2>forall %a,@] Type@]"
              (pp_print_list ~pp_sep:pp_print_space
                 (fun fmt name -> fprintf fmt "(%s : Type)" name)) params in
 
@@ -238,10 +238,11 @@ let pp_interface_primitive_helpers_decl (fmt : formatter) (m : input_module) =
 
   pp_print_list ~pp_sep:(fun fmt _ -> fprintf fmt "@ @ ")
     (fun fmt prim ->
-       fprintf fmt "@[<hv 2>Definition %s `{Provide ix %s} %a :=@ request (%s %a)@]."
-         prim.prim_name
-         interface_name
-         pp_type_repr_prototype (impure_proj "ix" prim.prim_type)
+       let prefix = sprintf "Definition %s `{Provide ix %s}"
+           prim.prim_name
+           interface_name in
+       fprintf fmt "@[<hv 2>%a :=@ request (%s %a)@]."
+         (pp_type_repr_prototype prefix) (impure_proj "ix" prim.prim_type)
          (String.capitalize_ascii prim.prim_name)
          pp_type_repr_arg_list prim.prim_type)
     fmt m.module_primitives

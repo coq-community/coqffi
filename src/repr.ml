@@ -147,24 +147,48 @@ let pp_type_repr_arrows (fmt : formatter) = function
       polys
       pp_mono_type_repr_arrows typ
 
-let pp_mono_type_repr_prototype =
-  let rec pp_mono_type_repr_prototype_aux (n : int) (fmt : formatter) = function
-    | TLambda (t1, t2) ->
-      fprintf fmt "(x%n : %a)@ %a" n
-        pp_mono_type_repr_arrows t1
-        (pp_mono_type_repr_prototype_aux @@ n+1) t2
-    | t -> fprintf fmt ": %a"
-             pp_mono_type_repr_arrows t in
+let pp_type_repr_prototype prefix (fmt : formatter) (t : type_repr) =
+  let type_repr  = function
+    | TPoly (_, t) -> t
+    | TMono t -> t in
 
-  pp_mono_type_repr_prototype_aux 0
+  let polys = function
+    | TPoly (p, _) -> p
+    | TMono _ -> [] in
 
-let pp_type_repr_prototype (fmt : formatter) = function
-  | TPoly (polys, mono) ->
-    fprintf fmt "%a@ %a"
+  let split =
+    let rec aux acc = function
+      | TLambda (t1, t2) ->
+        aux (acc @ [t1]) t2
+      | t -> (acc, t) in
+    aux [] in
+
+  let pp_args =
+    let n = ref 0 in
+    pp_print_list ~pp_sep:pp_print_space
+      (fun fmt t -> begin
+           fprintf fmt "(x%d : %a)"
+             !n pp_mono_type_repr_arrows t;
+           n := !n + 1
+         end) in
+
+  match (polys t, split (type_repr t)) with
+  | ([], ([], ret_type)) ->
+    fprintf fmt "@[<hov 2>%s@ : %a@]"
+      prefix
+      pp_mono_type_repr_arrows ret_type
+  | ([], (args, ret_type)) ->
+    fprintf fmt "@[<hov 2>@[%s@ %a@]@ : %a@]"
+      prefix
+      pp_args args
+      pp_mono_type_repr_arrows ret_type
+  | (polys, (args, ret_type)) ->
+    fprintf fmt "@[<hv 2>@[<hov 4>%s@ %a@ %a@]@ : %a@]"
+      prefix
       (pp_print_list ~pp_sep:pp_print_space
          (fun fmt typ -> fprintf fmt "(%s : Type)" typ)) polys
-      pp_mono_type_repr_prototype mono
-  | TMono mono -> pp_mono_type_repr_prototype fmt mono
+      pp_args args
+      pp_mono_type_repr_arrows ret_type
 
 let pp_mono_type_repr_arg_list fmt typ_list =
   let rec to_list = function

@@ -25,6 +25,6 @@ val translate_type_repr : Translation.t -> type_repr -> type_repr
 
 val pp_type_repr_arrows : Format.formatter -> type_repr -> unit
 
-val pp_type_repr_prototype : Format.formatter -> type_repr -> unit
+val pp_type_repr_prototype : string -> Format.formatter -> type_repr -> unit
 
 val pp_type_repr_arg_list : Format.formatter -> type_repr -> unit
