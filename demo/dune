@@ -4,4 +4,8 @@
 
 (rule
   (target File.v)
-  (action (run coqffi "%{cmi:file}" %{target})))
+  (action (run coqffi %{cmi:file} %{target})))
+
+(rule
+  (target Foo.v)
+  (action (run coqffi %{cmi:foo} %{target})))
