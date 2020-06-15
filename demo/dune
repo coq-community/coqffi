@@ -1,3 +1,7 @@
 (library
   (name demo)
   (libraries coq-base.lib))
+
+(rule
+  (target File.v)
+  (action (run coqffi "%{cmi:file}" %{target})))
