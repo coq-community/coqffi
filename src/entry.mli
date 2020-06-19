@@ -42,11 +42,5 @@ val translate : Translation.t -> input_module -> input_module
 
 (** * Format *)
 
-val pp_types_decl : Format.formatter -> input_module -> unit
-val pp_types_extract_decl : Format.formatter -> input_module -> unit
-val pp_interface_decl : Format.formatter -> input_module -> unit
-val pp_interface_primitive_helpers_decl : Format.formatter -> input_module -> unit
-val pp_interface_semantics_decl : Format.formatter -> input_module -> unit
-val pp_interface_handlers_decl : Format.formatter -> input_module -> unit
-val pp_interface_handlers_extract_decl : Format.formatter -> input_module -> unit
-val pp_input_module : Format.formatter -> input_module -> unit
+val pp_input_module : Cli.extraction_profile -> Cli.impure_mode option
+  -> Format.formatter -> input_module -> unit

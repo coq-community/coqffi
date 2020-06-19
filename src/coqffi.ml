@@ -1,25 +1,38 @@
 open Cmi_format
 open Entry
 
-let types_table =
+let coqbase_types_table =
   Translation.empty
   |> Translation.add "list" "list"
-  |> Translation.add "int" "i63"
   |> Translation.add "bool" "bool"
   |> Translation.add "option" "option"
   |> Translation.add "unit" "unit"
-  |> Translation.add "Coqbase.Bytestring.t" "Base.Data.Bytestring.bytestring"
+  |> Translation.add "int" "i63"
+  |> Translation.add "Coqbase.Bytestring.t" "bytestring"
 
-let process input ochannel =
+let stdlib_types_table =
+  Translation.empty
+  |> Translation.add "list" "list"
+  |> Translation.add "bool" "bool"
+  |> Translation.add "option" "option"
+  |> Translation.add "unit" "unit"
+
+let types_table profile =
+  let open Cli in
+  match profile with
+  | Coqbase -> coqbase_types_table
+  | Stdlib -> stdlib_types_table
+
+let process profile mode input ochannel =
   read_cmi input
   |> input_module_of_cmi_infos
-  |> translate types_table
-  |> pp_input_module ochannel
+  |> translate (types_table profile)
+  |> pp_input_module profile mode ochannel
 
 let _ =
-  let input = Sys.argv.(1) in
-  let output = Sys.argv.(2) in
-  let ochannel = if output = "-"
-    then Format.std_formatter
-    else open_out output |> Format.formatter_of_out_channel in
-  process input ochannel
+  Cli.parse ();
+  let input = Cli.get_input_path () in
+  let output = Cli.get_output_formatter () in
+  let profile = Cli.get_extraction_profile () in
+  let mode = Cli.get_impure_mode () in
+  process profile mode input output

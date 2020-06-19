@@ -35,6 +35,7 @@ functions. We expect to support more frameworks in the future, such as
 
 Set Implicit Arguments.
 
+From Base Require Import Prelude.
 From FreeSpec.Core Require Import All.
 
 (** * Types *)
@@ -54,23 +55,21 @@ Definition swap
 (** ** Interface Definition *)
 
 Inductive FILE : interface :=
-| Openfile : Base.Data.Bytestring.bytestring -> FILE fd
-| Read_all : fd -> FILE Base.Data.Bytestring.bytestring
-| Write : fd -> Base.Data.Bytestring.bytestring -> FILE unit
+| Openfile : bytestring -> FILE fd
+| Read_all : fd -> FILE bytestring
+| Write : fd -> bytestring -> FILE unit
 | Closefile : fd -> FILE unit.
 
 (** ** Primitive Helpers *)
 
-Definition openfile `{Provide ix FILE} (x0 : Base.Data.Bytestring.bytestring)
-  : impure ix fd :=
+Definition openfile `{Provide ix FILE} (x0 : bytestring) : impure ix fd :=
   request (Openfile x0).
 
-Definition read_all `{Provide ix FILE} (x0 : fd)
-  : impure ix Base.Data.Bytestring.bytestring :=
+Definition read_all `{Provide ix FILE} (x0 : fd) : impure ix bytestring :=
   request (Read_all x0).
 
-Definition write `{Provide ix FILE} (x0 : fd)
-(x1 : Base.Data.Bytestring.bytestring) : impure ix unit :=
+Definition write `{Provide ix FILE} (x0 : fd) (x1 : bytestring)
+  : impure ix unit :=
   request (Write x0 x1).
 
 Definition closefile `{Provide ix FILE} (x0 : fd) : impure ix unit :=
@@ -79,12 +78,18 @@ Definition closefile `{Provide ix FILE} (x0 : fd) : impure ix unit :=
 (** * Extraction *)
 
 Module FileExtr.
-  (** ** Extractable Semantics *)
-
-  Axiom (ocaml_openfile : Base.Data.Bytestring.bytestring -> fd).
-  Axiom (ocaml_read_all : fd -> Base.Data.Bytestring.bytestring).
-  Axiom (ocaml_write : fd -> Base.Data.Bytestring.bytestring -> unit).
+  Extract Constant fd => "Demo.File.fd".
+  Extract Constant fd_equal => "Demo.File.fd_equal".
+  Extract Constant swap => "Demo.File.swap".
+  Axiom (ocaml_openfile : bytestring -> fd).
+  Axiom (ocaml_read_all : fd -> bytestring).
+  Axiom (ocaml_write : fd -> bytestring -> unit).
   Axiom (ocaml_closefile : fd -> unit).
+
+  Extract Constant ocaml_openfile => "Demo.File.openfile".
+  Extract Constant ocaml_read_all => "Demo.File.read_all".
+  Extract Constant ocaml_write => "Demo.File.write".
+  Extract Constant ocaml_closefile => "Demo.File.closefile".
 
   Definition file : semantics FILE :=
     bootstrap (fun a e =>
@@ -94,15 +99,5 @@ Module FileExtr.
             | Write x0 x1 => ocaml_write x0 x1
             | Closefile x0 => ocaml_closefile x0
             end).
-
-  (** ** Extraction Configuration *)
-
-  Extract Constant fd => "Demo.File.fd".
-  Extract Constant fd_equal => "Demo.File.fd_equal".
-  Extract Constant swap => "Demo.File.swap".
-  Extract Constant ocaml_openfile => "Demo.File.openfile".
-  Extract Constant ocaml_read_all => "Demo.File.read_all".
-  Extract Constant ocaml_write => "Demo.File.write".
-  Extract Constant ocaml_closefile => "Demo.File.closefile".
 End FileExtr.
 ```
