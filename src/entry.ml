@@ -29,11 +29,11 @@ type entry =
 exception UnsupportedOCamlSignature of Types.signature_item
 
 let entry_of_signature (s : Types.signature_item) : entry =
-  let is_ffi_pure attr =
-    attr.attr_name.txt = "ffi_pure" in
+  let is_impure attr =
+    attr.attr_name.txt = "impure" in
 
-  let has_ffi_pure : attributes -> bool =
-    List.exists is_ffi_pure in
+  let has_impure : attributes -> bool =
+    List.exists is_impure in
 
   let expr_to_string = function
     | Pexp_constant (Pconst_string (str, _)) -> Some str
@@ -57,15 +57,15 @@ let entry_of_signature (s : Types.signature_item) : entry =
     let name = Ident.name ident in
     let repr = type_repr_of_type_expr desc.val_type in
 
-    if has_ffi_pure desc.val_attributes
-    then EFunc {
+    if has_impure desc.val_attributes
+    then EPrim {
+        prim_name = name;
+        prim_type = repr;
+      }
+    else EFunc {
         func_name = name;
         func_type = repr;
         func_model = find_coq_model desc.val_attributes;
-      }
-    else EPrim {
-        prim_name = name;
-        prim_type = repr;
       }
   | Sig_type (ident, desc, _, Exported) ->
     let get_poly t =

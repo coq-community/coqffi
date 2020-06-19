@@ -10,16 +10,15 @@ open Coqbase
 
 type fd
 
-val openfile : Bytestring.t -> fd
-val read_all : fd -> Bytestring.t
-val write : fd -> Bytestring.t -> unit
-val closefile : fd -> unit
+val openfile : Bytestring.t -> fd [@@impure]
+val read_all : fd -> Bytestring.t [@@impure]
+val write : fd -> Bytestring.t -> unit [@@impure]
+val closefile : fd -> unit [@@impure]
 
 val fd_equal : fd -> fd -> bool
-  [@@ffi_pure]
 
 val swap : ('a -> 'b -> 'c) -> 'b -> 'a -> 'c
-  [@@ffi_pure] [@@coq_model "fun _ _ _ f x y => f y x"]
+  [@@coq_model "fun _ _ _ f x y => f y x"]
 ```
 
 `coqffi` generates the necessary Coq boilerplate to use these
