@@ -6,6 +6,8 @@ type extraction_profile =
   | Coqbase
 
 exception FreeSpecExtractionProfile
+exception TooManyArguments
+exception MissingInputArgument
 
 let impure_mode_opt : impure_mode option ref =
   ref None
@@ -25,7 +27,7 @@ let get_extraction_profile _ = !extraction_opt
 let get_input_path _ =
   match !input_opt with
   | Some path -> path
-  | _ -> assert false
+  | _ -> raise MissingInputArgument
 
 let get_output_formatter _ =
   match !output_opt with
@@ -65,8 +67,14 @@ let parse _ =
 
   Arg.parse specs (fun arg ->
       if !n = 0
-      then input_opt := Some arg
-      else assert false)
+      then begin
+        input_opt := Some arg;
+        n := 1
+      end
+      else raise TooManyArguments)
     "coqffi";
 
   validate ()
+
+let usage =
+  {|coqffi INPUT [-p {stdlib|coq-base}] [-m {FreeSpec}]|}
