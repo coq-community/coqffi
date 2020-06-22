@@ -41,18 +41,18 @@ let specs = [
        | "stdlib" -> extraction_opt := Stdlib
        | "coq-base" -> extraction_opt := Coqbase
        | _ -> assert false),
-   "  Select an extraction profile for base types.");
+   "  Select an extraction profile for base types");
 
   ("-m",
    Arg.Symbol (["FreeSpec"], fun mode ->
        match mode with
        | "FreeSpec" -> impure_mode_opt := Some FreeSpec
        | _ -> assert false),
-   "  Select a framework to model impure computations.");
+   "  Select a framework to model impure computations");
 
   ("-o",
    Arg.String (fun path -> output_opt := Some path),
-   "  Select a framework to model impure computations.");
+   " Select a framework to model impure computations");
 ]
 
 let parse _ =
@@ -77,4 +77,4 @@ let parse _ =
   validate ()
 
 let usage =
-  {|coqffi INPUT [-p {stdlib|coq-base}] [-m {FreeSpec}]|}
+  {|coqffi INPUT [-p {stdlib|coq-base}] [-m {FreeSpec}] [-o OUTPUT]|}
