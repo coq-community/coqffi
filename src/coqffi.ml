@@ -1,5 +1,5 @@
 open Cmi_format
-open Entry
+open Interface
 
 let coqbase_types_table =
   Translation.empty
@@ -23,11 +23,11 @@ let types_table profile =
   | Coqbase -> coqbase_types_table
   | Stdlib -> stdlib_types_table
 
-let process profile mode input ochannel =
+let process with_type_value profile mode input ochannel =
   read_cmi input
-  |> input_module_of_cmi_infos
+  |> interface_of_cmi_infos ~with_type_value
   |> translate (types_table profile)
-  |> pp_input_module profile mode ochannel
+  |> pp_interface profile mode ochannel
 
 let _ =
   try begin
@@ -36,7 +36,8 @@ let _ =
     let output = Cli.get_output_formatter () in
     let profile = Cli.get_extraction_profile () in
     let mode = Cli.get_impure_mode () in
-    process profile mode input output
+    let with_type_value = Cli.with_type_value () in
+    process with_type_value profile mode input output
   end
   with
   | Cli.TooManyArguments ->

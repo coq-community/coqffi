@@ -11,36 +11,35 @@ type function_entry = {
   func_model : string option
 }
 
+type variant_entry = {
+  variant_name : string;
+  variant_args: mono_type_repr list;
+}
+
+type type_value =
+  | Variant of variant_entry list
+  | Opaque
+
 type type_entry = {
   type_name : string;
   type_params : string list;
   type_model : string option;
+  type_value : type_value;
 }
+
+type mutually_recursive_types_entry = type_entry list
 
 type entry =
   | EPrim of primitive_entry
   | EFunc of function_entry
   | EType of type_entry
 
-val entry_of_signature : Types.signature_item -> entry
+val entry_of_signature : ?with_type_value:bool -> Types.signature_item -> entry
 
 exception UnsupportedOCamlSignature of Types.signature_item
+exception UnsupportedOCamlTypeKind of Types.type_kind
 
-type input_module = {
-  module_namespace : string list;
-  module_name : string;
-  module_types : type_entry list;
-  module_functions : function_entry list;
-  module_primitives : primitive_entry list;
-}
+val dependencies : type_entry -> string list
 
-val empty_module : string -> input_module
-
-val input_module_of_cmi_infos : Cmi_format.cmi_infos -> input_module
-
-val translate : Translation.t -> input_module -> input_module
-
-(** * Format *)
-
-val pp_input_module : Cli.extraction_profile -> Cli.impure_mode option
-  -> Format.formatter -> input_module -> unit
+val find_mutually_recursive_types
+  : type_entry list -> mutually_recursive_types_entry list

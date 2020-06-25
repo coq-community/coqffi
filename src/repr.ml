@@ -87,6 +87,24 @@ let translate_type_repr (tbl : Translation.t) = function
     let tbl' = List.fold_left (fun tbl t -> Translation.add t t tbl) tbl polys in
     TPoly (polys, translate_mono_type_repr tbl' mono)
 
+let rec mono_dependencies (t : mono_type_repr) : string list =
+  let merge : string list -> string list -> string list =
+    List.merge String.compare in
+  let fold_mono_list : mono_type_repr list -> string list =
+    List.concat_map (fun t -> mono_dependencies t) in
+  match t with
+  | TLambda (t1, t2) ->
+    merge (mono_dependencies t1) (mono_dependencies t2)
+  | TProd tl -> fold_mono_list tl
+  | TParam (t, params) -> merge [t] (fold_mono_list params)
+
+let dependencies : type_repr -> string list = function
+  | TMono t -> mono_dependencies t
+  | TPoly (params, t) ->
+    List.filter
+      (fun t -> List.exists (String.equal t) params)
+      (mono_dependencies t)
+
 type type_pos =
   | PTop
   | PArrowLeft

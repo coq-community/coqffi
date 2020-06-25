@@ -10,15 +10,17 @@ open Coqbase
 
 type fd
 
-val openfile : Bytestring.t -> fd [@@impure]
+type file_flags =
+  | O_RDONLY
+  | O_WRONLY
+  | O_RDWR
+
+val openfile : Bytestring.t -> file_flags list -> fd [@@impure]
 val read_all : fd -> Bytestring.t [@@impure]
 val write : fd -> Bytestring.t -> unit [@@impure]
 val closefile : fd -> unit [@@impure]
 
 val fd_equal : fd -> fd -> bool
-
-val swap : ('a -> 'b -> 'c) -> 'b -> 'a -> 'c
-  [@@coq_model "fun _ _ _ f x y => f y x"]
 ```
 
 `coqffi` generates the necessary Coq boilerplate to use these
@@ -35,30 +37,32 @@ From FreeSpec.Core Require Import All.
 
 (** * Types *)
 
+Inductive file_flags : Type :=
+| O_RDONLY : file_flags
+| O_WRONLY : file_flags
+| O_RDWR : file_flags.
+
 Axiom (fd : Type).
 
 (** * Pure Functions *)
 
 Axiom (fd_equal : fd -> fd -> bool).
 
-Definition swap
-  : forall (a : Type) (b : Type) (c : Type), (a -> b -> c) -> b -> a -> c :=
-  fun _ _ _ f x y => f y x.
-
 (** * Impure Primitives *)
 
 (** ** Interface Definition *)
 
 Inductive FILE : interface :=
-| Openfile : bytestring -> FILE fd
+| Openfile : bytestring -> list file_flags -> FILE fd
 | Read_all : fd -> FILE bytestring
 | Write : fd -> bytestring -> FILE unit
 | Closefile : fd -> FILE unit.
 
 (** ** Primitive Helpers *)
 
-Definition openfile `{Provide ix FILE} (x0 : bytestring) : impure ix fd :=
-  request (Openfile x0).
+Definition openfile `{Provide ix FILE} (x0 : bytestring)
+(x1 : list file_flags) : impure ix fd :=
+  request (Openfile x0 x1).
 
 Definition read_all `{Provide ix FILE} (x0 : fd) : impure ix bytestring :=
   request (Read_all x0).
@@ -72,29 +76,30 @@ Definition closefile `{Provide ix FILE} (x0 : fd) : impure ix unit :=
 
 (** * Extraction *)
 
-Module FileExtr.
-  Extract Constant fd => "Demo.File.fd".
-  Extract Constant fd_equal => "Demo.File.fd_equal".
-  Extract Constant swap => "Demo.File.swap".
-  Axiom (ocaml_openfile : bytestring -> fd).
-  Axiom (ocaml_read_all : fd -> bytestring).
-  Axiom (ocaml_write : fd -> bytestring -> unit).
-  Axiom (ocaml_closefile : fd -> unit).
+Extract Constant fd => "Demo.File.fd".
+Extract Inductive file_flags => "Demo.File.file_flags" ["Demo.File.O_RDONLY"
+  "Demo.File.O_WRONLY" "Demo.File.O_RDWR"].
 
-  Extract Constant ocaml_openfile => "Demo.File.openfile".
-  Extract Constant ocaml_read_all => "Demo.File.read_all".
-  Extract Constant ocaml_write => "Demo.File.write".
-  Extract Constant ocaml_closefile => "Demo.File.closefile".
+Extract Constant fd_equal => "Demo.File.fd_equal".
 
-  Definition file : semantics FILE :=
-    bootstrap (fun a e =>
-      local match e in FILE a return a with
-            | Openfile x0 => ocaml_openfile x0
-            | Read_all x0 => ocaml_read_all x0
-            | Write x0 x1 => ocaml_write x0 x1
-            | Closefile x0 => ocaml_closefile x0
-            end).
-End FileExtr.
+Axiom (ml_openfile : bytestring -> list file_flags -> fd).
+Axiom (ml_read_all : fd -> bytestring).
+Axiom (ml_write : fd -> bytestring -> unit).
+Axiom (ml_closefile : fd -> unit).
+
+Extract Constant ml_openfile => "Demo.File.openfile".
+Extract Constant ml_read_all => "Demo.File.read_all".
+Extract Constant ml_write => "Demo.File.write".
+Extract Constant ml_closefile => "Demo.File.closefile".
+
+Definition ml_file_sem : semantics FILE :=
+  bootstrap (fun a e =>
+    local match e in FILE a return a with
+          | Openfile x0 x1 => ml_openfile x0 x1
+          | Read_all x0 => ml_read_all x0
+          | Write x0 x1 => ml_write x0 x1
+          | Closefile x0 => ml_closefile x0
+          end).
 ```
 
 `coqffi` can be configured through two key options:
@@ -107,3 +112,10 @@ End FileExtr.
   [`FreeSpec`](https://github.com/ANSSI-FR/FreeSpec). We expect to
   support more frameworks in the future, such as [Interactive
   Trees](https://github.com/DeepSpec/InteractionTrees)
+
+Besides, it provides several flags to enable certain experimental
+features:
+
+- `--with-type-value` to generate Coq definitions for types whose
+  implementation is public. **Note:** `coqffi` does only support a
+  subset of OCaml’s types, and may generate invalid Coq types.

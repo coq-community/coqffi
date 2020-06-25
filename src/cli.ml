@@ -21,6 +21,11 @@ let input_opt : string option ref =
 let output_opt : string option ref =
   ref None
 
+let with_type_value_opt : bool ref =
+  ref false
+
+let with_type_value _ = !with_type_value_opt
+
 let get_impure_mode _ = !impure_mode_opt
 let get_extraction_profile _ = !extraction_opt
 
@@ -53,6 +58,10 @@ let specs = [
   ("-o",
    Arg.String (fun path -> output_opt := Some path),
    " Select a framework to model impure computations");
+
+  ("--with-type-value",
+   Arg.Unit (fun _ -> with_type_value_opt := true),
+   " Bind OCaml type values to Coq inductive types");
 ]
 
 let parse _ =

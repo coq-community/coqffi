@@ -9,6 +9,8 @@ exception FreeSpecExtractionProfile
 exception TooManyArguments
 exception MissingInputArgument
 
+val with_type_value : unit -> bool
+
 val get_impure_mode : unit -> impure_mode option
 val get_extraction_profile : unit -> extraction_profile
 
