@@ -1,4 +1,5 @@
 open Entry
+open Config
 
 type interface = {
   interface_namespace : string list;
@@ -17,5 +18,4 @@ val translate : Translation.t -> interface -> interface
 
 (** * Format *)
 
-val pp_interface : Cli.extraction_profile -> Cli.impure_mode option
-  -> Format.formatter -> interface -> unit
+val pp_interface : generation_config -> Format.formatter -> interface -> unit
