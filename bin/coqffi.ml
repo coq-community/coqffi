@@ -1,5 +1,6 @@
 open Cmi_format
-open Interface
+open Coqffi
+open Coqffi.Interface
 
 let coqbase_types_table =
   Translation.empty

@@ -1,5 +1,5 @@
 (library
-  (name demo)
+  (name examples)
   (libraries coq-base.lib))
 
 (rule
@@ -15,5 +15,5 @@
   (action (run coqffi -p coq-base -m FreeSpec %{cmi:foo} -o %{target})))
 
 (coq.theory
-  (name Demo)
+  (name Examples)
   (modules Foo Rectypes File))

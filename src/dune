@@ -1,4 +1,4 @@
-(executable
+(library
   (name coqffi)
   (public_name coqffi)
   (libraries compiler-libs.common str))
