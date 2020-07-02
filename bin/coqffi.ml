@@ -11,6 +11,7 @@ let coqbase_types_table =
   |> Translation.add "unit" "unit"
   |> Translation.add "int" "i63"
   |> Translation.add "Coqbase.Bytestring.t" "bytestring"
+  |> Translation.add "Coqbase.Sum.t" "sum"
 
 let stdlib_types_table =
   Translation.empty
