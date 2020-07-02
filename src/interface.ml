@@ -26,7 +26,7 @@ let empty_interface (modname : string) =
     interface_primitives = [];
   }
 
-let interface_of_cmi_infos ?(with_type_value = false) (info : cmi_infos) =
+let interface_of_cmi_infos ?(transparent_types = false) (info : cmi_infos) =
   let add_primitive_entry (m : interface) (pr : primitive_entry) : interface = {
     m with
     interface_primitives = m.interface_primitives @ [pr]
@@ -47,7 +47,7 @@ let interface_of_cmi_infos ?(with_type_value = false) (info : cmi_infos) =
     | EFunc fn -> add_function_entry m fn
     | EType t -> add_type_entry m t in
 
-  List.fold_left (fun m s -> entry_of_signature ~with_type_value s |> add_entry m)
+  List.fold_left (fun m s -> entry_of_signature ~transparent_types s |> add_entry m)
     (empty_interface info.cmi_name)
     info.cmi_sign
 

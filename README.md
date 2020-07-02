@@ -116,6 +116,6 @@ Definition ml_file_sem : semantics FILE :=
 Besides, it provides several flags to enable certain experimental
 features:
 
-- `--with-type-value` to generate Coq definitions for types whose
+- `-ftransparent-types` to generate Coq definitions for types whose
   implementation is public. **Note:** `coqffi` does only support a
   subset of OCaml’s types, and may generate invalid Coq types.

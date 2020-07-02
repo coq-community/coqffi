@@ -26,7 +26,7 @@ let types_table profile =
 
 let process conf input ochannel =
   read_cmi input
-  |> interface_of_cmi_infos ~with_type_value:conf.gen_with_type_value
+  |> interface_of_cmi_infos ~transparent_types:conf.gen_transparent_types
   |> translate (types_table conf.gen_profile)
   |> pp_interface conf ochannel
 
@@ -46,7 +46,7 @@ let parse _ =
   let output_opt : string option ref =
     ref None in
 
-  let with_type_value_opt : bool ref =
+  let transparent_types_opt : bool ref =
     ref false in
 
   let get_input_path _ =
@@ -79,8 +79,8 @@ let parse _ =
      Arg.String (fun path -> output_opt := Some path),
      " Select a framework to model impure computations");
 
-    ("--with-type-value",
-     Arg.Unit (fun _ -> with_type_value_opt := true),
+    ("-ftransparent-types",
+     Arg.Set transparent_types_opt,
      " Bind OCaml type values to Coq inductive types");
   ] in
 
@@ -98,7 +98,7 @@ let parse _ =
   let conf = {
     gen_profile = !extraction_opt;
     gen_impure_mode = !impure_mode_opt;
-    gen_with_type_value = !with_type_value_opt;
+    gen_transparent_types = !transparent_types_opt;
   } in
 
   validate conf;

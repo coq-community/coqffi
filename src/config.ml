@@ -8,7 +8,7 @@ type extraction_profile =
 type generation_config = {
   gen_profile : extraction_profile;
   gen_impure_mode : impure_mode option;
-  gen_with_type_value : bool;
+  gen_transparent_types : bool;
 }
 
 exception FreeSpecInvalidExtractionProfile

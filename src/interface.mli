@@ -12,7 +12,7 @@ type interface = {
 val empty_interface : string -> interface
 
 val interface_of_cmi_infos
-  : ?with_type_value:bool -> Cmi_format.cmi_infos -> interface
+  : ?transparent_types:bool -> Cmi_format.cmi_infos -> interface
 
 val translate : Translation.t -> interface -> interface
 

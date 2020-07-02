@@ -4,11 +4,11 @@
 
 (rule
   (target Rectypes.v)
-  (action (run coqffi --with-type-value -p coq-base -m FreeSpec %{cmi:rectypes} -o %{target})))
+  (action (run coqffi -ftransparent-types -p coq-base -m FreeSpec %{cmi:rectypes} -o %{target})))
 
 (rule
   (target File.v)
-  (action (run coqffi --with-type-value -p coq-base -m FreeSpec %{cmi:file} -o %{target})))
+  (action (run coqffi -ftransparent-types -p coq-base -m FreeSpec %{cmi:file} -o %{target})))
 
 (rule
   (target Foo.v)

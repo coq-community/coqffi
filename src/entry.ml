@@ -39,7 +39,7 @@ type entry =
 exception UnsupportedOCamlSignature of Types.signature_item
 exception UnsupportedOCamlTypeKind of Types.type_kind
 
-let entry_of_signature ?(with_type_value = false) (s : Types.signature_item)
+let entry_of_signature ?(transparent_types = false) (s : Types.signature_item)
   : entry =
   let is_impure attr =
     attr.attr_name.txt = "impure" in
@@ -99,7 +99,7 @@ let entry_of_signature ?(with_type_value = false) (s : Types.signature_item)
     } in
 
     let value t =
-      if with_type_value
+      if transparent_types
       then match t with
         | Type_abstract -> Opaque
         | Type_variant v -> Variant (List.map to_variant_entry v)
