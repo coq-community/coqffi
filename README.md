@@ -10,17 +10,12 @@ open Coqbase
 
 type fd
 
-type file_flags =
-  | O_RDONLY
-  | O_WRONLY
-  | O_RDWR
+val fd_equal : fd -> fd -> bool
 
-val openfile : Bytestring.t -> file_flags list -> fd [@@impure]
+val openfile : Bytestring.t -> fd [@@impure]
 val read_all : fd -> Bytestring.t [@@impure]
 val write : fd -> Bytestring.t -> unit [@@impure]
 val closefile : fd -> unit [@@impure]
-
-val fd_equal : fd -> fd -> bool
 ```
 
 `coqffi` generates the necessary Coq boilerplate to use these
@@ -37,11 +32,6 @@ From FreeSpec.Core Require Import All.
 
 (** * Types *)
 
-Inductive file_flags : Type :=
-| O_RDONLY : file_flags
-| O_WRONLY : file_flags
-| O_RDWR : file_flags.
-
 Axiom (fd : Type).
 
 (** * Pure Functions *)
@@ -53,16 +43,15 @@ Axiom (fd_equal : fd -> fd -> bool).
 (** ** Interface Definition *)
 
 Inductive FILE : interface :=
-| Openfile : bytestring -> list file_flags -> FILE fd
+| Openfile : bytestring -> FILE fd
 | Read_all : fd -> FILE bytestring
 | Write : fd -> bytestring -> FILE unit
 | Closefile : fd -> FILE unit.
 
 (** ** Primitive Helpers *)
 
-Definition openfile `{Provide ix FILE} (x0 : bytestring)
-(x1 : list file_flags) : impure ix fd :=
-  request (Openfile x0 x1).
+Definition openfile `{Provide ix FILE} (x0 : bytestring) : impure ix fd :=
+  request (Openfile x0).
 
 Definition read_all `{Provide ix FILE} (x0 : fd) : impure ix bytestring :=
   request (Read_all x0).
@@ -76,26 +65,24 @@ Definition closefile `{Provide ix FILE} (x0 : fd) : impure ix unit :=
 
 (** * Extraction *)
 
-Extract Constant fd => "Demo.File.fd".
-Extract Inductive file_flags => "Demo.File.file_flags" ["Demo.File.O_RDONLY"
-  "Demo.File.O_WRONLY" "Demo.File.O_RDWR"].
+Extract Constant fd => "Examples.File.fd".
 
-Extract Constant fd_equal => "Demo.File.fd_equal".
+Extract Constant fd_equal => "Examples.File.fd_equal".
 
-Axiom (ml_openfile : bytestring -> list file_flags -> fd).
+Axiom (ml_openfile : bytestring -> fd).
 Axiom (ml_read_all : fd -> bytestring).
 Axiom (ml_write : fd -> bytestring -> unit).
 Axiom (ml_closefile : fd -> unit).
 
-Extract Constant ml_openfile => "Demo.File.openfile".
-Extract Constant ml_read_all => "Demo.File.read_all".
-Extract Constant ml_write => "Demo.File.write".
-Extract Constant ml_closefile => "Demo.File.closefile".
+Extract Constant ml_openfile => "Examples.File.openfile".
+Extract Constant ml_read_all => "Examples.File.read_all".
+Extract Constant ml_write => "Examples.File.write".
+Extract Constant ml_closefile => "Examples.File.closefile".
 
 Definition ml_file_sem : semantics FILE :=
   bootstrap (fun a e =>
     local match e in FILE a return a with
-          | Openfile x0 x1 => ml_openfile x0 x1
+          | Openfile x0 => ml_openfile x0
           | Read_all x0 => ml_read_all x0
           | Write x0 x1 => ml_write x0 x1
           | Closefile x0 => ml_closefile x0

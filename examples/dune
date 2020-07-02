@@ -3,17 +3,13 @@
   (libraries coq-base.lib))
 
 (rule
+  (target File.v)
+  (action (run coqffi -p coq-base -m FreeSpec %{cmi:file} -o %{target})))
+
+(rule
   (target Rectypes.v)
   (action (run coqffi -ftransparent-types -p coq-base -m FreeSpec %{cmi:rectypes} -o %{target})))
 
-(rule
-  (target File.v)
-  (action (run coqffi -ftransparent-types -p coq-base -m FreeSpec %{cmi:file} -o %{target})))
-
-(rule
-  (target Foo.v)
-  (action (run coqffi -p coq-base -m FreeSpec %{cmi:foo} -o %{target})))
-
 (coq.theory
   (name Examples)
-  (modules Foo Rectypes File))
+  (modules Rectypes File))
