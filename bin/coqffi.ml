@@ -32,7 +32,10 @@ let process conf input ochannel =
   |> pp_interface conf ochannel
 
 exception TooManyArguments
+exception InconsistentFlags of string
 exception MissingInputArgument
+
+type option_status = Default | Clear | Set
 
 let parse _ =
   let impure_mode_opt : impure_mode option ref =
@@ -47,8 +50,8 @@ let parse _ =
   let output_opt : string option ref =
     ref None in
 
-  let transparent_types_opt : bool ref =
-    ref false in
+  let transparent_types_opt : option_status ref =
+    ref Default in
 
   let get_input_path _ =
     match !input_opt with
@@ -81,8 +84,18 @@ let parse _ =
      " Select a framework to model impure computations");
 
     ("-ftransparent-types",
-     Arg.Set transparent_types_opt,
-     " Bind OCaml type values to Coq inductive types");
+     Arg.Unit (fun _ ->
+       match !transparent_types_opt with
+         | Default | Set -> transparent_types_opt := Set
+         | Clear -> raise (InconsistentFlags "transparent-types")),
+     " Enable transparent types feature");
+
+    ("-fno-transparent-types",
+     Arg.Unit (fun _ ->
+       match !transparent_types_opt with
+         | Default | Clear -> transparent_types_opt := Clear
+         | Set -> raise (InconsistentFlags "transparent-types")),
+     " Disable transparent types feature");
   ] in
 
   let n = ref 0 in
@@ -99,7 +112,9 @@ let parse _ =
   let conf = {
     gen_profile = !extraction_opt;
     gen_impure_mode = !impure_mode_opt;
-    gen_transparent_types = !transparent_types_opt;
+    gen_transparent_types = match !transparent_types_opt with
+      | Default | Clear -> false
+      | Set -> true;
   } in
 
   validate conf;
@@ -119,6 +134,9 @@ let _ =
     Format.printf "Too many arguments.\n%s\n" usage
   | MissingInputArgument ->
     Format.printf "Too many arguments.\n%s\n" usage
+  | InconsistentFlags opt ->
+    Format.printf "-f%s and -fno-%s cannot be used together.\n%s\n"
+      opt opt usage
   | Entry.UnsupportedOCamlSignature s ->
     Format.printf "Use of unsupported OCaml construction: %a"
       Printtyp.signature [s]
