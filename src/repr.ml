@@ -102,7 +102,7 @@ let dependencies : type_repr -> string list = function
   | TMono t -> mono_dependencies t
   | TPoly (params, t) ->
     List.filter
-      (fun t -> List.exists (String.equal t) params)
+      (fun t -> not (List.mem t params))
       (mono_dependencies t)
 
 type type_pos =
