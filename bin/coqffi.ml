@@ -3,32 +3,10 @@ open Coqffi
 open Coqffi.Config
 open Coqffi.Interface
 
-let coqbase_types_table =
-  Translation.empty
-  |> Translation.add "list" "list"
-  |> Translation.add "bool" "bool"
-  |> Translation.add "option" "option"
-  |> Translation.add "unit" "unit"
-  |> Translation.add "int" "i63"
-  |> Translation.add "Coqbase.Bytestring.t" "bytestring"
-  |> Translation.add "Coqbase.Sum.t" "sum"
-
-let stdlib_types_table =
-  Translation.empty
-  |> Translation.add "list" "list"
-  |> Translation.add "bool" "bool"
-  |> Translation.add "option" "option"
-  |> Translation.add "unit" "unit"
-
-let types_table profile =
-  match profile with
-  | Coqbase -> coqbase_types_table
-  | Stdlib -> stdlib_types_table
-
 let process conf input ochannel =
   read_cmi input
   |> interface_of_cmi_infos ~transparent_types:conf.gen_transparent_types
-  |> translate (types_table conf.gen_profile)
+  |> translate (Translation.types_table conf.gen_profile)
   |> pp_interface conf ochannel
 
 exception TooManyArguments
