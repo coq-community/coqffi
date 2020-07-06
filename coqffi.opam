@@ -1,0 +1,7 @@
+opam-version: "2.0"
+version: "1.0.0+dev"
+synopsis: "OCaml/Coq FFI made easy"
+maintainer: ["Thomas Letan <thomas.letan@ssi.gouv.fr>"]
+authors: ["Thomas Letan <thomas.letan@ssi.gouv.fr>"]
+
+build: ["dune" "build" "-p" name "-j" jobs]
