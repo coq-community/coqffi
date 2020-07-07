@@ -29,6 +29,8 @@ _input_
 	- *stdlib*
 	- *coq-base*
 
+	See the *EXTRACTION PROFILES* section for more details.
+
 *-m* _impure mode_
 	The Coq framework to use in order to model impure functions.
 
@@ -57,3 +59,31 @@ _input_
 	generation of invalid Coq type. More precisely, it does not
 	enforce the “strict-positive occurence” constraints of Coq
 	constructors.
+
+# EXTRACTION PROFILES
+
+*Note*: OCaml tuples are supported by all extraction profiles.
+
+## stdlib
+
+The list of OCaml base types supported by the *stdlib* profile is:
+
+- _'a_ *list*
+- _'a_ *option*
+- *bool*
+- *unit*
+- *char*
+- *string*
+
+## coq-base
+
+The list of OCaml base types supported by the *coq-base* profile is:
+
+- _'a_ *list*
+- _'a_ *option*
+- *bool*
+- *unit*
+- *int*
+- *char*
+- *Coqbase.Bytestring.t* (from the *coq-base* package)
+- *Coqbase.Sum.t* (from the *coq-base* package)
