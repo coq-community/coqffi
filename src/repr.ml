@@ -77,14 +77,14 @@ let rec translate_mono_type_repr (tbl : Translation.t) = function
   | TProd typ_list ->
     TProd (List.map (translate_mono_type_repr tbl) typ_list)
   | TParam (name, typ_list) ->
-    (match Translation.find tbl name with
+    (match Translation.find tbl ~ocaml:name with
      | Some name' -> TParam (name', List.map (translate_mono_type_repr tbl) typ_list)
      | None -> raise (UnknownOCamlType name))
 
 let translate_type_repr (tbl : Translation.t) = function
   | TMono mono -> TMono (translate_mono_type_repr tbl mono)
   | TPoly (polys, mono) ->
-    let tbl' = List.fold_left (fun tbl t -> Translation.add t t tbl) tbl polys in
+    let tbl' = List.fold_left (fun tbl t -> Translation.preserve t tbl) tbl polys in
     TPoly (polys, translate_mono_type_repr tbl' mono)
 
 let rec mono_dependencies (t : mono_type_repr) : string list =

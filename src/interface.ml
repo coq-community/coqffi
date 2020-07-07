@@ -74,7 +74,7 @@ let translate tbl m =
 
   let translate_type tbl typ =
     let tbl' = List.fold_left
-        (fun tbl t -> Translation.add t t tbl)
+        (fun tbl t -> Translation.preserve t tbl)
         tbl
         typ.type_params in
     {
@@ -83,7 +83,7 @@ let translate tbl m =
     } in
 
   let tbl' = List.fold_left
-      (fun tbl t -> Translation.add t.type_name t.type_name tbl)
+      (fun tbl t -> Translation.preserve t.type_name tbl)
       tbl
       m.interface_types in
 
@@ -318,8 +318,8 @@ let pp_impure_extraction mode fmt m =
   | _ -> ()
 
 let pp_extraction_profile_import fmt = function
-  | Config.Stdlib -> ()
-  | Config.Coqbase -> fprintf fmt "From Base Require Import Prelude.@ "
+  | Config.Stdlib -> fprintf fmt "From Coq Require Import ExtrOcamlBasic ExtrOcamlString.@ "
+  | Config.Coqbase -> fprintf fmt "From Base Require Import Prelude Extraction.@ "
 
 let pp_impure_mode_import fmt = function
   | Some Config.FreeSpec ->
