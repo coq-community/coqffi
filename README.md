@@ -96,7 +96,7 @@ Definition ml_file_sem : semantics FILE :=
 - The “impure mode” determines which framework is used to model impure
   functions. Currently, `coqffi` provides one mode:
   [`FreeSpec`](https://github.com/ANSSI-FR/FreeSpec). We expect to
-  support more frameworks in the future, such as [Interactive
+  support more frameworks in the future, such as [Interaction
   Trees](https://github.com/DeepSpec/InteractionTrees)
 
 Besides, it provides several flags to enable certain experimental
