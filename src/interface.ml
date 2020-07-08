@@ -115,7 +115,7 @@ let pp_interface_freespec_semantics_decl (fmt : formatter) (m : interface) =
   fprintf fmt "@[<v 2>Definition ml_%s_sem : semantics %s :=@ "
     semantics_name interface_name;
   fprintf fmt
-    "@[<v 2>bootstrap (fun a e =>@ local @[<v>match e in %s a return a with@ %a@ end@]).@]@]"
+    "@[<v 2>bootstrap (fun a e =>@ local @[<v>match e in %s a return a with@ %a@ end@]).@]@]@ @ "
     interface_name
     (pp_print_list ~pp_sep:pp_print_space
     (fun fmt prim ->
@@ -123,7 +123,11 @@ let pp_interface_freespec_semantics_decl (fmt : formatter) (m : interface) =
          (String.capitalize_ascii prim.prim_name)
          pp_type_repr_arg_list prim.prim_type
          prim.prim_name
-         pp_type_repr_arg_list prim.prim_type)) prims
+         pp_type_repr_arg_list prim.prim_type)) prims;
+
+  fprintf fmt "Instance %s_HasMLImpl : HasMLImpl %s := { ml_semantics := ml_%s_sem }."
+    semantics_name interface_name
+    semantics_name
 
 let pp_interface_freespec_handlers_decl (fmt : formatter) (m : interface) =
   let prims = m.interface_primitives in
@@ -323,7 +327,7 @@ let pp_extraction_profile_import fmt = function
 
 let pp_impure_mode_import fmt = function
   | Some Config.FreeSpec ->
-    fprintf fmt "From FreeSpec.Core Require Import All.@ "
+    fprintf fmt "From FreeSpec.Core Require Import All Extraction.@ "
   | _ -> ()
 
 let not_empty = function
