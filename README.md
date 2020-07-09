@@ -105,3 +105,23 @@ features:
 - `-ftransparent-types` to generate Coq definitions for types whose
   implementation is public. **Note:** `coqffi` does only support a
   subset of OCaml’s types, and may generate invalid Coq types.
+
+# Getting Started
+
+## Building From Source
+
+To build
+
+- [scdoc](https://sr.ht/~sircmpwn/scdoc/) (generating the `coqffi` man page)
+
+```
+dune build -p coqffi
+dune install
+```
+
+## Building the Examples
+
+If you want to build the examples using `dune build`, you will need to
+install the following dependencies:
+
+- [FreSspec](https://github.com/ANSSI-FR/FreeSpec) (compiling the examples)
