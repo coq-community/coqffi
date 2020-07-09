@@ -2,6 +2,7 @@ open Cmi_format
 open Coqffi
 open Coqffi.Config
 open Coqffi.Interface
+open Cmdliner
 
 let process conf input ochannel =
   read_cmi input
@@ -13,108 +14,114 @@ exception TooManyArguments
 exception InconsistentFlags of string
 exception MissingInputArgument
 
-type option_status = Default | Clear | Set
+let input_cmi_arg =
+  let doc =
+    "The compiled interface ($(b,.cmi)) of the OCaml module to be used in Coq" in
+  Arg.(required & pos 0 (some string) None & info [] ~docv:"INPUT" ~doc)
 
-let parse _ =
-  let impure_mode_opt : impure_mode option ref =
-    ref None in
+let output_arg =
+  let doc = "The name of the Coq file to generate" in
+  Arg.(value & opt (some string) None & info ["o"; "output"] ~docv:"OUTPUT" ~doc)
 
-  let extraction_opt : extraction_profile ref =
-    ref Stdlib in
+let immpure_mode_arg =
+  let doc =
+    "The Coq framework to use in order to model impure functions.
+     By default, $(b,coqffi) assumes OCaml functions are pure, but
+     they can be marked with the $(i,@@impure) attribute. Since
+     Gallina is a purely functional programming language, a
+     framework has to be used to model them." in
 
-  let input_opt : string option ref =
-    ref None in
+  let mode_enum = Arg.enum ["FreeSpec", FreeSpec] in
 
-  let output_opt : string option ref =
-    ref None in
+  Arg.(value & opt (some mode_enum) None
+       & info ["m"; "impure-mode"] ~docv:"MODE" ~doc)
 
-  let transparent_types_opt : option_status ref =
-    ref Default in
+let profile_arg =
+  let doc =
+    "The so-called extraction profile determined the set of base
+     types which can be used by the OCaml module, in addition to
+     the types defined by this module. See $(b,EXTRACTION PROFILES)
+     to get more details" in
 
-  let get_input_path _ =
-    match !input_opt with
-    | Some path -> path
-    | _ -> raise MissingInputArgument in
+  let profile_enum = Arg.enum ["stdlib", Stdlib; "coq-base", Coqbase] in
 
-  let get_output_formatter _ =
-    match !output_opt with
-    | Some path -> open_out path |> Format.formatter_of_out_channel
-    | _ -> Format.std_formatter in
+  Arg.(value & opt profile_enum Stdlib
+       & info ["p"; "extraction-profile"] ~docv:"PROFILE" ~doc)
 
-  let specs = [
-    ("-p",
-     Arg.Symbol (["stdlib"; "coq-base"], fun profile ->
-         match profile with
-         | "stdlib" -> extraction_opt := Stdlib
-         | "coq-base" -> extraction_opt := Coqbase
-         | _ -> assert false),
-     "  Select an extraction profile for base types");
+let transparent_types_opt =
+  let doc =
+    "Enable the support of OCaml transparent types.  By default, $(b,coqffi)
+     considers any types introduced by an OCaml module as opaque. If
+     $(b,-ftransparent-types) is used, then $(b,coqffi) will try to translate
+     some OCaml type definition into a compatible Coq counterpart.
+     $(b,Warning:) This feature is experimental, and may lead to the generation
+     of invalid Coq types. Typically, it does not enforce the “strict-positive
+     occurence” constraints of Coq constructors." in
 
-    ("-m",
-     Arg.Symbol (["FreeSpec"], fun mode ->
-         match mode with
-         | "FreeSpec" -> impure_mode_opt := Some FreeSpec
-         | _ -> assert false),
-     "  Select a framework to model impure computations");
+  Arg.(value & flag & info ["ftransparent-types"] ~doc)
 
-    ("-o",
-     Arg.String (fun path -> output_opt := Some path),
-     " Select a framework to model impure computations");
+let coqffi_info =
+  let doc = "Coq/OCAML FFI made easy" in
+  let man = [
+    `S "EXTRACTION PROFILES";
 
-    ("-ftransparent-types",
-     Arg.Unit (fun _ ->
-       match !transparent_types_opt with
-         | Default | Set -> transparent_types_opt := Set
-         | Clear -> raise (InconsistentFlags "transparent-types")),
-     " Enable transparent types feature");
+    `P "$(b,Note:) OCaml tuples are supported by all extraction profiles.";
 
-    ("-fno-transparent-types",
-     Arg.Unit (fun _ ->
-       match !transparent_types_opt with
-         | Default | Clear -> transparent_types_opt := Clear
-         | Set -> raise (InconsistentFlags "transparent-types")),
-     " Disable transparent types feature");
+    `P "The default extraction profile is $(b,stdlib).";
+
+    `P "The list of OCaml base types supported by the $(b,stdlib) profile is:";
+    `Noblank;
+    `Pre "  - $(b,bool)"; `Noblank;
+    `Pre "  - $(b,char)"; `Noblank;
+    `Pre "  - $(b,string)"; `Noblank;
+    `Pre "  - $(b,unit)"; `Noblank;
+    `Pre "  - $(i,'a) $(b,list)"; `Noblank;
+    `Pre "  - $(i,'a) $(b,option)"; `Noblank;
+    `P "This extraction profile does not have any OCaml dependency.";
+
+    `P "The list of OCaml base types supported by the $(b,coq-base) profile is:";
+    `Noblank;
+    `Pre "  - $(b,bool)"; `Noblank;
+    `Pre "  - $(b,char)"; `Noblank;
+    `Pre "  - $(b,int)"; `Noblank;
+    `Pre "  - $(b,unit)"; `Noblank;
+    `Pre "  - $(b,Coqbase.Bytestring.t)"; `Noblank;
+    `Pre "  - ($(i,'a), $(i,'b)) $(b,Coqbase.Sum.t)"; `Noblank;
+    `Pre "  - $(i,'a) $(b,list)"; `Noblank;
+    `Pre "  - $(i,'a) $(b,option)"; `Noblank;
+    `P "This extraction profile depends on the $(b,coqbase.lib) library from the
+        $(b,coqbase) Opam package.";
+    `S Manpage.s_bugs;
+    `P "Email bug reports to <thomas.letan at ssi.gouv.fr>.";
   ] in
+  Term.(info "coqffi" ~exits:default_exits ~doc ~man ~version:"coqffi.1.0.0+dev")
 
-  let n = ref 0 in
+let run_coqffi (input : string) (output : string option)
+    (impure_mode : impure_mode option) (profile : extraction_profile)
+    (transparent_types : bool) =
 
-  Arg.parse specs (fun arg ->
-      if !n = 0
-      then begin
-        input_opt := Some arg;
-        n := 1
-      end
-      else raise TooManyArguments)
-    "coqffi";
+  let parse _ =
+    let ochannel = match output with
+      | Some path -> open_out path |> Format.formatter_of_out_channel
+      | _ -> Format.std_formatter in
 
-  let conf = {
-    gen_profile = !extraction_opt;
-    gen_impure_mode = !impure_mode_opt;
-    gen_transparent_types = match !transparent_types_opt with
-      | Default | Clear -> false
-      | Set -> true;
-  } in
+    let conf = {
+      gen_profile = profile;
+      gen_impure_mode = impure_mode;
+      gen_transparent_types = transparent_types;
+    } in
 
-  validate conf;
+    (input, ochannel, conf) in
 
-  (get_input_path (), get_output_formatter (), conf)
-
-let usage =
-  {|coqffi INPUT [-p {stdlib|coq-base}] [-m {FreeSpec}] [-o OUTPUT]|}
-
-let _ =
   try begin
     let (input, output, conf) = parse () in
+    validate conf;
     process conf input output
   end
   with
-  | TooManyArguments ->
-    Format.printf "Too many arguments.\n%s\n" usage
-  | MissingInputArgument ->
-    Format.printf "Too many arguments.\n%s\n" usage
   | InconsistentFlags opt ->
-    Format.printf "-f%s and -fno-%s cannot be used together.\n%s\n"
-      opt opt usage
+    Format.printf "-f%s and -fno-%s cannot be used together.\n"
+      opt opt
   | Entry.UnsupportedOCamlSignature s ->
     Format.printf "Use of unsupported OCaml construction: %a"
       Printtyp.signature [s]
@@ -124,3 +131,14 @@ let _ =
   | Repr.UnknownOCamlType t ->
     Format.printf "Type %s is not supported by the selected profile"
       t
+
+let coqffi_t =
+  Term.(const run_coqffi
+        $ input_cmi_arg
+        $ output_arg
+        $ immpure_mode_arg
+        $ profile_arg
+        $ transparent_types_opt)
+
+let _ =
+  Term.(exit @@ eval (coqffi_t, coqffi_info))

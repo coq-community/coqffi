@@ -110,9 +110,7 @@ features:
 
 ## Building From Source
 
-To build
-
-- [scdoc](https://sr.ht/~sircmpwn/scdoc/) (generating the `coqffi` man page)
+You can use `dune` to build `coqffi` without the examples.
 
 ```
 dune build -p coqffi
@@ -125,3 +123,7 @@ If you want to build the examples using `dune build`, you will need to
 install the following dependencies:
 
 - [FreSspec](https://github.com/ANSSI-FR/FreeSpec) (compiling the examples)
+
+```
+dune build
+```

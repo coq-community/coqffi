@@ -1,8 +1,7 @@
 (rule
  (with-stdout-to
   coqffi.1
-  (with-stdin-from coqffi.1.scd
-   (run scdoc))))
+  (run coqffi --help=groff)))
 
 (install
  (section man)
