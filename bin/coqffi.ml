@@ -6,7 +6,7 @@ open Cmdliner
 
 let process conf input ochannel =
   read_cmi input
-  |> interface_of_cmi_infos ~transparent_types:conf.gen_transparent_types
+  |> interface_of_cmi_infos ~features:conf.gen_features
   |> translate (Translation.types_table conf.gen_profile)
   |> pp_interface conf ochannel
 
@@ -22,19 +22,6 @@ let output_arg =
   let doc = "The name of the Coq file to generate" in
   Arg.(value & opt (some string) None & info ["o"; "output"] ~docv:"OUTPUT" ~doc)
 
-let immpure_mode_arg =
-  let doc =
-    "The Coq framework to use in order to model impure functions.
-     By default, $(b,coqffi) assumes OCaml functions are pure, but
-     they can be marked with the $(i,@@impure) attribute. Since
-     Gallina is a purely functional programming language, a
-     framework has to be used to model them." in
-
-  let mode_enum = Arg.enum ["FreeSpec", FreeSpec] in
-
-  Arg.(value & opt (some mode_enum) None
-       & info ["m"; "impure-mode"] ~docv:"MODE" ~doc)
-
 let profile_arg =
   let doc =
     "The so-called extraction profile determined the set of base
@@ -47,33 +34,6 @@ let profile_arg =
   Arg.(value & opt profile_enum Stdlib
        & info ["p"; "extraction-profile"] ~docv:"PROFILE" ~doc)
 
-type feature =
-  TransparentTypes
-
-let feature_name = function
-  | TransparentTypes -> "transparent-types"
-
-let check_features fs =
-  let rec find_dup dups : ('a * 'b) list -> 'a list = function
-    | (f, _) :: rst ->
-      find_dup
-        (if List.mem_assoc f rst then (f :: dups) else dups)
-        rst
-    | [] -> List.sort_uniq compare dups in
-
-  Format.(
-    fprintf err_formatter "%a@?"
-      (pp_print_list ~pp_sep:pp_print_newline
-         (fun fmt f ->
-            fprintf fmt
-              "Warning: Feature `%s' has been selected several times.\n\
-              The first occurence will be used."
-              (feature_name f)))
-      (find_dup [] fs))
-
-let transparent_feature_opt fs =
-  Option.value ~default:false @@ List.assoc_opt TransparentTypes fs
-
 let features_opt =
   let doc =
     "Enable (using $(b,-f)$(i,feature-name)) or disable (using
@@ -83,15 +43,16 @@ let features_opt =
      is emitted, and the first occurence is used. See $(b,FEATURES) for a
      comprehensive list of the features available." in
 
-  let feature_enum f =
-    let name = feature_name f in [
-      name, (f, true);
-      "no-" ^ name, (f, false)
+  let feature_enum tname =
+    let name = feature_name tname in [
+      name, (tname, true);
+      "no-" ^ name, (tname, false)
     ] in
 
   let features_enum =
     Arg.enum (List.concat [
-        feature_enum  TransparentTypes
+        feature_enum TransparentTypes;
+        feature_enum Interface;
       ]) in
 
   Arg.(value & opt_all features_enum [] & info ["f"] ~doc ~docv:"FEATURE")
@@ -121,6 +82,15 @@ let coqffi_info =
        counterpart.  $(b,Warning:) This feature is experimental, and may lead to
        the generation of invalid Coq types. Typically, it does not enforce the
        “strict-positive occurence” constraints of Coq constructors."
+    );
+
+    `P "$(b,interface)"; `Noblank;
+    `I (
+      "$(b,no-interface)",
+      "When the $(b,interface) feature is enabled, $(b, coqffi) generates a
+       parameterized inductive type which describes the set of impure primitives
+       provided by the module. This type can be used with the monads of
+       verification frameworks such as Interaction Tree or FreeSpec."
     );
 
     `S "EXTRACTION PROFILES";
@@ -157,27 +127,32 @@ let coqffi_info =
   Term.(info "coqffi" ~exits:default_exits ~doc ~man ~version:"coqffi.1.0.0+dev")
 
 let run_coqffi (input : string) (output : string option)
-    (impure_mode : impure_mode option) (profile : extraction_profile)
-    (features : (feature * bool) list) =
+    (profile : extraction_profile) (features : features) =
 
   let parse _ =
     let ochannel = match output with
       | Some path -> open_out path |> Format.formatter_of_out_channel
       | _ -> Format.std_formatter in
 
-    check_features features;
-
     let conf = {
       gen_profile = profile;
-      gen_impure_mode = impure_mode;
-      gen_transparent_types = transparent_feature_opt features;
+      gen_features = features
     } in
 
     (input, ochannel, conf) in
 
   try begin
     let (input, output, conf) = parse () in
-    validate conf;
+
+    Format.(
+      fprintf err_formatter "%a@?"
+        (pp_print_list
+           (fun fmt f ->
+              fprintf fmt
+                "Warning: Feature `%s' has been selected several times.@ "
+                (feature_name f)))
+        (find_duplicates features));
+
     process conf input output
   end
   with
@@ -195,7 +170,6 @@ let coqffi_t =
   Term.(const run_coqffi
         $ input_cmi_arg
         $ output_arg
-        $ immpure_mode_arg
         $ profile_arg
         $ features_opt)
 

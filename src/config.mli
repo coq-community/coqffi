@@ -2,15 +2,20 @@ type extraction_profile =
   | Stdlib
   | Coqbase
 
-type impure_mode =
-  | FreeSpec
+type feature =
+  | TransparentTypes
+  | Interface
+
+val feature_name : feature -> string
+val default : feature -> bool
+
+type features = (feature * bool) list
+
+val find_duplicates : features -> feature list
+
+val is_enabled : features -> feature -> bool
 
 type generation_config = {
   gen_profile : extraction_profile;
-  gen_impure_mode : impure_mode option;
-  gen_transparent_types : bool;
+  gen_features : features;
 }
-
-exception FreeSpecInvalidExtractionProfile
-
-val validate : generation_config -> unit

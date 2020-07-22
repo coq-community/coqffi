@@ -2,6 +2,7 @@ open Cmi_format
 open Format
 open Entry
 open Repr
+open Config
 
 type interface = {
   interface_namespace : string list;
@@ -26,7 +27,7 @@ let empty_interface (modname : string) =
     interface_primitives = [];
   }
 
-let interface_of_cmi_infos ?(transparent_types = false) (info : cmi_infos) =
+let interface_of_cmi_infos ~features (info : cmi_infos) =
   let add_primitive_entry (m : interface) (pr : primitive_entry) : interface = {
     m with
     interface_primitives = m.interface_primitives @ [pr]
@@ -47,7 +48,10 @@ let interface_of_cmi_infos ?(transparent_types = false) (info : cmi_infos) =
     | EFunc fn -> add_function_entry m fn
     | EType t -> add_type_entry m t in
 
-  List.fold_left (fun m s -> entry_of_signature ~transparent_types s |> add_entry m)
+  List.fold_left
+    (fun m s ->
+       entry_of_signature ~transparent_types:(is_enabled features TransparentTypes) s
+       |> add_entry m)
     (empty_interface info.cmi_name)
     info.cmi_sign
 
@@ -109,37 +113,6 @@ let pp_interface_decl (fmt : formatter) (m : interface) =
   fprintf fmt "@[<v>Inductive %s : Type -> Type :=@ %a.@]"
     interface_name
     (pp_print_list ~pp_sep:pp_print_space pp_print_primitive) prims
-
-let pp_interface_freespec_semantics_decl (fmt : formatter) (m : interface) =
-  let interface_name = String.uppercase_ascii m.interface_name in
-  let semantics_name = String.lowercase_ascii m.interface_name in
-  let prims = m.interface_primitives in
-
-  fprintf fmt "@[<v 2>Definition ml_%s_sem : semantics %s :=@ "
-    semantics_name interface_name;
-  fprintf fmt
-    "@[<v 2>bootstrap (fun a e =>@ local @[<v>match e in %s a return a with@ %a@ end@]).@]@]@ @ "
-    interface_name
-    (pp_print_list ~pp_sep:pp_print_space
-    (fun fmt prim ->
-       fprintf fmt "| %s %a => ml_%s %a"
-         (String.capitalize_ascii prim.prim_name)
-         pp_type_repr_arg_list prim.prim_type
-         prim.prim_name
-         pp_type_repr_arg_list prim.prim_type)) prims;
-
-  fprintf fmt "Instance %s_HasMLImpl : HasMLImpl %s := { ml_semantics := ml_%s_sem }."
-    semantics_name interface_name
-    semantics_name
-
-let pp_interface_freespec_handlers_decl (fmt : formatter) (m : interface) =
-  let prims = m.interface_primitives in
-
-  pp_print_list ~pp_sep:pp_print_space
-    (fun fmt prim ->
-      fprintf fmt "Axiom (ml_%s : %a)."
-        prim.prim_name
-        pp_type_repr_arrows prim.prim_type) fmt prims
 
 let pp_functions_decl (fmt : formatter) (m : interface) =
   let pp_function_decl (fmt : formatter) (f : function_entry) =
@@ -225,28 +198,29 @@ let pp_types_decl (fmt : formatter) (m : interface) =
   pp_print_list ~pp_sep:(fun fmt _ -> fprintf fmt "@ @ ")
     pp_mutually_rectypes_decl fmt mut_types
 
-let pp_interface_freespec_primitive_helpers_decl (fmt : formatter) (m : interface) =
+let pp_interface_primitive_helpers_decl (fmt : formatter) (m : interface) =
   let interface_name = String.uppercase_ascii m.interface_name in
 
   pp_print_list ~pp_sep:(fun fmt _ -> fprintf fmt "@ @ ")
     (fun fmt prim ->
-       let prefix = sprintf "Definition %s `{Provide ix %s}"
+       let prefix = sprintf "Definition inj_%s `{Inject %s m}"
            prim.prim_name
            interface_name in
-       fprintf fmt "@[<hv 2>%a :=@ request (%s %a)@]."
-         (pp_type_repr_prototype prefix) (impure_proj "ix" prim.prim_type)
+       fprintf fmt "@[<hv 2>%a :=@ inject (%s %a)@]."
+         (pp_type_repr_prototype prefix) (interface_proj "m" prim.prim_type)
          (String.capitalize_ascii prim.prim_name)
          pp_type_repr_arg_list prim.prim_type)
-    fmt m.interface_primitives
+    fmt m.interface_primitives;
 
-let pp_interface_handlers_extract_decl (fmt : formatter) (m : interface) =
-  let prims = m.interface_primitives in
+  fprintf fmt "@ @ ";
 
-  pp_print_list ~pp_sep:pp_print_space
-    (fun fmt prim ->
-       fprintf fmt "@[<hov 2>Extract Constant ml_%s@ => \"%s\".@]"
-         prim.prim_name
-         (qualname m prim.prim_name)) fmt prims
+  fprintf fmt "@[<v 2>Instance Monad%s_Inject `(Inject %s m) : Monad%s m :=@ { %a@ }.@]"
+    m.interface_name
+    interface_name
+    m.interface_name
+    (pp_print_list ~pp_sep:(fun fmt _ -> fprintf fmt "@ ; ")
+       (fun fmt prim -> fprintf fmt "%s := inj_%s" prim.prim_name prim.prim_name))
+    m.interface_primitives
 
 let pp_types_extract_decl (fmt : formatter) (m : interface) =
   let print_args_list = pp_print_list (fun fmt x -> fprintf fmt " \"'%s\"" x) in
@@ -281,45 +255,70 @@ let pp_functions_extract_decl (fmt : formatter) (m : interface) =
          f.func_name
          (qualname m f.func_name)) fmt m.interface_functions
 
-let pp_impure_decl mode fmt m =
-  match mode with
-  | Some Config.FreeSpec -> begin
-      fprintf fmt "(** * Impure Primitives *)@ @ ";
+let pp_io_extract (fmt : formatter) (m : interface) =
+  pp_print_list ~pp_sep:pp_print_space
+    (fun fmt prim ->
+       let k_name = "k__" (* TODO: freshen *) in
+       fprintf fmt "@[<hov 2>Extract Constant io_%s =>@ \"(fun %a %s -> %s (%s %a))\".@]"
+         prim.prim_name
+         pp_type_repr_arg_list prim.prim_type
+         k_name
+         k_name
+         (qualname m prim.prim_name)
+         pp_type_repr_arg_list prim.prim_type)
+    fmt m.interface_primitives
 
-      fprintf fmt "(** ** Interface Definition *)@ @ ";
+let pp_impure_decl conf fmt m =
+  fprintf fmt "(** * Impure Primitives *)@ @ ";
 
-      fprintf fmt "@[<v>%a@]@ @ "
-        pp_interface_decl m;
+  fprintf fmt "(** ** Monad *)@ @ ";
 
-      fprintf fmt "(** ** Primitive Helpers *)@ @ ";
+  fprintf fmt "@[<v 2>Class Monad%s (m : Type -> Type) : Type :=@ { %a@ }.@]@ @ "
+    m.interface_name
+    (pp_print_list ~pp_sep:(fun fmt _ -> fprintf fmt "@ ; ")
+       (fun fmt prim -> fprintf fmt "%s : %a"
+           prim.prim_name
+           pp_type_repr_arrows (interface_proj "m" prim.prim_type)))
+    m.interface_primitives;
 
-      fprintf fmt "@[<v>%a@]@ @ "
-        pp_interface_freespec_primitive_helpers_decl m
-    end
-  | _ -> ()
+  fprintf fmt "(** ** [IO] Instance *)@ @ ";
 
-let pp_impure_extraction mode fmt m =
-  match mode with
-  | Some Config.FreeSpec -> begin
-      fprintf fmt "@[<v>%a@]@ @ "
-        pp_interface_freespec_handlers_decl m;
+  fprintf fmt "%a@ @ "
+    (pp_print_list ~pp_sep:pp_print_space
+       (fun fmt prim ->
+          fprintf fmt "Axiom (io_%s : %a)."
+            prim.prim_name
+            pp_type_repr_arrows (interface_proj "IO" prim.prim_type)))
+    m.interface_primitives;
 
-      fprintf fmt "@[<v>%a@]@ @ "
-        pp_interface_handlers_extract_decl m;
+  fprintf fmt "%a@ @ " pp_io_extract m;
 
-      fprintf fmt "@[<v>%a@]"
-        pp_interface_freespec_semantics_decl m
-    end
-  | _ -> ()
+  fprintf fmt "@[<v 2>Instance Monad%s_IO : Monad%s IO :=@ { %a@ }.@]@ @ "
+    m.interface_name
+    m.interface_name
+    (pp_print_list ~pp_sep:(fun fmt _ -> fprintf fmt "@ ; ")
+       (fun fmt prim -> fprintf fmt "%s := io_%s" prim.prim_name prim.prim_name))
+    m.interface_primitives;
+
+  if is_enabled conf.gen_features Interface
+  then begin
+    fprintf fmt "(** ** Interface Definition *)@ @ ";
+
+    fprintf fmt "@[<v>%a@]@ @ "
+      pp_interface_decl m;
+
+    fprintf fmt "@[<v>%a@]"
+      pp_interface_primitive_helpers_decl m
+  end
 
 let pp_extraction_profile_import fmt = function
-  | Config.Stdlib -> fprintf fmt "From Coq Require Import ExtrOcamlBasic ExtrOcamlString.@ "
-  | Config.Coqbase -> fprintf fmt "From Base Require Import Prelude Extraction.@ "
+  | Config.Stdlib -> fprintf fmt "From Coq Require Import ExtrOcamlBasic ExtrOcamlString."
+  | Config.Coqbase -> fprintf fmt "From Base Require Import Prelude Extraction."
 
-let pp_impure_mode_import fmt = function
-  | Some Config.FreeSpec ->
-    fprintf fmt "From FreeSpec.Core Require Import All Extraction.@ "
-  | _ -> ()
+let pp_impure_mode_import fmt conf =
+  fprintf fmt "From SimpleIO Require Import IO_Monad.";
+  if is_enabled conf.gen_features Interface
+  then fprintf fmt "@ From CoqFFI Require Import Interface."
 
 let not_empty = function
   | [] -> false
@@ -328,7 +327,7 @@ let not_empty = function
 let pp_types fmt m =
   if not_empty m.interface_types then
     begin
-      fprintf fmt "@ (** * Types *)@ @ ";
+      fprintf fmt "(** * Types *)@ @ ";
 
       fprintf fmt "@[<v>%a@]@ @ "
         pp_types_decl m;
@@ -353,8 +352,6 @@ let pp_impure conf fmt m =
   if not_empty m.interface_primitives then
     begin
       pp_impure_decl conf fmt m;
-
-      pp_impure_extraction conf fmt m
     end
 
 let pp_interface (conf : Config.generation_config)
@@ -363,16 +360,19 @@ let pp_interface (conf : Config.generation_config)
   fprintf fmt "(* This file has been generated by coqffi. *)@ @ ";
 
   fprintf fmt "Set Implicit Arguments.@ ";
+  fprintf fmt "Unset Strict Implicit.@ ";
+  fprintf fmt "Set Contextual Implicit.@ ";
   fprintf fmt "Generalizable All Variables.@ @ ";
 
-  pp_extraction_profile_import fmt conf.gen_profile;
-  pp_impure_mode_import fmt conf.gen_impure_mode;
+  fprintf fmt "%a@ %a@ @ "
+    pp_extraction_profile_import conf.gen_profile
+    pp_impure_mode_import conf;
 
   pp_types fmt m;
 
   pp_funcs fmt m;
 
-  pp_impure conf.gen_impure_mode fmt m;
+  pp_impure conf fmt m;
 
   fprintf fmt "@?";
   pp_close_box fmt ()

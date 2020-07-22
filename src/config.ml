@@ -1,5 +1,10 @@
-type impure_mode =
-  | FreeSpec
+type feature =
+  | TransparentTypes
+  | Interface
+
+let default _ = false
+
+type features = (feature * bool) list
 
 type extraction_profile =
   | Stdlib
@@ -7,13 +12,20 @@ type extraction_profile =
 
 type generation_config = {
   gen_profile : extraction_profile;
-  gen_impure_mode : impure_mode option;
-  gen_transparent_types : bool;
+  gen_features : features;
 }
 
-exception FreeSpecInvalidExtractionProfile
+let feature_name = function
+  | TransparentTypes -> "transparent-types"
+  | Interface -> "interface"
 
-let validate conf =
-  match (conf.gen_impure_mode, conf.gen_profile) with
-  | (Some FreeSpec, Stdlib) -> raise FreeSpecInvalidExtractionProfile
-  | _ -> ()
+let find_duplicates : features -> feature list =
+  let rec find_dup dups = function
+    | (f, _) :: rst ->
+      find_dup
+        (if List.mem_assoc f rst then (f :: dups) else dups)
+        rst
+    | [] -> List.sort_uniq compare dups in
+  find_dup []
+
+let is_enabled lf f = Option.value ~default:(default f) @@ List.assoc_opt f lf
