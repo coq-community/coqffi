@@ -11,7 +11,6 @@ let process conf input ochannel =
   |> pp_interface conf ochannel
 
 exception TooManyArguments
-exception InconsistentFlags of string
 exception MissingInputArgument
 
 let input_cmi_arg =
@@ -48,21 +47,82 @@ let profile_arg =
   Arg.(value & opt profile_enum Stdlib
        & info ["p"; "extraction-profile"] ~docv:"PROFILE" ~doc)
 
-let transparent_types_opt =
-  let doc =
-    "Enable the support of OCaml transparent types.  By default, $(b,coqffi)
-     considers any types introduced by an OCaml module as opaque. If
-     $(b,-ftransparent-types) is used, then $(b,coqffi) will try to translate
-     some OCaml type definition into a compatible Coq counterpart.
-     $(b,Warning:) This feature is experimental, and may lead to the generation
-     of invalid Coq types. Typically, it does not enforce the “strict-positive
-     occurence” constraints of Coq constructors." in
+type feature =
+  TransparentTypes
 
-  Arg.(value & flag & info ["ftransparent-types"] ~doc)
+let feature_name = function
+  | TransparentTypes -> "transparent-types"
+
+let check_features fs =
+  let rec find_dup dups : ('a * 'b) list -> 'a list = function
+    | (f, _) :: rst ->
+      find_dup
+        (if List.mem_assoc f rst then (f :: dups) else dups)
+        rst
+    | [] -> List.sort_uniq compare dups in
+
+  Format.(
+    fprintf err_formatter "%a@?"
+      (pp_print_list ~pp_sep:pp_print_newline
+         (fun fmt f ->
+            fprintf fmt
+              "Warning: Feature `%s' has been selected several times.\n\
+              The first occurence will be used."
+              (feature_name f)))
+      (find_dup [] fs))
+
+let transparent_feature_opt fs =
+  Option.value ~default:false @@ List.assoc_opt TransparentTypes fs
+
+let features_opt =
+  let doc =
+    "Enable (using $(b,-f)$(i,feature-name)) or disable (using
+     $(b,-fno-)$(i,feature-name)) the feature called $(i,feature-name). This
+     option can be used several times (to enable or disable several
+     features). If it is used several times for the same feature, then a warning
+     is emitted, and the first occurence is used. See $(b,FEATURES) for a
+     comprehensive list of the features available." in
+
+  let feature_enum f =
+    let name = feature_name f in [
+      name, (f, true);
+      "no-" ^ name, (f, false)
+    ] in
+
+  let features_enum =
+    Arg.enum (List.concat [
+        feature_enum  TransparentTypes
+      ]) in
+
+  Arg.(value & opt_all features_enum [] & info ["f"] ~doc ~docv:"FEATURE")
 
 let coqffi_info =
   let doc = "Coq/OCAML FFI made easy" in
   let man = [
+    `S Manpage.s_description;
+
+    `P "$(b,coqffi) automatically generates FFI bindings to OCaml libraries.
+        More precisely, $(b,coqffi) generates the necessary boilerplate for a
+        Coq development to use the functions and types described in an OCaml
+        module interface ($(b,.mli)).";
+
+    `S Manpage.s_arguments;
+
+    `S Manpage.s_options;
+
+    `S "FEATURES";
+
+    `P "$(b,transparent-types)"; `Noblank;
+    `I (
+      "$(b,no-transparent-types)",
+      "By default, $(b,coqffi) considers any types introduced by an OCaml module
+       as opaque. If $(b,-ftransparent-types) is used, then $(b,coqffi) will try
+       to translate some OCaml type definition into a compatible Coq
+       counterpart.  $(b,Warning:) This feature is experimental, and may lead to
+       the generation of invalid Coq types. Typically, it does not enforce the
+       “strict-positive occurence” constraints of Coq constructors."
+    );
+
     `S "EXTRACTION PROFILES";
 
     `P "$(b,Note:) OCaml tuples are supported by all extraction profiles.";
@@ -98,17 +158,19 @@ let coqffi_info =
 
 let run_coqffi (input : string) (output : string option)
     (impure_mode : impure_mode option) (profile : extraction_profile)
-    (transparent_types : bool) =
+    (features : (feature * bool) list) =
 
   let parse _ =
     let ochannel = match output with
       | Some path -> open_out path |> Format.formatter_of_out_channel
       | _ -> Format.std_formatter in
 
+    check_features features;
+
     let conf = {
       gen_profile = profile;
       gen_impure_mode = impure_mode;
-      gen_transparent_types = transparent_types;
+      gen_transparent_types = transparent_feature_opt features;
     } in
 
     (input, ochannel, conf) in
@@ -119,9 +181,6 @@ let run_coqffi (input : string) (output : string option)
     process conf input output
   end
   with
-  | InconsistentFlags opt ->
-    Format.printf "-f%s and -fno-%s cannot be used together.\n"
-      opt opt
   | Entry.UnsupportedOCamlSignature s ->
     Format.printf "Use of unsupported OCaml construction: %a"
       Printtyp.signature [s]
@@ -138,7 +197,7 @@ let coqffi_t =
         $ output_arg
         $ immpure_mode_arg
         $ profile_arg
-        $ transparent_types_opt)
+        $ features_opt)
 
 let _ =
   Term.(exit @@ eval (coqffi_t, coqffi_info))

@@ -8,7 +8,7 @@
 
 (rule
   (target Rectypes.v)
-  (action (run coqffi --ftransparent-types %{cmi:rectypes} -o %{target})))
+  (action (run coqffi -ftransparent-types %{cmi:rectypes} -o %{target})))
 
 (coq.theory
   (name Examples)
