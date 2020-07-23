@@ -103,7 +103,7 @@ let pp_interface_decl (fmt : formatter) (m : interface) =
       (String.capitalize_ascii prim.prim_name)
       pp_type_repr_arrows (interface_proj interface_name prim.prim_type) in
 
-  fprintf fmt "@[<v>Inductive %s : interface :=@ %a.@]"
+  fprintf fmt "@[<v>Inductive %s : Type -> Type :=@ %a.@]"
     interface_name
     (pp_print_list ~pp_sep:pp_print_space pp_print_primitive) prims
 
