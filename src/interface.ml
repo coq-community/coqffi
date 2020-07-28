@@ -51,6 +51,9 @@ let interface_of_cmi_infos ?(transparent_types = false) (info : cmi_infos) =
     (empty_interface info.cmi_name)
     info.cmi_sign
 
+let qualname m name =
+  String.concat "." (m.interface_namespace @ [m.interface_name; name])
+
 let translate tbl m =
   let translate_function tbl f = {
     f with
@@ -241,11 +244,9 @@ let pp_interface_handlers_extract_decl (fmt : formatter) (m : interface) =
 
   pp_print_list ~pp_sep:pp_print_space
     (fun fmt prim ->
-       fprintf fmt "@[<hov 2>Extract Constant ml_%s@ => \"%s.%s.%s\".@]"
+       fprintf fmt "@[<hov 2>Extract Constant ml_%s@ => \"%s\".@]"
          prim.prim_name
-         (String.concat "." m.interface_namespace)
-         m.interface_name
-         prim.prim_name) fmt prims
+         (qualname m prim.prim_name)) fmt prims
 
 let pp_types_extract_decl (fmt : formatter) (m : interface) =
   let print_args_list = pp_print_list (fun fmt x -> fprintf fmt " \"'%s\"" x) in
@@ -259,36 +260,26 @@ let pp_types_extract_decl (fmt : formatter) (m : interface) =
 
   pp_print_list ~pp_sep:pp_print_space
     (fun fmt t ->
-       let mod_namespace = String.concat "." m.interface_namespace in
        match (t.type_model, t.type_value) with
        | (None, Variant l) ->
-         fprintf fmt "@[<hov 2>Extract Inductive %s =>@ \"%s.%s.%s\"@ [%a].@]"
+         fprintf fmt "@[<hov 2>Extract Inductive %s =>@ \"%s\"@ [%a].@]"
            t.type_name
-           mod_namespace
-           m.interface_name
-           t.type_name
+           (qualname m t.type_name)
            (pp_print_list ~pp_sep:pp_print_space
-              (fun fmt v -> fprintf fmt "\"%s.%s.%s\""
-                  mod_namespace
-                  m.interface_name
-                  v.variant_name)) l
+              (fun fmt v -> fprintf fmt "\"%s\"" (qualname m v.variant_name))) l
        | _ ->
-         fprintf fmt "@[<hov 2>Extract Constant %s%a@ => \"%a%s.%s.%s\".@]"
+         fprintf fmt "@[<hov 2>Extract Constant %s%a@ => \"%a%s\".@]"
            t.type_name
            print_args_list t.type_params
            print_args_prod t.type_params
-           mod_namespace
-           m.interface_name
-           t.type_name) fmt m.interface_types
+           (qualname m t.type_name)) fmt m.interface_types
 
 let pp_functions_extract_decl (fmt : formatter) (m : interface) =
   pp_print_list ~pp_sep:pp_print_space
     (fun fmt f ->
-       fprintf fmt "@[<hov 2>Extract Constant %s@ => \"%s.%s.%s\".@]"
+       fprintf fmt "@[<hov 2>Extract Constant %s@ => \"%s\".@]"
          f.func_name
-         (String.concat "." m.interface_namespace)
-         m.interface_name
-         f.func_name) fmt m.interface_functions
+         (qualname m f.func_name)) fmt m.interface_functions
 
 let pp_impure_decl mode fmt m =
   match mode with
