@@ -1,10 +1,17 @@
-open Coqbase
-
 type fd = Unix.file_descr
 
-let openfile path = Unix.openfile (Bytestring.to_string path) [Unix.O_RDONLY] 0
-let read_all _ = Bytestring.of_string "to be implemented"
-let write _ _ = ()
-let closefile = Unix.close
+let std_out = Unix.stdout
 
-let fd_equal _ _ = false
+let openfile path = Unix.openfile path [Unix.O_RDONLY] 0
+
+let read_all fd =
+  let stats = Unix.fstat fd in
+  let buff = Bytes.create stats.st_size in
+  let _ = Unix.read fd buff 0 stats.st_size in
+  Bytes.to_string buff
+
+let write fd str =
+  let _ = Unix.write fd (Bytes.of_string str) 0 (String.length str) in
+  ()
+
+let closefile = Unix.close

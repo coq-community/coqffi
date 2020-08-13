@@ -4,11 +4,11 @@ open Coqffi.Config
 open Coqffi.Interface
 open Cmdliner
 
-let process conf input ochannel =
+let process features input ochannel =
   read_cmi input
-  |> interface_of_cmi_infos ~features:conf.gen_features
-  |> translate (Translation.types_table conf.gen_profile)
-  |> pp_interface conf ochannel
+  |> interface_of_cmi_infos ~features
+  |> translate Translation.types_table
+  |> pp_interface features ochannel
 
 exception TooManyArguments
 exception MissingInputArgument
@@ -21,18 +21,6 @@ let input_cmi_arg =
 let output_arg =
   let doc = "The name of the Coq file to generate" in
   Arg.(value & opt (some string) None & info ["o"; "output"] ~docv:"OUTPUT" ~doc)
-
-let profile_arg =
-  let doc =
-    "The so-called extraction profile determined the set of base
-     types which can be used by the OCaml module, in addition to
-     the types defined by this module. See $(b,EXTRACTION PROFILES)
-     to get more details" in
-
-  let profile_enum = Arg.enum ["stdlib", Stdlib; "coq-base", Coqbase] in
-
-  Arg.(value & opt profile_enum Stdlib
-       & info ["p"; "extraction-profile"] ~docv:"PROFILE" ~doc)
 
 let features_opt =
   let doc =
@@ -95,54 +83,32 @@ let coqffi_info =
 
     `S "EXTRACTION PROFILES";
 
-    `P "$(b,Note:) OCaml tuples are supported by all extraction profiles.";
-
-    `P "The default extraction profile is $(b,stdlib).";
-
-    `P "The list of OCaml base types supported by the $(b,stdlib) profile is:";
-    `Noblank;
-    `Pre "  - $(b,bool)"; `Noblank;
-    `Pre "  - $(b,char)"; `Noblank;
-    `Pre "  - $(b,string)"; `Noblank;
-    `Pre "  - $(b,unit)"; `Noblank;
-    `Pre "  - $(i,'a) $(b,list)"; `Noblank;
-    `Pre "  - $(i,'a) $(b,option)"; `Noblank;
-    `P "This extraction profile does not have any OCaml dependency.";
-
-    `P "The list of OCaml base types supported by the $(b,coq-base) profile is:";
+    `P "In addition to tuples and types introduced in the input module,
+        $(b,coqffi) supports the following base types:";
     `Noblank;
     `Pre "  - $(b,bool)"; `Noblank;
     `Pre "  - $(b,char)"; `Noblank;
     `Pre "  - $(b,int)"; `Noblank;
-    `Pre "  - $(b,unit)"; `Noblank;
-    `Pre "  - $(b,Coqbase.Bytestring.t)"; `Noblank;
-    `Pre "  - ($(i,'a), $(i,'b)) $(b,Coqbase.Sum.t)"; `Noblank;
     `Pre "  - $(i,'a) $(b,list)"; `Noblank;
     `Pre "  - $(i,'a) $(b,option)"; `Noblank;
-    `P "This extraction profile depends on the $(b,coqbase.lib) library from the
-        $(b,coqbase) Opam package.";
+    `Pre "  - $(b,string)"; `Noblank;
+    `Pre "  - $(b,unit)"; `Noblank;
     `S Manpage.s_bugs;
     `P "Email bug reports to <thomas.letan at ssi.gouv.fr>.";
   ] in
   Term.(info "coqffi" ~exits:default_exits ~doc ~man ~version:"coqffi.1.0.0+dev")
 
-let run_coqffi (input : string) (output : string option)
-    (profile : extraction_profile) (features : features) =
+let run_coqffi (input : string) (output : string option) (features : features) =
 
   let parse _ =
     let ochannel = match output with
       | Some path -> open_out path |> Format.formatter_of_out_channel
       | _ -> Format.std_formatter in
 
-    let conf = {
-      gen_profile = profile;
-      gen_features = features
-    } in
-
-    (input, ochannel, conf) in
+    (input, ochannel, features) in
 
   try begin
-    let (input, output, conf) = parse () in
+    let (input, output, features) = parse () in
 
     Format.(
       fprintf err_formatter "%a@?"
@@ -153,7 +119,7 @@ let run_coqffi (input : string) (output : string option)
                 (feature_name f)))
         (find_duplicates features));
 
-    process conf input output
+    process features input output
   end
   with
   | Entry.UnsupportedOCamlSignature s ->
@@ -170,7 +136,6 @@ let coqffi_t =
   Term.(const run_coqffi
         $ input_cmi_arg
         $ output_arg
-        $ profile_arg
         $ features_opt)
 
 let _ =

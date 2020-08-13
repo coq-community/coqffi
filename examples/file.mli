@@ -1,10 +1,8 @@
-open Coqbase
-
 type fd
 
-val fd_equal : fd -> fd -> bool
+val std_out : fd
 
-val openfile : Bytestring.t -> fd [@@impure]
-val read_all : fd -> Bytestring.t [@@impure]
-val write : fd -> Bytestring.t -> unit [@@impure]
+val openfile : string -> fd [@@impure]
 val closefile : fd -> unit [@@impure]
+val read_all : fd -> string [@@impure]
+val write : fd -> string -> unit [@@impure]

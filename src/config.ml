@@ -6,15 +6,6 @@ let default _ = false
 
 type features = (feature * bool) list
 
-type extraction_profile =
-  | Stdlib
-  | Coqbase
-
-type generation_config = {
-  gen_profile : extraction_profile;
-  gen_features : features;
-}
-
 let feature_name = function
   | TransparentTypes -> "transparent-types"
   | Interface -> "interface"

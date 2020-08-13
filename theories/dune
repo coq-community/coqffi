@@ -1,3 +1,5 @@
 (coq.theory
   (package coqffi)
   (name CoqFFI))
+
+(include_subdirs qualified)

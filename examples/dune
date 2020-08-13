@@ -4,7 +4,7 @@
 
 (rule
   (target File.v)
-  (action (run coqffi -finterface -p coq-base %{cmi:file} -o %{target})))
+  (action (run coqffi -finterface %{cmi:file} -o %{target})))
 
 (rule
   (target Rectypes.v)
@@ -12,7 +12,7 @@
 
 (rule
   (target Poly.v)
-  (action (run coqffi -finterface -p coq-base %{cmi:poly} -o %{target})))
+  (action (run coqffi -finterface %{cmi:poly} -o %{target})))
 
 (coq.theory
   (name Examples)
