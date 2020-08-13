@@ -1,6 +1,5 @@
 (library
-  (name examples)
-  (libraries coq-base.lib))
+  (name examples))
 
 (rule
   (target File.v)
