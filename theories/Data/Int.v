@@ -14,8 +14,8 @@ Definition max_int (p : positive) : Z := 2 ^ (Z.pos p - 1).
 
 Record i63 := mk_i63 { un_i63 : int}.
 
-Register i63 as base.data.i63.type.
-Register mk_i63 as base.data.i63.mk_i63.
+Register i63 as coqffi.data.i63.type.
+Register mk_i63 as coqffi.data.i63.mk_i63.
 
 Declare Scope i63_scope.
 Delimit Scope i63_scope with i63.
