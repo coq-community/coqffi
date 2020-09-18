@@ -1,5 +1,7 @@
 # `coqffi`
 
+[![Build Status](https://travis-ci.org/lthms/coqffi.svg?branch=main)](https://travis-ci.org/lthms/coqffi)
+
 **`coqffi` automatically generates Coq FFI bindings to OCaml
 libraries.**
 
