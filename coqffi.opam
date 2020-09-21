@@ -1,7 +1,20 @@
 opam-version: "2.0"
 version: "1.0.0+dev"
 synopsis: "OCaml/Coq FFI made easy"
+description: """
+coqffi automatically Coq FFI binding to OCaml libraries. In practice, it means
+that coqffi generates the necessary Coq boilerplate to use these functions in a
+Coq development, and to configure the extraction mechanism accordingly.
+"""
 maintainer: ["Thomas Letan <thomas.letan@ssi.gouv.fr>"]
 authors: ["Thomas Letan <thomas.letan@ssi.gouv.fr>"]
+
+depends: [
+  "ocaml" {>= "4.10"}
+  "dune" {>= "2.5"}
+  "cmdliner" {>= "1.0"}
+  "coq" {>= "8.12"}
+  "coq-simple-io"
+]
 
 build: ["dune" "build" "-p" name "-j" jobs]
