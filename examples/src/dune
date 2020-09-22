@@ -13,7 +13,11 @@
   (target Poly.v)
   (action (run coqffi -finterface %{cmi:poly} -o %{target})))
 
+(rule
+  (target Str.v)
+  (action (run coqffi -r Examples.StrModels -finterface %{cmi:str} -o %{target})))
+
 (coq.theory
   (name Examples)
   (theories CoqFFI)
-  (modules Rectypes File Poly))
+  (modules Str StrModels Rectypes File Poly))

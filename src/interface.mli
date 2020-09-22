@@ -18,4 +18,4 @@ val translate : Translation.t -> interface -> interface
 
 (** * Format *)
 
-val pp_interface : features -> Format.formatter -> interface -> unit
+val pp_interface : string list -> features -> Format.formatter -> interface -> unit

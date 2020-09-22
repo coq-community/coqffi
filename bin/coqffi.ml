@@ -4,11 +4,11 @@ open Coqffi.Config
 open Coqffi.Interface
 open Cmdliner
 
-let process features input ochannel =
+let process models features input ochannel =
   read_cmi input
   |> interface_of_cmi_infos ~features
   |> translate Translation.types_table
-  |> pp_interface features ochannel
+  |> pp_interface models features ochannel
 
 exception TooManyArguments
 exception MissingInputArgument
@@ -21,6 +21,15 @@ let input_cmi_arg =
 let output_arg =
   let doc = "The name of the Coq file to generate" in
   Arg.(value & opt (some string) None & info ["o"; "output"] ~docv:"OUTPUT" ~doc)
+
+let models_opt =
+  let doc =
+    "Coq fully qualified modules to be required prior to defining the
+    bindings. This can be used in conjunction with the $(i,coq_model) attribute,
+    where a binding is not introduced by an axiom, but rather as an alias for an
+    already existing Coq term." in
+
+  Arg.(value & opt_all string [] & info ["r"; "require"] ~doc ~docv:"MODULE")
 
 let features_opt =
   let doc =
@@ -98,7 +107,8 @@ let coqffi_info =
   ] in
   Term.(info "coqffi" ~exits:default_exits ~doc ~man ~version:"coqffi.1.0.0+dev")
 
-let run_coqffi (input : string) (output : string option) (features : features) =
+let run_coqffi (input : string) (output : string option)
+    (features : features) (models : string list) =
 
   let parse _ =
     let ochannel = match output with
@@ -119,7 +129,7 @@ let run_coqffi (input : string) (output : string option) (features : features) =
                 (feature_name f)))
         (find_duplicates features));
 
-    process features input output
+    process models features input output
   end
   with
   | Entry.UnsupportedOCamlSignature s ->
@@ -136,7 +146,8 @@ let coqffi_t =
   Term.(const run_coqffi
         $ input_cmi_arg
         $ output_arg
-        $ features_opt)
+        $ features_opt
+        $ models_opt)
 
 let _ =
   Term.(exit @@ eval (coqffi_t, coqffi_info))
