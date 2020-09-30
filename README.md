@@ -93,7 +93,7 @@ can use `dune` to build `coqffi`.
 
 ```
 dune build -p coqffi
-dune install
+dune install coqffi
 ```
 
 This also builds several examples which use `coqffi`. At the very
