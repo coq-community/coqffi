@@ -1,4 +1,5 @@
 (executable
   (name coqffi)
   (public_name coqffi)
+  (package coq-coqffi)
   (libraries compiler-libs.common coqffi cmdliner))
