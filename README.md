@@ -33,7 +33,7 @@ Coq development, and configures the Coq extraction mechanism accordingly.
   - Thomas Letan ([**@lthms**](https://github.com/lthms))
 - License: [MIT License](LICENSE)
 - Compatible Coq versions: 8.12 or later
-- Compatible OCaml versions: 4.10
+- Compatible OCaml versions: 4.08 or later
 - Additional dependencies:
   - [coq-ext-lib](https://github.com/coq-community/coq-ext-lib) 0.11.2 or later
   - [Coq Simple IO](https://github.com/Lysxia/coq-simple-io) 1.3.0 or later
@@ -47,6 +47,7 @@ Coq development, and configures the Coq extraction mechanism accordingly.
  ``` shell
  git clone https://github.com/coq-community/coqffi.git
  cd coqffi
+ ./src-prepare.sh
  dune build -p coq-coqffi
  dune install
  ```

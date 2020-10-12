@@ -1,0 +1,13 @@
+diff --git a/src/entry.ml b/src/entry.ml
+index 8c17545..f5e439f 100644
+--- a/src/entry.ml
++++ b/src/entry.ml
+@@ -48,7 +48,7 @@ let entry_of_signature ?(transparent_types = false) (s : Types.signature_item)
+     List.exists is_impure in
+ 
+   let expr_to_string = function
+-    | Pexp_constant (Pconst_string (str, _, _)) -> Some str
++    | Pexp_constant (Pconst_string (str, _)) -> Some str
+     | _ -> None in
+ 
+   let struct_to_string = function

@@ -9,12 +9,15 @@ license: "MIT"
 
 synopsis: "Tool for generating Coq FFI bindings to OCaml libraries"
 description: """
-coqffi generates the necessary Coq boilerplate to use OCaml functions in a
+`coqffi` generates the necessary Coq boilerplate to use OCaml functions in a
 Coq development, and configures the Coq extraction mechanism accordingly."""
 
-build: ["dune" "build" "-p" name "-j" jobs]
+build: [
+  ["./src-prepare.sh"]
+  ["dune" "build" "-p" name "-j" jobs]
+]
 depends: [
-  "ocaml" {>= "4.10.0" & < "4.11~"}
+  "ocaml" {>= "4.08" & < "4.12~" }
   "dune" {>= "2.5"}
   "coq" {(>= "8.12" & < "8.13~") | (= "dev")}
   "coq-ext-lib" {>= "0.11.2"}

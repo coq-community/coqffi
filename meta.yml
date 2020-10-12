@@ -1,5 +1,5 @@
 ---
-fullname: coqffi
+fullname: '`coqffi`'
 shortname: coqffi
 organization: coq-community
 community: true
@@ -9,7 +9,7 @@ dune: true
 synopsis: Tool for generating Coq FFI bindings to OCaml libraries
 
 description: |-
-  coqffi generates the necessary Coq boilerplate to use OCaml functions in a
+  `coqffi` generates the necessary Coq boilerplate to use OCaml functions in a
   Coq development, and configures the Coq extraction mechanism accordingly.
 
 authors:
@@ -35,8 +35,8 @@ supported_coq_versions:
   opam: '{(>= "8.12" & < "8.13~") | (= "dev")}'
 
 supported_ocaml_versions:
-    text: '4.10'
-    opam: '{>= "4.10.0" & < "4.11~"}'
+    text: 4.08 or later
+    opam: '{>= "4.08" & < "4.12~" }'
 
 tested_coq_opam_versions:
 - version: dev
@@ -67,6 +67,7 @@ build: |-
   ``` shell
   git clone https://github.com/coq-community/coqffi.git
   cd coqffi
+  ./src-prepare.sh
   dune build -p coq-coqffi
   dune install
   ```

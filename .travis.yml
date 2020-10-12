@@ -15,7 +15,7 @@ addons:
 env:
   global:
     - NJOBS=2
-    - COMPILER="4.10.0"
+    - COMPILER="4.11.1"
     - NATIVE_COMP="yes"
     - COQ_VER="8.12.0"
     - DUNE_VER="2.7.0"
@@ -36,4 +36,5 @@ install:
   - opam list
 
 script:
+  - ./src-prepare.sh
   - dune build
