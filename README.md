@@ -5,7 +5,7 @@
 [![Code of Conduct][conduct-shield]][conduct-link]
 [![Zulip][zulip-shield]][zulip-link]
 
-[travis-shield]: https://travis-ci.com/coq-community/coqffi.svg?branch=master
+[travis-shield]: https://travis-ci.com/coq-community/coqffi.svg?branch=main
 [travis-link]: https://travis-ci.com/coq-community/coqffi/builds
 
 [contributing-shield]: https://img.shields.io/badge/contributions-welcome-%23f7931e.svg
@@ -57,15 +57,13 @@ Coq development, and configures the Coq extraction mechanism accordingly.
 Suppose the following OCaml header file (`file.mli`) is given:
 
 ```ocaml
-open Coqbase
-
 type fd
 
 val fd_equal : fd -> fd -> bool
 
-val openfile : Bytestring.t -> fd [@@impure]
-val read_all : fd -> Bytestring.t [@@impure]
-val write : fd -> Bytestring.t -> unit [@@impure]
+val openfile : string -> fd [@@impure]
+val read_all : fd -> string [@@impure]
+val write : fd -> string -> unit [@@impure]
 val closefile : fd -> unit [@@impure]
 ```
 
@@ -101,17 +99,17 @@ Extract Constant fd_equal => "Examples.File.fd_equal".
 (** ** Monad *)
 
 Class MonadFile (m : Type -> Type) : Type :=
-  { openfile : bytestring -> m fd
-  ; read_all : fd -> m bytestring
-  ; write : fd -> bytestring -> m unit
+  { openfile : string -> m fd
+  ; read_all : fd -> m string
+  ; write : fd -> string -> m unit
   ; closefile : fd -> m unit
   }.
 
 (** ** [IO] Instance *)
 
-Axiom (io_openfile : bytestring -> IO fd).
-Axiom (io_read_all : fd -> IO bytestring).
-Axiom (io_write : fd -> bytestring -> IO unit).
+Axiom (io_openfile : string -> IO fd).
+Axiom (io_read_all : fd -> IO string).
+Axiom (io_write : fd -> string -> IO unit).
 Axiom (io_closefile : fd -> IO unit).
 
 Extract Constant io_openfile =>
