@@ -112,6 +112,12 @@ Definition abs (x : i63) : i63 :=
   then -1 * x
   else x.
 
+Definition i63min (x y : i63) : i63 :=
+  if x <? y then x else y.
+
+Definition i63max (x y : i63) : i63 :=
+  if x <? y then y else x.
+
 (** * Extraction *)
 
 Module IntExtraction.
