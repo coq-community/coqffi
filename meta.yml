@@ -3,6 +3,7 @@ fullname: '`coqffi`'
 shortname: coqffi
 organization: coq-community
 community: true
+branch: main
 travis: true
 dune: true
 
