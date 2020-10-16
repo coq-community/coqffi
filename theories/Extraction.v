@@ -5,7 +5,7 @@ Import IntExtraction.
 
 (** ** Strings *)
 
-From Coq Require Export String Ascii.
+From CoqFFI Require Export String.
 From Coq Require Import ExtrOcamlNativeString.
 
 (** ** Booleans *)

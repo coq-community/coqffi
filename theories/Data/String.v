@@ -2,9 +2,10 @@
     [String Notation] for [string], which supports escape characters such as
     <<\n>>, <<\t>> and others. *)
 
-From Coq Require Import String Ascii List Byte.
-From Coq Require Import ExtrOcamlNativeString.
+From Coq Require Export Ascii String.
+From Coq Require Import List Byte.
 From ExtLib Require Import Option Functor.
+From ExtLib Require Export Char.
 
 Import FunctorNotation.
 Import ListNotations.
