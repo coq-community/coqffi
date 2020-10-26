@@ -44,12 +44,14 @@ Coq development, and configures the Coq extraction mechanism accordingly.
 
 ## Building and installation instructions
 
+Make sure your OPAM installation points to the official Coq repository
+as documented [here](https://github.com/coq/opam-coq-archive), and
+then, the following should work:
+
  ``` shell
- git clone https://github.com/coq-community/coqffi.git
- cd coqffi
- ./src-prepare.sh
- dune build -p coq-coqffi
- dune install
+git clone https://github.com/coq-community/coqffi.git
+cd coqffi
+opam install .
  ```
 
 ## Example
