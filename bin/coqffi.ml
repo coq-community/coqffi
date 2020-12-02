@@ -50,6 +50,7 @@ let features_opt =
     Arg.enum (List.concat [
         feature_enum TransparentTypes;
         feature_enum Interface;
+        feature_enum SimpleIO;
       ]) in
 
   Arg.(value & opt_all features_enum [] & info ["f"] ~doc ~docv:"FEATURE")
@@ -79,6 +80,14 @@ let coqffi_info =
        counterpart.  $(b,Warning:) This feature is experimental, and may lead to
        the generation of invalid Coq types. Typically, it does not enforce the
        “strict-positive occurence” constraints of Coq constructors."
+    );
+
+    `P "$(b,simple-io)"; `Noblank;
+    `I (
+      "$(b,no-simple-io)", "By default, $(b,coqffi) uses the $(i,IO)
+      monad provided by the $(b,coq-simple-io) package to model impure
+      computations. One can disable the generation of
+      $(b,coq-simple-io)'s helpers with $(b,-fno-)$(i,simple-io)."
     );
 
     `P "$(b,interface)"; `Noblank;
