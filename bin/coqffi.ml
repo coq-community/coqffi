@@ -142,13 +142,16 @@ let run_coqffi (input : string) (output : string option)
   end
   with
   | Entry.UnsupportedOCamlSignature s ->
-    Format.printf "Use of unsupported OCaml construction: %a"
+    Format.fprintf Format.err_formatter
+      "Error: Use of unsupported OCaml construction: %a"
       Printtyp.signature [s]
   | Repr.UnsupportedOCamlType t ->
-    Format.printf "Unsupported OCaml type construction %a"
+    Format.fprintf Format.err_formatter
+      "Error: Unsupported OCaml type construction %a"
       Printtyp.type_expr t
   | Repr.UnknownOCamlType t ->
-    Format.printf "Type %s is not supported by the selected profile"
+    Format.fprintf Format.err_formatter
+      "Error: Type %s is not supported by the selected profile"
       t
 
 let coqffi_t =
