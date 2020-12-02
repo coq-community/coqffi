@@ -7,7 +7,6 @@ type feature =
 exception FreeSpecRequiresInterface
 
 val feature_name : feature -> string
-val default : feature -> bool
 
 type features = (feature * bool) list
 

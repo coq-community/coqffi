@@ -6,10 +6,6 @@ type feature =
 
 exception FreeSpecRequiresInterface
 
-let default = function
-  | SimpleIO -> true
-  | _ -> false
-
 type features = (feature * bool) list
 
 let feature_name = function
@@ -27,7 +23,13 @@ let find_duplicates : features -> feature list =
     | [] -> List.sort_uniq compare dups in
   find_dup []
 
-let is_enabled lf f = Option.value ~default:(default f) @@ List.assoc_opt f lf
+let rec is_enabled lf f =
+  Option.value ~default:(default lf f) @@ List.assoc_opt f lf
+and default lf = function
+  | SimpleIO -> true
+  | Interface -> is_enabled lf FreeSpec
+  | _ -> false
+
 let is_disabled lf f = not (is_enabled lf f)
 
 let support_impure_values lf = is_enabled lf SimpleIO || is_enabled lf FreeSpec
