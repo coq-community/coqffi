@@ -268,6 +268,38 @@ let pp_io_extract (fmt : formatter) (m : interface) =
          pp_type_repr_arg_list prim.prim_type)
     fmt m.interface_primitives
 
+let pp_interface_freespec_semantics_decl (fmt : formatter) (m : interface) =
+  let interface_name = String.uppercase_ascii m.interface_name in
+  let semantics_name = String.lowercase_ascii m.interface_name in
+  let prims = m.interface_primitives in
+
+  fprintf fmt "@[<v 2>Definition ml_%s_sem : semantics %s :=@ "
+    semantics_name interface_name;
+  fprintf fmt
+    "@[<v 2>bootstrap (fun a e =>@ local @[<v>match e in %s a return a with@ %a@ end@]).@]@]@ @ "
+    interface_name
+    (pp_print_list ~pp_sep:pp_print_space
+    (fun fmt prim ->
+       fprintf fmt "| %s %a => ml_%s %a"
+         (String.capitalize_ascii prim.prim_name)
+         pp_type_repr_arg_list prim.prim_type
+         prim.prim_name
+         pp_type_repr_arg_list prim.prim_type)) prims
+
+let pp_interface_freespec_handlers_decl (fmt : formatter) (m : interface) =
+  let prims = m.interface_primitives in
+
+  pp_print_list ~pp_sep:pp_print_space
+    (fun fmt prim ->
+      fprintf fmt
+        "Axiom (ml_%s : %a).@ @[<hov 2>Extract Constant ml_%s@ => \"%s.%s.%s\".@]"
+        prim.prim_name
+        pp_type_repr_arrows prim.prim_type
+        prim.prim_name
+        (String.concat "." m.interface_namespace)
+        m.interface_name
+        prim.prim_name) fmt prims
+
 let pp_impure_decl conf fmt m =
   fprintf fmt "(** * Impure Primitives *)@ @ ";
 
@@ -310,8 +342,16 @@ let pp_impure_decl conf fmt m =
     fprintf fmt "@[<v>%a@]@ @ "
       pp_interface_decl m;
 
-    fprintf fmt "@[<v>%a@]"
+    fprintf fmt "@[<v>%a@]@ @ "
       pp_interface_primitive_helpers_decl m
+  end;
+
+  if Config.is_enabled conf FreeSpec
+  then begin
+    fprintf fmt "(** ** FreeSpec [semantics] *)@ @ ";
+
+    fprintf fmt "%a@ @ " pp_interface_freespec_handlers_decl m;
+    fprintf fmt "%a" pp_interface_freespec_semantics_decl m
   end
 
 let not_empty = function
@@ -377,6 +417,8 @@ let pp_interface (models : string list) (features : Config.features)
   then fprintf fmt "From SimpleIO Require Import IO_Monad.@ ";
   if is_enabled features Interface
   then fprintf fmt "From CoqFFI Require Import Interface.@ ";
+  if is_enabled features FreeSpec
+  then fprintf fmt "From FreeSpec.Core Require Import Core.@ ";
   pp_models fmt models;
 
   pp_types fmt m;
@@ -385,5 +427,5 @@ let pp_interface (models : string list) (features : Config.features)
 
   pp_impure features fmt m;
 
-  fprintf fmt "@?";
+  fprintf fmt "(* generated file ends here *)@?";
   pp_close_box fmt ()

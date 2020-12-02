@@ -2,6 +2,9 @@ type feature =
   | TransparentTypes
   | Interface
   | SimpleIO
+  | FreeSpec
+
+exception FreeSpecRequiresInterface
 
 let default = function
   | SimpleIO -> true
@@ -13,6 +16,7 @@ let feature_name = function
   | TransparentTypes -> "transparent-types"
   | Interface -> "interface"
   | SimpleIO -> "simple-io"
+  | FreeSpec -> "freespec"
 
 let find_duplicates : features -> feature list =
   let rec find_dup dups = function
@@ -24,6 +28,10 @@ let find_duplicates : features -> feature list =
   find_dup []
 
 let is_enabled lf f = Option.value ~default:(default f) @@ List.assoc_opt f lf
+let is_disabled lf f = not (is_enabled lf f)
 
-let support_impure_values lf =
-  is_enabled lf SimpleIO
+let support_impure_values lf = is_enabled lf SimpleIO || is_enabled lf FreeSpec
+
+let check_features_consistency lf =
+  if is_enabled lf FreeSpec && is_disabled lf Interface
+  then raise FreeSpecRequiresInterface
