@@ -1,7 +1,7 @@
 open Entry
 open Config
 
-type interface = {
+type t = {
   interface_namespace : string list;
   interface_name : string;
   interface_types : type_entry list;
@@ -9,13 +9,11 @@ type interface = {
   interface_primitives : primitive_entry list;
 }
 
-val empty_interface : string -> interface
+val empty_interface : string -> t
 
 val interface_of_cmi_infos
-  : features:features -> Cmi_format.cmi_infos -> interface
+  : features:features -> Cmi_format.cmi_infos -> t
 
-val translate : Translation.t -> interface -> interface
+val translate : Translation.t -> t -> t
 
-(** * Format *)
-
-val pp_interface : string list -> features -> Format.formatter -> interface -> unit
+val qualified_name : t -> string -> string

@@ -46,14 +46,13 @@ val type_repr_of_type_expr : Types.type_expr -> type_repr
 
 (** {2 Heplers Functions} *)
 
-(** Project the codomain of a function into the [impure] monad provided by
-    FreeSpec, {e i.e.}, [impure_proj ix (a -> .. -> r) ≡ a -> .. -> impure ix
-    r] *)
-val impure_proj : string -> type_repr -> type_repr
+(** Create a function type, {e i.e.}, [tlambda [a; b; c] d ≡ a -> b ->
+    c -> d] *)
+val tlambda : mono_type_repr list -> mono_type_repr -> mono_type_repr
 
-(** Project the codomain of a function into a given interface, {e i.e.},
-    [interface_proj I (a -> .. -> r) ≡ a -> .. -> I r] *)
-val interface_proj : string -> type_repr -> type_repr
+(** Project the codomain of a function into a parameterized type, {e
+    i.e.}, [type_lift T [x r] (a -> .. -> r) ≡ a -> .. -> T x y r] *)
+val type_lift : string -> ?args:(mono_type_repr list) -> type_repr -> type_repr
 
 (** [mono_dependencies t] is the list of types which appear in [t] definition.
     For instance, [mono_dependencies (int * bool) ≡ ["int"; "bool"]] *)
@@ -88,19 +87,22 @@ val translate_mono_type_repr : Translation.t -> mono_type_repr -> mono_type_repr
 
 val translate_type_repr : Translation.t -> type_repr -> type_repr
 
+val type_sort_mono : mono_type_repr
+val type_sort : type_repr
+
+type prototype_repr = {
+  prototype_type_args : string list;
+  prototype_args : type_repr list;
+  prototype_ret_type : type_repr
+}
+
+val type_repr_to_prototype_repr : type_repr -> prototype_repr
+
 (** {2 Pretty-printing Coq Terms} *)
 
 (** Output [TLambda] values as [t0 -> .. -> tn] *)
-val pp_mono_type_repr_arrows : Format.formatter -> mono_type_repr -> unit
+val pp_mono_type_repr : Format.formatter -> mono_type_repr -> unit
 
 (** Output [TLambda] values as [forall (a1 : Type) .. (an : Type), t0 -> .. ->
     tn] *)
-val pp_type_repr_arrows : Format.formatter -> type_repr -> unit
-
-(** Output [TLambda] values as [(a0 : Type) .. (an : Type) (x0 : t0) .. (xm :
-    tm) : tn]). The first argument of [pp_type_repr_prototype] is a prefix to
-    append before this prototype ({e e.g.}, "Definition name" ) *)
-val pp_type_repr_prototype : string -> Format.formatter -> type_repr -> unit
-
-(** For a function which takes [n + 1] arguments, output [x0 .. xn]. *)
-val pp_type_repr_arg_list : Format.formatter -> type_repr -> unit
+val pp_type_repr : Format.formatter -> type_repr -> unit

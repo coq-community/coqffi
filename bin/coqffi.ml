@@ -8,7 +8,8 @@ let process models features input ochannel =
   read_cmi input
   |> interface_of_cmi_infos ~features
   |> translate Translation.types_table
-  |> pp_interface models features ochannel
+  |> Vernac.of_interface features models
+  |> Format.fprintf ochannel "%a@?" Vernac.pp_vernac
 
 exception TooManyArguments
 exception MissingInputArgument
