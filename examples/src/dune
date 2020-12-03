@@ -10,6 +10,18 @@
   (action (run coqffi -ftransparent-types %{cmi:rectypes} -o %{target})))
 
 (rule
+  (target TransparentPolytype.v)
+  (action (run coqffi -ftransparent-types %{cmi:polytype} -o %{target})))
+
+(rule
+  (target OpaquePolytype.v)
+  (action (run coqffi %{cmi:polytype} -o %{target})))
+
+(rule
+  (target PolyPrim.v)
+  (action (run coqffi %{cmi:polyprim} -o %{target})))
+
+(rule
   (target Poly.v)
   (action (run coqffi -finterface %{cmi:poly} -o %{target})))
 
@@ -19,5 +31,4 @@
 
 (coq.theory
   (name Examples)
-  (theories CoqFFI)
-  (modules Str StrModels Rectypes File Poly))
+  (theories CoqFFI))
