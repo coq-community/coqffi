@@ -35,8 +35,6 @@ Coq development, and configures the Coq extraction mechanism accordingly.
 - Compatible Coq versions: 8.12 or later
 - Compatible OCaml versions: 4.08 or later
 - Additional dependencies:
-  - [coq-ext-lib](https://github.com/coq-community/coq-ext-lib) 0.11.2 or later
-  - [Coq Simple IO](https://github.com/Lysxia/coq-simple-io) 1.3.0 or later
   - [Cmdliner](http://erratique.ch/software/cmdliner) 1.0.4 or later
   - [Dune](https://dune.build) 2.5 or later
 - Coq namespace: `CoqFFI`
@@ -140,5 +138,10 @@ Instance MonadFile_IO : MonadFile IO :=
   ; closefile := io_closefile
   }.
 ```
+
+The Coq modules outputted by `coqffi` may have dependencies, based
+on the features you have decided to use (*e.g.*, by default, the
+`simple-io` feature is enabled, leading generated module to depend
+on [`coq-simple-io`](https://github.com/Lysxia/coq-simple-io)).
 
 See the `coqffi` man pages for more information on how to use it.
