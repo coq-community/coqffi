@@ -3,8 +3,10 @@ From SimpleIO Require Import SimpleIO.
 From ExtLib Require Import Monad.
 Import MonadLetNotation.
 Open Scope monad_scope.
+From CoqFFI Require Import Int.
+Open Scope i63_scope.
 
-From Examples Require Import File.
+From Examples Require Import File Sleep.
 
 Generalizable All Variables.
 
@@ -17,3 +19,13 @@ Definition cat `{Monad m, MonadFile m} : m unit :=
 Definition cat_main : io_unit := IO.unsafe_run cat.
 
 Extraction "cat.ml" cat_main.
+
+Definition sleep_plenty `{Monad m, MonadFile m, MonadSleep m}
+  : m unit :=
+  let x := (5 * 1 + 1 - 3) / 3 in
+  sleep x;;
+  write std_out "Hello, sleepy world!".
+
+Definition sleep_plenty_main : io_unit := IO.unsafe_run sleep_plenty.
+
+Extraction "sleep_plenty.ml" sleep_plenty_main.

@@ -1,8 +1,14 @@
 (coq.extraction
   (prelude extract)
   (theories CoqFFI Examples)
-  (extracted_modules cat))
+  (extracted_modules sleep_plenty cat))
+
+(executable
+  (name sleep_plenty)
+  (modules sleep_plenty uint63)
+  (libraries unix examples))
 
 (executable
   (name cat)
+  (modules cat)
   (libraries unix examples))

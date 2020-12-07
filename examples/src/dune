@@ -6,6 +6,10 @@
   (action (run coqffi -finterface %{cmi:file} -o %{target})))
 
 (rule
+  (target Sleep.v)
+  (action (run coqffi %{cmi:sleep} -o %{target})))
+
+(rule
   (target Rectypes.v)
   (action (run coqffi -ftransparent-types %{cmi:rectypes} -o %{target})))
 
