@@ -1,8 +1,8 @@
 (coq.extraction
   (prelude extract)
   (theories CoqFFI Examples)
-  (extracted_modules read100))
+  (extracted_modules cat))
 
 (executable
-  (name read100)
+  (name cat)
   (libraries unix examples))

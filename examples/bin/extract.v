@@ -8,12 +8,12 @@ From Examples Require Import File.
 
 Generalizable All Variables.
 
-Definition read100 `{Monad m, MonadFile m} : m unit :=
+Definition cat `{Monad m, MonadFile m} : m unit :=
   let* fd := openfile "README.md" in
   let* content := read_all fd in
   write std_out content;;
   closefile fd.
 
-Definition main : io_unit := IO.unsafe_run read100.
+Definition cat_main : io_unit := IO.unsafe_run cat.
 
-Extraction "read100.ml" main.
+Extraction "cat.ml" cat_main.
