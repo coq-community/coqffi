@@ -1,5 +1,18 @@
+diff --git a/src/compat.ml b/src/compat.ml
+index 9a96d0e..ebc3e0e 100644
+--- a/src/compat.ml
++++ b/src/compat.ml
+@@ -1,2 +1,6 @@
+-let concat_map = List.concat_map
+-let find_map = List.find_map
++let concat_map f l = List.concat (List.map f l)
++let rec find_map f = function
++  | [] -> None
++  | x::rst -> match f x with
++    | Some x -> Some x
++    | _ -> find_map f rst
 diff --git a/src/entry.ml b/src/entry.ml
-index 8c17545..210dbf9 100644
+index 6e66c07..1c19ba7 100644
 --- a/src/entry.ml
 +++ b/src/entry.ml
 @@ -48,7 +48,7 @@ let entry_of_signature ?(transparent_types = false) (s : Types.signature_item)
@@ -11,67 +24,3 @@ index 8c17545..210dbf9 100644
      | _ -> None in
  
    let struct_to_string = function
-@@ -62,7 +62,13 @@ let entry_of_signature ?(transparent_types = false) (s : Types.signature_item)
-       | _ -> None
-     else None in
- 
--  let find_coq_model = List.find_map get_model in
-+  let rec find_map f = function
-+    | [] -> None
-+    | x::rst -> match f x with
-+      | Some x -> Some x
-+      | _ -> find_map f rst in
-+
-+  let find_coq_model = find_map get_model in
- 
-   match s with
-   | Sig_value (ident, desc, Exported) ->
-@@ -143,11 +149,13 @@ let on_stack = function
-   | _ -> false
- 
- let dependencies t =
-+  let concat_map f l = List.concat (List.map f l) in
-+
-   match t.type_value with
-   | Variant l ->
-     List.sort_uniq String.compare
--      (List.concat_map
--         (fun e -> List.concat_map mono_dependencies e.variant_args) l)
-+      (concat_map
-+         (fun e -> concat_map mono_dependencies e.variant_args) l)
-   | Opaque -> []
- 
- let find_mutually_recursive_types tl =
-diff --git a/src/repr.ml b/src/repr.ml
-index 73a1dea..18f8948 100644
---- a/src/repr.ml
-+++ b/src/repr.ml
-@@ -1,5 +1,7 @@
- open Format
- 
-+let concat_map f l = List.concat (List.map f l)
-+
- type mono_type_repr =
-   | TLambda of (mono_type_repr * mono_type_repr)
-   | TProd of (mono_type_repr list)
-@@ -41,9 +43,9 @@ let type_repr_of_type_expr (t : Types.type_expr) : type_repr =
-        | Tarrow (_, t1, t2, _) ->
-          List.merge String.compare (poly_vars t1) (poly_vars t2)
-        | Tconstr (_, types, _) ->
--         List.concat_map (fun x -> poly_vars x) types
-+         concat_map (fun x -> poly_vars x) types
-        | Ttuple(l) ->
--         List.concat_map poly_vars l
-+         concat_map poly_vars l
-        | _ ->
-          raise (UnsupportedOCamlType t)) in
- 
-@@ -91,7 +93,7 @@ let rec mono_dependencies (t : mono_type_repr) : string list =
-   let merge : string list -> string list -> string list =
-     List.merge String.compare in
-   let fold_mono_list : mono_type_repr list -> string list =
--    List.concat_map (fun t -> mono_dependencies t) in
-+    concat_map (fun t -> mono_dependencies t) in
-   match t with
-   | TLambda (t1, t2) ->
-     merge (mono_dependencies t1) (mono_dependencies t2)

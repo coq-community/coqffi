@@ -366,7 +366,7 @@ let types_vernac features m vernacs =
 
   vernacs
   |+ Section "Types"
-  |++ List.concat_map type_entries_to_vernac mut_types
+  |++ Compat.concat_map type_entries_to_vernac mut_types
   |+ block_of_list @@ List.map to_extract m.interface_types
 
 let call_vars proto =

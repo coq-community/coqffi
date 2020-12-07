@@ -34,9 +34,9 @@ let type_repr_of_type_expr (t : Types.type_expr) : type_repr =
        | Tarrow (_, t1, t2, _) ->
          List.merge String.compare (poly_vars t1) (poly_vars t2)
        | Tconstr (_, types, _) ->
-         List.concat_map (fun x -> poly_vars x) types
+         Compat.concat_map (fun x -> poly_vars x) types
        | Ttuple(l) ->
-         List.concat_map poly_vars l
+         Compat.concat_map poly_vars l
        | _ ->
          raise (UnsupportedOCamlType t)) in
 
@@ -85,7 +85,7 @@ let rec mono_dependencies (t : mono_type_repr) : string list =
   let merge : string list -> string list -> string list =
     List.merge String.compare in
   let fold_mono_list : mono_type_repr list -> string list =
-    List.concat_map (fun t -> mono_dependencies t) in
+    Compat.concat_map (fun t -> mono_dependencies t) in
   match t with
   | TLambda (t1, t2) ->
     merge (mono_dependencies t1) (mono_dependencies t2)

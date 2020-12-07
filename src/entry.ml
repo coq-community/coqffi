@@ -62,7 +62,7 @@ let entry_of_signature ?(transparent_types = false) (s : Types.signature_item)
       | _ -> None
     else None in
 
-  let find_coq_model = List.find_map get_model in
+  let find_coq_model = Compat.find_map get_model in
 
   match s with
   | Sig_value (ident, desc, Exported) ->
@@ -146,8 +146,8 @@ let dependencies t =
   match t.type_value with
   | Variant l ->
     List.sort_uniq String.compare
-      (List.concat_map
-         (fun e -> List.concat_map mono_dependencies e.variant_args) l)
+      (Compat.concat_map
+         (fun e -> Compat.concat_map mono_dependencies e.variant_args) l)
   | Opaque -> []
 
 let find_mutually_recursive_types tl =
