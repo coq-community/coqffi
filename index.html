@@ -1,0 +1,188 @@
+<!DOCTYPE html>
+<html xmlns="http://www.w3.org/1999/xhtml" lang="en" xml:lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="generator" content="pandoc" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes" />
+  <title>coqffi</title>
+  <style>
+    html {
+      line-height: 1.5;
+      font-family: Georgia, serif;
+      font-size: 20px;
+      color: #1a1a1a;
+      background-color: #fdfdfd;
+    }
+    body {
+      margin: 0 auto;
+      max-width: 36em;
+      padding-left: 50px;
+      padding-right: 50px;
+      padding-top: 50px;
+      padding-bottom: 50px;
+      hyphens: auto;
+      word-wrap: break-word;
+      text-rendering: optimizeLegibility;
+      font-kerning: normal;
+    }
+    @media (max-width: 600px) {
+      body {
+        font-size: 0.9em;
+        padding: 1em;
+      }
+    }
+    @media print {
+      body {
+        background-color: transparent;
+        color: black;
+        font-size: 12pt;
+      }
+      p, h2, h3 {
+        orphans: 3;
+        widows: 3;
+      }
+      h2, h3, h4 {
+        page-break-after: avoid;
+      }
+    }
+    p {
+      margin: 1em 0;
+    }
+    a {
+      color: #1a1a1a;
+    }
+    a:visited {
+      color: #1a1a1a;
+    }
+    img {
+      max-width: 100%;
+    }
+    h1, h2, h3, h4, h5, h6 {
+      margin-top: 1.4em;
+    }
+    h5, h6 {
+      font-size: 1em;
+      font-style: italic;
+    }
+    h6 {
+      font-weight: normal;
+    }
+    ol, ul {
+      padding-left: 1.7em;
+      margin-top: 1em;
+    }
+    li > ol, li > ul {
+      margin-top: 0;
+    }
+    blockquote {
+      margin: 1em 0 1em 1.7em;
+      padding-left: 1em;
+      border-left: 2px solid #e6e6e6;
+      color: #606060;
+    }
+    code {
+      font-family: Menlo, Monaco, 'Lucida Console', Consolas, monospace;
+      font-size: 85%;
+      margin: 0;
+    }
+    pre {
+      margin: 1em 0;
+      overflow: auto;
+    }
+    pre code {
+      padding: 0;
+      overflow: visible;
+    }
+    .sourceCode {
+     background-color: transparent;
+     overflow: visible;
+    }
+    hr {
+      background-color: #1a1a1a;
+      border: none;
+      height: 1px;
+      margin: 1em 0;
+    }
+    table {
+      margin: 1em 0;
+      border-collapse: collapse;
+      width: 100%;
+      overflow-x: auto;
+      display: block;
+      font-variant-numeric: lining-nums tabular-nums;
+    }
+    table caption {
+      margin-bottom: 0.75em;
+    }
+    tbody {
+      margin-top: 0.5em;
+      border-top: 1px solid #1a1a1a;
+      border-bottom: 1px solid #1a1a1a;
+    }
+    th {
+      border-top: 1px solid #1a1a1a;
+      padding: 0.25em 0.5em 0.25em 0.5em;
+    }
+    td {
+      padding: 0.125em 0.5em 0.25em 0.5em;
+    }
+    header {
+      margin-bottom: 4em;
+      text-align: center;
+    }
+    #TOC li {
+      list-style: none;
+    }
+    #TOC a:not(:hover) {
+      text-decoration: none;
+    }
+    code{white-space: pre-wrap;}
+    span.smallcaps{font-variant: small-caps;}
+    span.underline{text-decoration: underline;}
+    div.column{display: inline-block; vertical-align: top; width: 50%;}
+    div.hanging-indent{margin-left: 1.5em; text-indent: -1.5em;}
+    ul.task-list{list-style: none;}
+    .display.math{display: block; text-align: center; margin: 0.5rem auto;}
+  </style>
+  <style type="text/css"> body {font-family: Arial, Helvetica; margin-left: 5em; font-size: large;} </style>
+  <style type="text/css"> h1 {margin-left: 0em; padding: 0px; text-align: center} </style>
+  <style type="text/css"> h2 {margin-left: 0em; padding: 0px; color: #580909} </style>
+  <style type="text/css"> h3 {margin-left: 1em; padding: 0px; color: #C05001;} </style>
+  <style type="text/css"> body { width: 1100px; margin-left: 30px; }</style>
+
+  <!--[if lt IE 9]>
+    <script src="//cdnjs.cloudflare.com/ajax/libs/html5shiv/3.7.3/html5shiv-printshiv.min.js"></script>
+  <![endif]-->
+</head>
+<body>
+<div style="text-align:left">
+<img src="https://github.githubassets.com/images/modules/logos_page/Octocat.png" height="25" style="border:0px"> <a href="https://github.com/coq-community/coqffi">View the project on GitHub</a> <img src="https://github.githubassets.com/images/modules/logos_page/Octocat.png" height="25" style="border:0px">
+</div>
+<h2 id="about">About</h2>
+<p>Welcome to the <code>coqffi</code> project website! This project is part of <a href="https://github.com/coq-community/manifesto">coq-community</a>.</p>
+<p><code>coqffi</code> generates the necessary Coq boilerplate to use OCaml functions in a Coq development, and configures the Coq extraction mechanism accordingly.</p>
+<p>This is an open source project, licensed under the MIT License.</p>
+<h2 id="get-the-code">Get the code</h2>
+<p>The current stable release of <code>coqffi</code> can be <a href="https://github.com/coq-community/coqffi/releases">downloaded from GitHub</a>.</p>
+<h2 id="documentation">Documentation</h2>
+<p>The <code>coqffi</code> binary comes with a comprehensive man page.</p>
+<p>In addition, documentations for the <code>CoqFFI</code> theory
+are provided for the following versions:</p>
+<ul>
+  <li> <a href="./1.0.0~beta1/toc.html"><code>coqffi.1.0.0~beta1</code></a></li>
+</ul>
+<h2 id="help-and-contact">Help and contact</h2>
+<ul>
+<li>Report issues on <a href="https://github.com/coq-community/coqffi/issues">GitHub</a></li>
+<li>Chat with us on <a href="https://coq.zulipchat.com/#narrow/stream/237663-coq-community-devs.20.26.20users">Zulip</a></li>
+<li>Discuss with us on Coq’s <a href="https://coq.discourse.group">Discourse</a> forum</li>
+</ul>
+<h2 id="authors-and-contributors">Authors and contributors</h2>
+<ul>
+<li>Thomas Letan</li>
+<li>Li-yao Xia</li>
+<li>Yann Régis-Gianas</li>
+<li>Yannick Zakowski</li>
+</ul>
+</body>
+</html>
