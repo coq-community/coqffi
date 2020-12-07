@@ -69,12 +69,13 @@ Suppose the following OCaml header file (`file.mli`) is given:
 ```ocaml
 type fd
 
+val std_out : fd
 val fd_equal : fd -> fd -> bool
 
 val openfile : string -> fd [@@impure]
+val closefile : fd -> unit [@@impure]
 val read_all : fd -> string [@@impure]
 val write : fd -> string -> unit [@@impure]
-val closefile : fd -> unit [@@impure]
 ```
 
 `coqffi` then generates the necessary Coq boilerplate to use these
@@ -88,60 +89,65 @@ Unset Strict Implicit.
 Set Contextual Implicit.
 Generalizable All Variables.
 
-From Base Require Import Prelude Extraction.
+From CoqFFI Require Export Extraction.
 From SimpleIO Require Import IO_Monad.
 From CoqFFI Require Import Interface.
 
 (** * Types *)
 
-Axiom (fd : Type).
+Axiom fd : Type.
 
 Extract Constant fd => "Examples.File.fd".
 
-(** * Pure Functions *)
+(** * Pure functions *)
 
-Axiom (fd_equal : fd -> fd -> bool).
+Axiom std_out : fd.
+Axiom fd_equal : fd -> fd -> bool.
 
+Extract Constant std_out => "Examples.File.std_out".
 Extract Constant fd_equal => "Examples.File.fd_equal".
 
 (** * Impure Primitives *)
 
-(** ** Monad *)
+(** ** Monad Definition *)
 
 Class MonadFile (m : Type -> Type) : Type :=
   { openfile : string -> m fd
+  ; closefile : fd -> m unit
   ; read_all : fd -> m string
   ; write : fd -> string -> m unit
-  ; closefile : fd -> m unit
   }.
 
 (** ** [IO] Instance *)
 
-Axiom (io_openfile : string -> IO fd).
-Axiom (io_read_all : fd -> IO string).
-Axiom (io_write : fd -> string -> IO unit).
-Axiom (io_closefile : fd -> IO unit).
+Axiom io_openfile : string -> IO fd.
+Axiom io_closefile : fd -> IO unit.
+Axiom io_read_all : fd -> IO string.
+Axiom io_write : fd -> string -> IO unit.
 
-Extract Constant io_openfile =>
-  "(fun x0 k__ -> k__ (Examples.File.openfile x0))".
-Extract Constant io_read_all =>
-  "(fun x0 k__ -> k__ (Examples.File.read_all x0))".
-Extract Constant io_write =>
-  "(fun x0 x1 k__ -> k__ (Examples.File.write x0 x1))".
-Extract Constant io_closefile =>
-  "(fun x0 k__ -> k__ (Examples.File.closefile x0))".
+Extract Constant io_openfile
+  => "(fun x0 k__ -> k__ (Examples.File.openfile x0))".
+Extract Constant io_closefile
+  => "(fun x0 k__ -> k__ (Examples.File.closefile x0))".
+Extract Constant io_read_all
+  => "(fun x0 k__ -> k__ (Examples.File.read_all x0))".
+Extract Constant io_write
+  => "(fun x0 x1 k__ -> k__ (Examples.File.write x0 x1))".
 
-Instance MonadFile_IO : MonadFile IO :=
+Instance IO_MonadFile : MonadFile IO :=
   { openfile := io_openfile
+  ; closefile := io_closefile
   ; read_all := io_read_all
   ; write := io_write
-  ; closefile := io_closefile
   }.
+
+(* The generated file ends here. *)
 ```
 
-The Coq modules outputted by `coqffi` may have dependencies, based
-on the features you have decided to use (*e.g.*, by default, the
-`simple-io` feature is enabled, leading generated module to depend
-on [`coq-simple-io`](https://github.com/Lysxia/coq-simple-io)).
+The generated module may introduce additional dependency to your
+project. For instance, the `simple-io` feature (enabled by default)
+generates the necessary boilerplate to use the impure primitives of
+the input module within the `IO` monad introduced by the
+`coq-simple-io` package.
 
 See the `coqffi` man pages for more information on how to use it.
