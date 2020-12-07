@@ -127,7 +127,7 @@ Module IntExtraction.
   Extract Inlined Constant abs => "abs".
   Extract Inlined Constant i63add => "(+)".
   Extract Inlined Constant i63sub => "(-)".
-  Extract Inlined Constant i63mul => "(*)".
+  Extract Inlined Constant i63mul => "( * )".
   Extract Inlined Constant i63div => "(/)".
   Extract Inlined Constant i63eqb => "(=)".
   Extract Inlined Constant i63ltb => "(<)".
