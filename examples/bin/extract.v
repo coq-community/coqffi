@@ -22,9 +22,10 @@ Extraction "cat.ml" cat_main.
 
 Definition sleep_plenty `{Monad m, MonadFile m, MonadSleep m}
   : m unit :=
+  write std_out "Hello...";;
   let x := (5 * 1 + 1 - 3) / 3 in
   sleep x;;
-  write std_out "Hello, sleepy world!".
+  write std_out " sleepy world!\n".
 
 Definition sleep_plenty_main : io_unit := IO.unsafe_run sleep_plenty.
 

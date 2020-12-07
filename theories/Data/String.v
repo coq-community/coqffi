@@ -4,11 +4,11 @@
 
 From Coq Require Export Ascii String.
 From Coq Require Import List Byte.
-From ExtLib Require Import Option Functor.
-From ExtLib Require Export Char.
 
-Import FunctorNotation.
 Import ListNotations.
+
+#[local]
+Infix "<$>" := option_map (at level 50).
 
 Fixpoint string_of_list_byte_fmt (i : list byte) : option string :=
   match i with

@@ -1,5 +1,4 @@
 From Coq Require Import NArith ZArith Int63 Program.Wf.
-From ExtLib Require Import RelDec.
 
 #[local] Close Scope nat_scope.
 #[local] Open Scope bool_scope.
@@ -59,14 +58,11 @@ Definition i63eqb (x y : i63) : bool :=
 
 Infix "=?" := i63eqb.
 
-Instance i63_RelDec : @RelDec i63 eq :=
-  { rel_dec := i63eqb }.
-
-#[refine]
-Instance i63_RelDec_Correct : RelDec_Correct i63_RelDec := {}.
+Lemma i63_eqb_eq (x y : i63) : x =? y = true <-> x = y.
 
 Proof.
-  intros [x] [y].
+  destruct x as [x].
+  destruct y as [y].
   cbv.
   split; intros equ.
   + apply eqb_correct in equ.
