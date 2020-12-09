@@ -125,7 +125,7 @@ let coqffi_info =
     `S Manpage.s_bugs;
     `P "Email bug reports to <thomas.letan at ssi.gouv.fr>.";
   ] in
-  Term.(info "coqffi" ~exits:default_exits ~doc ~man ~version:"coqffi.1.0.0+dev")
+  Term.(info "coqffi" ~exits:default_exits ~doc ~man ~version:"coqffi.dev")
 
 let run_coqffi (input : string) (output : string option)
     (features : features) (models : string list) =
