@@ -1,5 +1,8 @@
 # Unreleased
 
+- **Fix:** Extraction of inductive constructors
+  (`-ftransparent-types`)
+
 # `coqffi.1.0.0`
 
 This is the initial release of `coqffi`.

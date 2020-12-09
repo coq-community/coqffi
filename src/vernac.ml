@@ -354,7 +354,7 @@ let types_vernac features m vernacs =
         inductive_qualid = t.type_name;
         inductive_target = Interface.qualified_name m t.type_name;
         inductive_variants_target =
-          List.map (fun x -> x.variant_name) l
+          List.map (fun x -> Interface.qualified_name m x.variant_name) l
       }
     | _ ->
       ExtractConstant {
