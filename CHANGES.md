@@ -2,6 +2,10 @@
 
 This will be the initial release of `coqffi`.
 
+## Unreleased
+
+N/A
+
 ## `coqffi.1.0.0~beta2`
 
 - **Fix:** Extraction of inductive constructors

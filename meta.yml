@@ -25,7 +25,7 @@ maintainers:
 
 opam-file-maintainer: thomas.letan@ssi.gouv.fr
 
-opam-file-version: 1.0.0~beta2
+opam-file-version: dev
 
 license:
   fullname: MIT License
