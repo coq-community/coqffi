@@ -110,13 +110,18 @@ let pp_typeclass fmt cls =
 
 type instance = {
   instance_name : string;
+  instance_typeclass_args : string list;
   instance_type : Repr.type_repr;
   instance_members : (string * string) list;
 }
 
 let pp_instance fmt inst =
-  fprintf fmt "@[<hov 2>Instance %s@ : %a :=@ @[<v>{ %a@ }.@]@]"
+  fprintf fmt "@[<hov 2>Instance %s%a@ : %a :=@ @[<v>{ %a@ }.@]@]"
     inst.instance_name
+    (pp_list ~pp_prefix:(fun fmt _ -> pp_print_string fmt "`{")
+       ~pp_suffix:(fun fmt _ -> pp_print_string fmt "} ")
+       ~pp_sep:(fun fmt _ -> pp_print_string fmt ", ")
+       pp_print_string) inst.instance_typeclass_args
     pp_type_repr inst.instance_type
     (pp_print_list ~pp_sep:(fun fmt _ -> fprintf fmt "@ ; ")
        (fun fmt (m,v) -> fprintf fmt "%s := %s" m v)) inst.instance_members
@@ -401,6 +406,7 @@ let io_primitives_vernac m =
 
   let instance_vernac = Instance {
       instance_name = sprintf "IO_Monad%s" m.interface_name;
+      instance_typeclass_args = [];
       instance_type =
         TMono (TParam (sprintf "Monad%s" m.interface_name, [TParam ("IO", [])]));
       instance_members =
@@ -447,6 +453,23 @@ let interface_vernac m vernacs =
     }
   in
 
+  let inj_instance =
+    let monad_name =
+      sprintf "Monad%s" @@ String.capitalize_ascii m.interface_name in
+    let interface_name = String.uppercase_ascii m.interface_name in
+    Instance {
+      instance_name = sprintf "Inject_%s" monad_name;
+      instance_typeclass_args = [
+        sprintf "Inject %s m" interface_name
+      ];
+      instance_type = TMono (TParam (monad_name, [TParam ("m", [])]));
+      instance_members =
+        List.map (fun x ->
+            let n = x.prim_name in
+            (n, sprintf "inj_%s" n))
+          m.interface_primitives
+    } in
+
   let interface_inductive = Inductive [{
       inductive_name = String.uppercase_ascii m.interface_name;
       inductive_type_args = [];
@@ -462,6 +485,7 @@ let interface_vernac m vernacs =
     interface_inductive
   ]
   |++ List.map prim_to_inj_helper m.interface_primitives
+  |+ inj_instance
 
 let semantics_vernac m vernacs =
   let interface_name = String.uppercase_ascii m.interface_name in

@@ -41,6 +41,7 @@ type typeclass = {
 
 type instance = {
   instance_name : string;
+  instance_typeclass_args : string list;
   instance_type : Repr.type_repr;
   instance_members : (string * string) list
 }

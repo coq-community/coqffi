@@ -2,6 +2,8 @@
 
 - **Fix:** Extraction of inductive constructors
   (`-ftransparent-types`)
+- **Fix:** Generate the missing instance for the interface inductive
+  type (`-finterface`)
 
 # `coqffi.1.0.0`
 
