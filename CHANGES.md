@@ -1,13 +1,13 @@
-# Unreleased
+# `coqffi.1.0.0`
+
+This will be the initial release of `coqffi`.
+
+## Unreleased
 
 - **Fix:** Extraction of inductive constructors
   (`-ftransparent-types`)
 - **Fix:** Generate the missing instance for the interface inductive
   type (`-finterface`)
-
-# `coqffi.1.0.0`
-
-This is the initial release of `coqffi`.
 
 ## `coqffi.1.0.0~beta1`
 
