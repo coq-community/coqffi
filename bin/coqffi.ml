@@ -130,6 +130,7 @@ let coqffi_info =
     `Pre "  - $(b,char)"; `Noblank;
     `Pre "  - $(b,int)"; `Noblank;
     `Pre "  - $(i,'a) $(b,list)"; `Noblank;
+    `Pre "  - $(i,'a) $(b,Stdlib.Seq.t)"; `Noblank;
     `Pre "  - $(i,'a) $(b,option)"; `Noblank;
     `Pre "  - $(b,string)"; `Noblank;
     `Pre "  - $(b,unit)"; `Noblank;

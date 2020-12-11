@@ -15,6 +15,7 @@ let types_table =
   |> preserve "bool"
   |> translate ~ocaml:"char" ~coq:"ascii"
   |> translate ~ocaml:"int" ~coq:"i63"
+  |> translate ~ocaml:"Stdlib.Seq.t" ~coq:"Seq.t"
   |> preserve "list"
   |> preserve "option"
   |> preserve "string"

@@ -29,3 +29,8 @@ Extract Inductive prod => "( * )" [ "" ].
 (** ** Lists *)
 
 Extract Inductive list => "list" [ "[]" "( :: )" ].
+
+(** ** Seq *)
+
+From CoqFFI Require Export Seq.
+Import SeqExtraction.

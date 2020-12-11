@@ -12,11 +12,11 @@ index 9a96d0e..ebc3e0e 100644
 +    | Some x -> Some x
 +    | _ -> find_map f rst
 diff --git a/src/entry.ml b/src/entry.ml
-index 6e66c07..1c19ba7 100644
+index 2c86491..701d2e9 100644
 --- a/src/entry.ml
 +++ b/src/entry.ml
-@@ -48,7 +48,7 @@ let entry_of_signature ?(transparent_types = false) (s : Types.signature_item)
-     List.exists is_impure in
+@@ -62,7 +62,7 @@ let entry_of_signature lf (s : Types.signature_item)
+   in
  
    let expr_to_string = function
 -    | Pexp_constant (Pconst_string (str, _, _)) -> Some str
@@ -24,3 +24,18 @@ index 6e66c07..1c19ba7 100644
      | _ -> None in
  
    let struct_to_string = function
+diff --git a/theories/Data/Seq.v b/theories/Data/Seq.v
+index 4521dee..a7563b8 100644
+--- a/theories/Data/Seq.v
++++ b/theories/Data/Seq.v
+@@ -79,10 +79,6 @@ Module SeqExtraction.
+     [ "Stdlib.Seq.Nil" "Stdlib.Seq.Cons" ].
+   Extract Constant empty => "Stdlib.Seq.empty".
+   Extract Constant ret => "Stdlib.Seq.return".
+-  (* since OCaml 4.11 *)
+-  Extract Constant cons => "Stdlib.Seq.cons".
+-  (* since OCaml 4.11 *)
+-  Extract Constant append => "Stdlib.Seq.append".
+   Extract Constant map => "Stdlib.Seq.map".
+   Extract Constant filter => "Stdlib.Seq.filter".
+   Extract Constant filter_map => "Stdlib.Seq.filter_map".
