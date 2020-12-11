@@ -1,1 +1,1 @@
-val poly_prim : 'a -> 'b [@@impure]
+val poly_prim : 'a -> 'b

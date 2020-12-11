@@ -1,4 +1,4 @@
-val f1 : 'a -> int
-val f2 : int -> 'a
-val p1 : 'a -> int [@@impure]
-val p2 : int -> 'a [@@impure]
+val f1 : 'a -> int [@@pure]
+val f2 : int -> 'a [@@pure]
+val p1 : 'a -> int
+val p2 : int -> 'a

@@ -41,11 +41,21 @@ exception UnsupportedOCamlTypeKind of Types.type_kind
 
 let entry_of_signature ?(transparent_types = false) (s : Types.signature_item)
   : entry =
-  let is_impure attr =
-    attr.attr_name.txt = "impure" in
+  let has_pure_attr : attributes -> bool =
+    List.exists (fun attr -> attr.attr_name.txt = "pure")
+  in
 
-  let has_impure : attributes -> bool =
-    List.exists is_impure in
+  let to_mono = function
+    | TMono mono -> mono
+    | TPoly (_, mono) -> mono in
+
+  let is_pure_value = function
+    | TLambda (_, _) -> false
+    | _ -> true in
+
+  let is_pure attrs model t =
+    is_pure_value t || Option.is_some model || has_pure_attr attrs
+  in
 
   let expr_to_string = function
     | Pexp_constant (Pconst_string (str, _, _)) -> Some str
@@ -68,16 +78,17 @@ let entry_of_signature ?(transparent_types = false) (s : Types.signature_item)
   | Sig_value (ident, desc, Exported) ->
     let name = Ident.name ident in
     let repr = type_repr_of_type_expr desc.val_type in
+    let model = find_coq_model desc.val_attributes in
 
-    if has_impure desc.val_attributes
-    then EPrim {
-        prim_name = name;
-        prim_type = repr;
-      }
-    else EFunc {
+    if is_pure desc.val_attributes model (to_mono repr)
+    then EFunc {
         func_name = name;
         func_type = repr;
-        func_model = find_coq_model desc.val_attributes;
+        func_model = model;
+      }
+    else EPrim {
+        prim_name = name;
+        prim_type = repr;
       }
   | Sig_type (ident, decl, _, Exported) ->
     let get_poly t =

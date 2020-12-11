@@ -1,1 +1,1 @@
-val sleep : int -> unit [@@impure]
+val sleep : int -> unit

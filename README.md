@@ -70,12 +70,12 @@ Suppose the following OCaml header file (`file.mli`) is given:
 type fd
 
 val std_out : fd
-val fd_equal : fd -> fd -> bool
+val fd_equal : fd -> fd -> bool [@@pure]
 
-val openfile : string -> fd [@@impure]
-val closefile : fd -> unit [@@impure]
-val read_all : fd -> string [@@impure]
-val write : fd -> string -> unit [@@impure]
+val openfile : string -> fd
+val closefile : fd -> unit
+val read_all : fd -> string
+val write : fd -> string -> unit
 ```
 
 `coqffi` then generates the necessary Coq boilerplate to use these
