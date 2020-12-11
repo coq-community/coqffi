@@ -8,10 +8,10 @@ This will be the initial release of `coqffi`.
   be explicitly marked as pure with the `pure` attribute, while the
   rest of OCaml values are always considered pure (OCaml values
   were previously considered pure by default, and could be marked
-  using the `impure` attribute).
+  using the `impure` attribute)
 - **Breaking Change:** The `coq_model` attribute implies the marked
   value is pure (it was previously ignored when used in conjuction
-  with the `impure` attribute).
+  with the `impure` attribute)
 - **Feature:** Add a new feature to assume all OCaml values of
   the input OCaml module interface are pure (`-fpure-module`)
 
