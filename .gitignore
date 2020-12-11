@@ -1,3 +1,7 @@
 _build/
 .merlin
 .lia.cache
+.Makefile.d
+Makefile.conf
+Makefile
+html/
