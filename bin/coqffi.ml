@@ -50,6 +50,7 @@ let features_opt =
   let features_enum =
     Arg.enum (List.concat [
         feature_enum TransparentTypes;
+        feature_enum PureModule;
         feature_enum Interface;
         feature_enum SimpleIO;
         feature_enum FreeSpec;
@@ -82,6 +83,16 @@ let coqffi_info =
        counterpart.  $(b,Warning:) This feature is experimental, and may lead to
        the generation of invalid Coq types. Typically, it does not enforce the
        “strict-positive occurence” constraints of Coq constructors."
+    );
+
+    `P "$(b,pure-module)"; `Noblank;
+    `I (
+      "$(b,no-pure-module)",
+      "By default, $(b,coqffi) considers OCaml functions are impure,
+       and let users marked “pure functions” with the $(i,pure)
+       attribute. If $(b,-ftransparent-types) is used, then
+       $(b,coqffi) will consider all OCaml values listed in the
+       $(i,INPUT) module are pure."
     );
 
     `P "$(b,simple-io)"; `Noblank;

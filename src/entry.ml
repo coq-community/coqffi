@@ -1,6 +1,7 @@
 open Repr
 open Parsetree
 open Types
+open Config
 
 type primitive_entry = {
   prim_name : string;
@@ -39,8 +40,11 @@ type entry =
 exception UnsupportedOCamlSignature of Types.signature_item
 exception UnsupportedOCamlTypeKind of Types.type_kind
 
-let entry_of_signature ?(transparent_types = false) (s : Types.signature_item)
+let entry_of_signature lf (s : Types.signature_item)
   : entry =
+  let transparent_types = is_enabled lf TransparentTypes in
+  let pure_module = is_enabled lf PureModule in
+
   let has_pure_attr : attributes -> bool =
     List.exists (fun attr -> attr.attr_name.txt = "pure")
   in
@@ -54,7 +58,7 @@ let entry_of_signature ?(transparent_types = false) (s : Types.signature_item)
     | _ -> true in
 
   let is_pure attrs model t =
-    is_pure_value t || Option.is_some model || has_pure_attr attrs
+    pure_module || is_pure_value t || Option.is_some model || has_pure_attr attrs
   in
 
   let expr_to_string = function

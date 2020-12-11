@@ -34,7 +34,7 @@ type entry =
   | EFunc of function_entry
   | EType of type_entry
 
-val entry_of_signature : ?transparent_types:bool -> Types.signature_item -> entry
+val entry_of_signature : Config.features -> Types.signature_item -> entry
 
 exception UnsupportedOCamlSignature of Types.signature_item
 exception UnsupportedOCamlTypeKind of Types.type_kind

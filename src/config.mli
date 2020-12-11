@@ -1,5 +1,6 @@
 type feature =
   | TransparentTypes
+  | PureModule
   | Interface
   | SimpleIO
   | FreeSpec

@@ -1,5 +1,6 @@
 type feature =
   | TransparentTypes
+  | PureModule
   | Interface
   | SimpleIO
   | FreeSpec
@@ -10,6 +11,7 @@ type features = (feature * bool) list
 
 let feature_name = function
   | TransparentTypes -> "transparent-types"
+  | PureModule -> "pure-module"
   | Interface -> "interface"
   | SimpleIO -> "simple-io"
   | FreeSpec -> "freespec"

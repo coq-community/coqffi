@@ -1,7 +1,6 @@
 open Cmi_format
 open Entry
 open Repr
-open Config
 
 type t = {
   interface_namespace : string list;
@@ -48,9 +47,7 @@ let interface_of_cmi_infos ~features (info : cmi_infos) =
     | EType t -> add_type_entry m t in
 
   List.fold_left
-    (fun m s ->
-       entry_of_signature ~transparent_types:(is_enabled features TransparentTypes) s
-       |> add_entry m)
+    (fun m s -> entry_of_signature features s |> add_entry m)
     (empty_interface info.cmi_name)
     info.cmi_sign
 
