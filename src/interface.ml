@@ -12,8 +12,8 @@ type t = {
 
 let empty_interface (modname : string) =
   let rec namespace_and_path acc = function
-    | [x] -> (List.rev acc, x)
-    | x :: rst -> namespace_and_path (x :: acc) rst
+    | [x] -> (List.rev acc, String.capitalize_ascii x)
+    | x :: rst -> namespace_and_path (String.capitalize_ascii x :: acc) rst
     | _ -> assert false in
 
   let (namespace, name) = namespace_and_path [] (Str.split (Str.regexp "__") modname)

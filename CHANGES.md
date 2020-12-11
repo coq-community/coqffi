@@ -14,6 +14,7 @@ This will be the initial release of `coqffi`.
   with the `impure` attribute)
 - **Feature:** Add a new feature to assume all OCaml values of
   the input OCaml module interface are pure (`-fpure-module`)
+- **Fix:** Make sure module names are always capitalized
 
 ## `coqffi.1.0.0~beta2`
 
