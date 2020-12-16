@@ -40,8 +40,9 @@ supported_ocaml_versions:
     opam: '{>= "4.08" & < "4.12~" }'
 
 tested_coq_opam_versions:
-- version: dev
-- version: '8.12'
+- version: 'dev-ocaml-4.11.1-flambda'
+- version: '8.12-ocaml-4.11-flambda'
+- version: '8.12-ocaml-4.10-flambda'
 
 dependencies:
 - opam:

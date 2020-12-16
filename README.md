@@ -1,12 +1,16 @@
+<!---
+This file was generated from `meta.yml`, please do not edit manually.
+Follow the instructions on https://github.com/coq-community/templates to regenerate.
+--->
 # `coqffi`
 
-[![CI][action-shield]][action-link]
+[![Docker CI][docker-action-shield]][docker-action-link]
 [![Contributing][contributing-shield]][contributing-link]
 [![Code of Conduct][conduct-shield]][conduct-link]
 [![Zulip][zulip-shield]][zulip-link]
 
-[action-shield]: https://github.com/coq-community/coqffi/workflows/CI/badge.svg?branch=main
-[action-link]: https://github.com/coq-community/coqffi/actions?query=workflow%3ACI
+[docker-action-shield]: https://github.com/coq-community/coqffi/workflows/Docker%20CI/badge.svg?branch=main
+[docker-action-link]: https://github.com/coq-community/coqffi/actions?query=workflow:"Docker%20CI"
 
 [contributing-shield]: https://img.shields.io/badge/contributions-welcome-%23f7931e.svg
 [contributing-link]: https://github.com/coq-community/manifesto/blob/master/CONTRIBUTING.md
