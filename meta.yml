@@ -4,7 +4,7 @@ shortname: coqffi
 organization: coq-community
 community: true
 branch: main
-travis: true
+action: true
 dune: true
 
 synopsis: Tool for generating Coq FFI bindings to OCaml libraries

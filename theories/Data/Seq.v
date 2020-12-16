@@ -3,7 +3,8 @@ Unset Strict Implicit.
 Set Contextual Implicit.
 Generalizable All Variables.
 
-From SimpleIO Require Import IO_Monad.
+From Coq Require Import Extraction.
+
 
 (** * Types *)
 

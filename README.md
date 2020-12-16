@@ -1,12 +1,12 @@
 # `coqffi`
 
-[![Travis][travis-shield]][travis-link]
+[![CI][action-shield]][action-link]
 [![Contributing][contributing-shield]][contributing-link]
 [![Code of Conduct][conduct-shield]][conduct-link]
 [![Zulip][zulip-shield]][zulip-link]
 
-[travis-shield]: https://travis-ci.com/coq-community/coqffi.svg?branch=main
-[travis-link]: https://travis-ci.com/coq-community/coqffi/builds
+[action-shield]: https://github.com/coq-community/coqffi/workflows/CI/badge.svg?branch=main
+[action-link]: https://github.com/coq-community/coqffi/actions?query=workflow%3ACI
 
 [contributing-shield]: https://img.shields.io/badge/contributions-welcome-%23f7931e.svg
 [contributing-link]: https://github.com/coq-community/manifesto/blob/master/CONTRIBUTING.md
