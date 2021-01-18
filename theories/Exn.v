@@ -7,5 +7,5 @@ Class Exn (e : Type) := { to_exn : e -> exn
                         }.
 
 Module ExnExtraction.
-  Extract Constant exn => "exn".
+  Extract Inlined Constant exn => "exn".
 End ExnExtraction.
