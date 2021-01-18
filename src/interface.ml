@@ -8,6 +8,7 @@ type t = {
   interface_types : type_entry list;
   interface_functions : function_entry list;
   interface_primitives : primitive_entry list;
+  interface_exceptions : exception_entry list;
 }
 
 let empty_interface (modname : string) =
@@ -23,6 +24,7 @@ let empty_interface (modname : string) =
     interface_types = [];
     interface_functions = [];
     interface_primitives = [];
+    interface_exceptions = [];
   }
 
 let interface_of_cmi_infos ~features (info : cmi_infos) =
@@ -41,10 +43,16 @@ let interface_of_cmi_infos ~features (info : cmi_infos) =
     interface_types = m.interface_types @ [t]
   } in
 
+  let add_exception_entry (m : t) (e : exception_entry) : t = {
+    m with
+    interface_exceptions = m.interface_exceptions @ [e]
+  } in
+
   let add_entry (m : t) = function
     | EPrim pr -> add_primitive_entry m pr
     | EFunc fn -> add_function_entry m fn
-    | EType t -> add_type_entry m t in
+    | EType t -> add_type_entry m t
+    | EExn e -> add_exception_entry m e in
 
   List.fold_left
     (fun m s -> entry_of_signature features s |> add_entry m)
@@ -63,6 +71,11 @@ let translate tbl m =
   let translate_primitive tbl prim = {
     prim with
     prim_type = translate_type_repr tbl prim.prim_type
+  } in
+
+  let translate_exception tbl e = {
+    e with
+    exception_args = List.map (translate_mono_type_repr tbl) e.exception_args
   } in
 
   let translate_type_value tbl = function
@@ -95,4 +108,5 @@ let translate tbl m =
     interface_types = List.map (translate_type tbl') m.interface_types;
     interface_functions = List.map (translate_function tbl') m.interface_functions;
     interface_primitives = List.map (translate_primitive tbl') m.interface_primitives;
+    interface_exceptions = List.map (translate_exception tbl') m.interface_exceptions;
   }

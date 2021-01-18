@@ -532,6 +532,108 @@ let semantics_vernac m vernacs =
     }
   ]
 
+let exceptions_vernac _features m vernacs =
+  let exception_vernac v e =
+    let exn_name = e.exception_name in
+    let exn_type = TParam ("exn", []) in
+    let proxy_name = sprintf "%sExn" e.exception_name in
+    let proxy_constructor_name = sprintf "Make%sExn" e.exception_name in
+    let proxy_type = TParam (proxy_name, []) in
+
+    let proxy_proto = {
+        prototype_type_args = [];
+        prototype_args = List.map (fun mono -> TMono mono) e.exception_args;
+        prototype_ret_type = TMono (proxy_type);
+      } in
+
+    let proxy_inductive =
+      Inductive [
+        {
+          inductive_name = proxy_name;
+          inductive_type_args = [];
+          inductive_type = type_sort;
+          inductive_constructors = [
+            {
+              constructor_name = proxy_constructor_name;
+              constructor_prototype = proxy_proto;
+            }
+          ];
+        }
+      ] in
+
+    let to_exn = sprintf "exn_of_%s" (String.lowercase_ascii exn_name) in
+    let of_exn = sprintf "%s_of_exn" (String.lowercase_ascii exn_name) in
+
+    let to_exn_axiom =
+      Axiom {
+          axiom_name = to_exn;
+          axiom_type = TMono (TLambda (proxy_type, exn_type));
+        } in
+    let of_exn_axiom =
+      Axiom {
+          axiom_name = of_exn;
+          axiom_type = TMono (TLambda (exn_type, TParam ("option", [proxy_type])));
+        } in
+
+    let vars = call_vars proxy_proto in
+
+    let to_exn_extract =
+      ExtractConstant {
+          constant_qualid = to_exn;
+          constant_type_vars = [];
+          constant_target = asprintf "@[<h>(function | %s%a => %s%a)@]"
+                              proxy_constructor_name
+                              (pp_list ~pp_prefix:pp_print_space
+                                 ~pp_sep:pp_print_space
+                                 pp_print_string) vars
+                              exn_name
+                              (pp_list ~pp_prefix:pp_print_space
+                                 ~pp_sep:pp_print_space
+                                 pp_print_string) vars
+        } in
+
+    let of_exn_extract =
+      ExtractConstant {
+          constant_qualid = of_exn;
+          constant_type_vars = [];
+          constant_target = asprintf "@[<h>(function | %s%a => Some (%s%a) | _ => None)@]"
+                              exn_name
+                              (pp_list ~pp_prefix:pp_print_space
+                                 ~pp_sep:pp_print_space
+                                 pp_print_string) vars
+                              proxy_constructor_name
+                              (pp_list ~pp_prefix:pp_print_space
+                                 ~pp_sep:pp_print_space
+                                 pp_print_string) vars
+        } in
+
+    let exn_instance =
+      Instance {
+          instance_name = sprintf "%s_Exn" proxy_name;
+          instance_typeclass_args = [];
+          instance_type = TMono (TParam ("Exn", [TParam (proxy_name, [])]));
+          instance_members = [("to_exn", to_exn); ("of_exn", of_exn)];
+        } in
+
+    v
+    |++ [
+      Subsection (sprintf "[%s]" exn_name);
+      proxy_inductive;
+      compacted_block_of_list [
+        to_exn_axiom;
+        of_exn_axiom;
+      ];
+      compacted_block_of_list [
+        to_exn_extract;
+        of_exn_extract;
+      ];
+      exn_instance
+    ] in
+
+  vernacs
+  |+ Section "OCaml Exceptions"
+  |+ Block (List.fold_left exception_vernac (of_list []) m.interface_exceptions)
+
 let primitives_vernac features m vernacs =
   let prim_to_members prim =
     (prim.prim_name, type_lift "m" prim.prim_type) in
@@ -562,6 +664,7 @@ let of_interface features models m =
       ]
      |> requires_vernac features models
      |> not (empty m.interface_types) @? types_vernac features m
+     |> not (empty m.interface_exceptions) @? exceptions_vernac features m
      |> not (empty m.interface_functions) @? functions_vernac m
      |> not (empty m.interface_primitives) @? primitives_vernac features m
      |+ Comment "The generated file ends here.")

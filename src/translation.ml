@@ -20,3 +20,4 @@ let types_table =
   |> preserve "option"
   |> preserve "string"
   |> preserve "unit"
+  |> preserve "exn"

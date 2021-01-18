@@ -7,6 +7,7 @@ type t = {
   interface_types : type_entry list;
   interface_functions : function_entry list;
   interface_primitives : primitive_entry list;
+  interface_exceptions : exception_entry list;
 }
 
 val empty_interface : string -> t

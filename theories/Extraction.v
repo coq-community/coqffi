@@ -34,3 +34,8 @@ Extract Inductive list => "list" [ "[]" "( :: )" ].
 
 From CoqFFI Require Export Seq.
 Import SeqExtraction.
+
+(** Exceptions *)
+
+From CoqFFI Require Export Exn.
+Import ExnExtraction.

@@ -29,10 +29,16 @@ type type_entry = {
 
 type mutually_recursive_types_entry = type_entry list
 
+type exception_entry = {
+  exception_name : string;
+  exception_args : mono_type_repr list;
+}
+
 type entry =
   | EPrim of primitive_entry
   | EFunc of function_entry
   | EType of type_entry
+  | EExn of exception_entry
 
 val entry_of_signature : Config.features -> Types.signature_item -> entry
 

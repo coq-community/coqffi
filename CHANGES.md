@@ -17,6 +17,10 @@ This will be the initial release of `coqffi`.
 - **Feature:** Add `Seq.t` to the list of the primitive types
   supported by `coqffi`
 - **Fix:** Make sure module names are always capitalized
+- **Feature**: In presence of a constuction of the form `exception Foo
+  of bar`, coqffi now generates a “proxy” type `FooExn`, along with
+  conversion functions from and to `exn`, and an instance for the
+  `Exn` typeclass provided by the `CoqFFI` theory.
 
 ## `coqffi.1.0.0~beta2`
 

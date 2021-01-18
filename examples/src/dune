@@ -33,6 +33,10 @@
   (target Str.v)
   (action (run coqffi -r Examples.StrModels -finterface %{cmi:str} -o %{target})))
 
+(rule
+  (target Exn.v)
+  (action (run coqffi -finterface %{cmi:exn} -o %{target})))
+
 (coq.theory
   (name Examples)
   (theories CoqFFI))

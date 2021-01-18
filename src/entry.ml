@@ -32,10 +32,16 @@ type type_entry = {
 
 type mutually_recursive_types_entry = type_entry list
 
+type exception_entry = {
+  exception_name : string;
+  exception_args : mono_type_repr list;
+}
+
 type entry =
   | EPrim of primitive_entry
   | EFunc of function_entry
   | EType of type_entry
+  | EExn of exception_entry
 
 exception UnsupportedOCamlSignature of Types.signature_item
 exception UnsupportedOCamlTypeKind of Types.type_kind
@@ -78,6 +84,10 @@ let entry_of_signature lf (s : Types.signature_item)
 
   let find_coq_model = Compat.find_map get_model in
 
+  let of_constructor_args = function
+    | Cstr_tuple typs -> List.map mono_type_repr_of_type_expr typs
+    | _ -> assert false in
+
   match s with
   | Sig_value (ident, desc, Exported) ->
     let name = Ident.name ident in
@@ -104,10 +114,6 @@ let entry_of_signature lf (s : Types.signature_item)
 
     let polys = minimize get_poly decl.type_params in
 
-    let of_constructor_args = function
-      | Cstr_tuple typs -> List.map mono_type_repr_of_type_expr typs
-      | _ -> assert false in
-
     let to_variant_entry v = {
       variant_name = Ident.name v.cd_id;
       variant_args = of_constructor_args v.cd_args;
@@ -128,6 +134,14 @@ let entry_of_signature lf (s : Types.signature_item)
       type_name = name;
       type_model = find_coq_model decl.type_attributes;
       type_value = value decl.type_kind;
+    }
+  | Sig_typext (ident, cst, Text_exception, Exported) ->
+    let name = Ident.name ident in
+    let ty = of_constructor_args cst.ext_args in
+
+    EExn {
+      exception_name = name;
+      exception_args = ty;
     }
   | _ -> raise (UnsupportedOCamlSignature s)
 

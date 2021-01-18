@@ -121,11 +121,11 @@ let coqffi_info =
       feature needs to be enabled). It is disable by default."
     );
 
-    `S "EXTRACTION PROFILES";
+    `S "SUPPORTED TYPES";
 
     `P "In addition to tuples and types introduced in the input module,
         $(b,coqffi) supports the following base types:";
-    `Noblank;
+
     `Pre "  - $(b,bool)"; `Noblank;
     `Pre "  - $(b,char)"; `Noblank;
     `Pre "  - $(b,int)"; `Noblank;
@@ -134,6 +134,12 @@ let coqffi_info =
     `Pre "  - $(i,'a) $(b,option)"; `Noblank;
     `Pre "  - $(b,string)"; `Noblank;
     `Pre "  - $(b,unit)"; `Noblank;
+    `Pre "  - $(b,exn)";
+    `P "Besides, $(b,coqffi) also supports extending the $(b,exn)
+    type, using the $(i,exception )$(b,Foo)$(i, of ) $(b,bar)
+    construction. In such a case, $(b,coqffi) will generate a “proxy”
+    inductive type $(b,FooExn), along with conversion functions from
+    and to $(b,exn).";
     `S Manpage.s_bugs;
     `P "Email bug reports to <thomas.letan at ssi.gouv.fr>.";
   ] in
