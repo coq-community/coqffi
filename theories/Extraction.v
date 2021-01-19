@@ -5,7 +5,7 @@ Import IntExtraction.
 
 (** ** Strings *)
 
-From CoqFFI Require Export String.
+From Coq Require Export Ascii String.
 From Coq Require Import ExtrOcamlNativeString.
 
 (** ** Booleans *)
@@ -32,8 +32,8 @@ Extract Inductive list => "list" [ "[]" "( :: )" ].
 
 (** ** Seq *)
 
-From CoqFFI Require Export Seq.
-Import SeqExtraction.
+From CoqFFI Require Seq.
+Import Seq.SeqExtraction.
 
 (** Exceptions *)
 

@@ -3,10 +3,11 @@ From SimpleIO Require Import SimpleIO.
 From ExtLib Require Import Monad.
 Import MonadLetNotation.
 Open Scope monad_scope.
-From CoqFFI Require Import Int Seq.
+From CoqFFI Require Import Extraction.
 Open Scope i63_scope.
 
 From Examples Require Import File Sleep.
+From CoqFFI Require Import String.
 
 Generalizable All Variables.
 
