@@ -16,13 +16,13 @@ This will be the initial release of `coqffi`.
   export the `CoqFFI.Data.Seq` module anymore
 - **Feature:** Add a new feature to assume all OCaml values of
   the input OCaml module interface are pure (`-fpure-module`)
-- **Feature:** Add `Seq.t` to the list of the primitive types
-  supported by `coqffi`
-- **Fix:** Make sure module names are always capitalized
+- **Feature:** Add `Seq.t` and `result` to the list of the primitive
+  types supported by `coqffi`
 - **Feature**: In presence of a constuction of the form `exception Foo
   of bar`, coqffi now generates a “proxy” type `FooExn`, along with
   conversion functions from and to `exn`, and an instance for the
   `Exn` typeclass provided by the `CoqFFI` theory.
+- **Fix:** Make sure module names are always capitalized
 
 ## `coqffi.1.0.0~beta2`
 

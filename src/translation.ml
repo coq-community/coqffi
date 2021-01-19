@@ -16,6 +16,7 @@ let types_table =
   |> translate ~ocaml:"char" ~coq:"ascii"
   |> translate ~ocaml:"int" ~coq:"i63"
   |> translate ~ocaml:"Stdlib.Seq.t" ~coq:"Seq.t"
+  |> translate ~ocaml:"Stdlib.result" ~coq:"sum"
   |> preserve "list"
   |> preserve "option"
   |> preserve "string"
