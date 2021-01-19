@@ -22,6 +22,8 @@ This will be the initial release of `coqffi`.
   of bar`, coqffi now generates a “proxy” type `FooExn`, along with
   conversion functions from and to `exn`, and an instance for the
   `Exn` typeclass provided by the `CoqFFI` theory.
+- **Feature:** Support the `may_raise` attribute to mark pure function
+  and impure primivites susceptible to raise exceptions.
 - **Fix:** Make sure module names are always capitalized
 
 ## `coqffi.1.0.0~beta2`

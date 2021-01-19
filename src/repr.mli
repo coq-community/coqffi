@@ -50,6 +50,10 @@ val type_repr_of_type_expr : Types.type_expr -> type_repr
     c -> d] *)
 val tlambda : mono_type_repr list -> mono_type_repr -> mono_type_repr
 
+(** Apply a function to the codomain of a function,, {e i.e.},
+    [map_codomain f (a -> .. -> r) ≡ a -> .. -> f r] *)
+val map_codomain : (mono_type_repr -> mono_type_repr) -> type_repr -> type_repr
+
 (** Project the codomain of a function into a parameterized type, {e
     i.e.}, [type_lift T [x r] (a -> .. -> r) ≡ a -> .. -> T x y r] *)
 val type_lift : string -> ?args:(mono_type_repr list) -> type_repr -> type_repr

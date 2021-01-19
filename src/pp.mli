@@ -15,3 +15,7 @@ val pp_list : ?pp_prefix:(formatter -> unit -> unit)
 val pp_args_list : formatter -> Repr.type_repr list -> unit
 
 val pp_type_args_list : formatter -> string list -> unit
+
+val pp_try_with : (formatter -> unit -> unit) -> formatter -> unit -> unit
+
+val pp_fun_call : ?paren:bool -> string -> string list -> formatter -> unit -> unit

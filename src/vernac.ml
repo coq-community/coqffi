@@ -193,6 +193,12 @@ type t =
   | ExtractConstant of extract_constant
   | ExtractInductive of extract_inductive
 
+let exn_t = TParam ("exn", [])
+let may_raise_t may_raise t =
+  if may_raise
+  then map_codomain (fun t -> TParam ("sum", [t; exn_t])) t
+  else t
+
 let rec pp_vernac fmt = function
   | Block l ->
     fprintf fmt "@[<v>%a@]"
@@ -236,6 +242,9 @@ let empty = function
 
 let (@?) cond f = if cond then f else (fun x -> x)
 
+let call_vars proto =
+  List.mapi (fun i _ -> sprintf "x%d" i) proto.prototype_args
+
 let requires_vernac features models =
   let requires_freespec = Lazylist.push (FromRequireImport {
       import_from = "FreeSpec.Core";
@@ -263,24 +272,41 @@ let requires_vernac features models =
      |++ List.map (fun x -> Require { require_module = x }) models)
 
 let functions_vernac m =
-  let to_def f = match f.func_model with
+  let to_def f =
+    let func_type = may_raise_t f.func_may_raise f.func_type in
+
+    match f.func_model with
     | Some model -> Definition {
         def_name = f.func_name;
         def_typeclass_args = [];
         def_prototype = {
           prototype_type_args = [];
           prototype_args = [];
-          prototype_ret_type = f.func_type;
+          prototype_ret_type = func_type;
         };
         def_body = (fun fmt _ -> pp_print_string fmt model)
       }
-    | _ -> Axiom { axiom_name = f.func_name; axiom_type = f.func_type }
+    | _ -> Axiom { axiom_name = f.func_name; axiom_type = func_type }
   in
 
-  let to_extr f = ExtractConstant {
+  let to_extr f =
+    let target = Interface.qualified_name m f.func_name in
+
+    let func_extract f =
+      if f.func_may_raise
+      then
+        let proto = type_repr_to_prototype_repr f.func_type in
+        let args = call_vars proto in
+        asprintf "(fun %a -> %a)"
+          (pp_print_list ~pp_sep:(fun fmt _ -> pp_print_string fmt " ")
+             pp_print_string) args
+          (pp_try_with (pp_fun_call target args)) ()
+      else target in
+
+    ExtractConstant {
       constant_qualid = f.func_name;
       constant_type_vars = [];
-      constant_target = Interface.qualified_name m f.func_name
+      constant_target = func_extract f
     } in
 
   Lazylist.push_list [
@@ -374,34 +400,35 @@ let types_vernac features m vernacs =
   |++ Compat.concat_map type_entries_to_vernac mut_types
   |+ block_of_list @@ List.map to_extract m.interface_types
 
-let call_vars proto =
-  List.mapi (fun i _ -> sprintf "x%d" i) proto.prototype_args
-
 let io_primitives_vernac m =
   (* TODO: tailrec? *)
-  let to_axiom prim = Axiom {
+  let to_axiom prim =
+    let axiom_type =
+      type_lift "IO" (may_raise_t prim.prim_may_raise prim.prim_type) in
+    Axiom {
       axiom_name = sprintf "io_%s" prim.prim_name;
-      axiom_type = type_lift "IO" prim.prim_type;
+      axiom_type = axiom_type;
     } in
 
   let to_extract_constant prim =
     let proto = type_repr_to_prototype_repr prim.prim_type in
     let args = call_vars proto in
+    let pp_call = pp_fun_call
+                    (Interface.qualified_name m prim.prim_name)
+                    args in
+    let body =
+      asprintf "(%a)"
+        (if prim.prim_may_raise then pp_try_with pp_call else pp_call) ()
+    in
+
     ExtractConstant {
       constant_qualid = sprintf "io_%s" prim.prim_name;
       constant_type_vars = [];
       constant_target =
-        asprintf "@[<h>(fun%a%a%ak__ -> k__ %a%s%a%a%a)@]"
-          (pp_if_not_empty pp_print_space) args
-          (pp_print_list ~pp_sep:pp_print_space
+        asprintf "@[<h>(fun%a k__ -> k__ %s)@]"
+          (pp_list ~pp_prefix:(fun fmt _ -> pp_print_string fmt " ") ~pp_sep:pp_print_space
              pp_print_string) args
-          (pp_if_not_empty pp_print_space) args
-          (pp_if_not_empty (fun fmt _ -> pp_print_string fmt "(")) args
-          (Interface.qualified_name m prim.prim_name)
-          (pp_if_not_empty pp_print_space) args
-          (pp_print_list ~pp_sep:pp_print_space
-             pp_print_string) args
-          (pp_if_not_empty (fun fmt _ -> pp_print_string fmt ")")) args
+          body
     } in
 
   let instance_vernac = Instance {
@@ -422,22 +449,22 @@ let io_primitives_vernac m =
   ]
 
 let interface_vernac m vernacs =
-  let prim_to_constructor prim = {
-    constructor_name =
-      String.capitalize_ascii prim.prim_name;
-    constructor_prototype = {
-      prototype_type_args = [];
-      prototype_args = [];
-      prototype_ret_type =
-        type_lift
-          (String.uppercase_ascii m.interface_name)
-          prim.prim_type
-    }
+  let prim_to_constructor prim =
+    let prim_type = type_lift
+                      (String.uppercase_ascii m.interface_name)
+                      (may_raise_t prim.prim_may_raise prim.prim_type) in
+    {
+      constructor_name = String.capitalize_ascii prim.prim_name;
+      constructor_prototype = {
+          prototype_type_args = [];
+          prototype_args = [];
+          prototype_ret_type = prim_type
+        }
   } in
 
   let prim_to_inj_helper prim =
-    let proto =
-      Repr.type_repr_to_prototype_repr (type_lift "m" prim.prim_type) in
+    let inj_type = may_raise_t prim.prim_may_raise prim.prim_type in
+    let proto = Repr.type_repr_to_prototype_repr (type_lift "m" inj_type) in
     Definition {
       def_name = sprintf "inj_%s" prim.prim_name;
       def_typeclass_args = [
@@ -492,18 +519,32 @@ let semantics_vernac m vernacs =
   let interface_type =
     TParam (interface_name, []) in
 
+  let prim_target prim =
+    let target_name = qualified_name m prim.prim_name in
+    if prim.prim_may_raise
+    then let proto = type_repr_to_prototype_repr prim.prim_type in
+         let args = call_vars proto in
+         asprintf "(fun %a -> %a)"
+           (pp_list
+              ~pp_sep:(fun fmt _ -> pp_print_string fmt " ")
+              pp_print_string) args
+           (pp_try_with (pp_fun_call target_name args)) ()
+    else target_name in
+
   vernacs
   |++ [
     Subsection "FreeSpec Semantics";
     compacted_block_of_list @@ List.map (fun prim -> Axiom {
       axiom_name = sprintf "unsafe_%s" prim.prim_name;
-      axiom_type = prim.prim_type;
+      axiom_type = may_raise_t prim.prim_may_raise prim.prim_type;
     }) m.interface_primitives;
+
     compacted_block_of_list @@ List.map (fun prim -> ExtractConstant {
       constant_qualid = sprintf "unsafe_%s" prim.prim_name;
       constant_type_vars = [];
-      constant_target = qualified_name m prim.prim_name;
+      constant_target = prim_target prim;
     }) m.interface_primitives;
+
     Definition {
       def_name = sprintf "%s_unsafe_semantics"
           (String.lowercase_ascii m.interface_name);
@@ -636,7 +677,8 @@ let exceptions_vernac _features m vernacs =
 
 let primitives_vernac features m vernacs =
   let prim_to_members prim =
-    (prim.prim_name, type_lift "m" prim.prim_type) in
+    let prim_type = may_raise_t prim.prim_may_raise prim.prim_type in
+    (prim.prim_name, type_lift "m" prim_type) in
 
   let monad_vernac = Typeclass {
      class_name = sprintf "Monad%s" m.interface_name;

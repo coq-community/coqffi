@@ -37,6 +37,10 @@
   (target Exn.v)
   (action (run coqffi -finterface %{cmi:exn} -o %{target})))
 
+(rule
+  (target Raise.v)
+  (action (run coqffi -finterface %{cmi:raise} -ffreespec -o %{target})))
+
 (coq.theory
   (name Examples)
   (theories CoqFFI))

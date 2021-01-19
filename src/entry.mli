@@ -3,12 +3,14 @@ open Repr
 type primitive_entry = {
   prim_name : string;
   prim_type : type_repr;
+  prim_may_raise : bool;
 }
 
 type function_entry = {
   func_name : string;
   func_type : type_repr;
-  func_model : string option
+  func_model : string option;
+  func_may_raise : bool;
 }
 
 type variant_entry = {

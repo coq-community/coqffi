@@ -6,12 +6,14 @@ open Config
 type primitive_entry = {
   prim_name : string;
   prim_type : type_repr;
+  prim_may_raise : bool;
 }
 
 type function_entry = {
   func_name : string;
   func_type : type_repr;
-  func_model : string option
+  func_model : string option;
+  func_may_raise : bool;
 }
 
 type variant_entry = {
@@ -51,9 +53,12 @@ let entry_of_signature lf (s : Types.signature_item)
   let transparent_types = is_enabled lf TransparentTypes in
   let pure_module = is_enabled lf PureModule in
 
-  let has_pure_attr : attributes -> bool =
-    List.exists (fun attr -> attr.attr_name.txt = "pure")
-  in
+  let has_attr name : attributes -> bool =
+    List.exists (fun attr -> attr.attr_name.txt = name) in
+
+  let has_pure_attr : attributes -> bool = has_attr "pure" in
+
+  let has_may_raise_attr : attributes -> bool = has_attr "may_raise" in
 
   let to_mono = function
     | TMono mono -> mono
@@ -93,16 +98,19 @@ let entry_of_signature lf (s : Types.signature_item)
     let name = Ident.name ident in
     let repr = type_repr_of_type_expr desc.val_type in
     let model = find_coq_model desc.val_attributes in
+    let may_raise = has_may_raise_attr desc.val_attributes in
 
     if is_pure desc.val_attributes model (to_mono repr)
     then EFunc {
         func_name = name;
         func_type = repr;
         func_model = model;
+        func_may_raise = may_raise;
       }
     else EPrim {
         prim_name = name;
         prim_type = repr;
+        prim_may_raise = may_raise;
       }
   | Sig_type (ident, decl, _, Exported) ->
     let get_poly t =

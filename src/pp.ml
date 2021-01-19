@@ -11,9 +11,11 @@ let pp_list ?(pp_prefix=fun _ _ -> ()) ?(pp_suffix=fun _ _ -> ())
     end
   | _ -> ()
 
-let pp_if_not_empty pp fmt = function
-  | _ :: _ -> pp fmt ()
-  | _ -> ()
+let not_empty = function
+  | _ :: _ -> true
+  | _ -> false
+
+let pp_if_not_empty pp fmt l = if not_empty l then pp fmt ()
 
 let pp_args_list fmt args_list =
   let idx = ref 0 in
@@ -29,3 +31,17 @@ let pp_type_args_list fmt type_args_list =
     (fun fmt arg -> fprintf fmt "(%s : Type)" arg)
     fmt
     type_args_list
+
+let pp_try_with pp fmt _ =
+  fprintf fmt "try Stdlib.Result.ok %a with e -> Stdlib.Result.error e"
+    pp ()
+
+let pp_fun_call ?(paren=true) fn_name args fmt _ =
+  fprintf fmt "%a%s%a%a"
+    (fun fmt l -> if not_empty l && paren then pp_print_string fmt "(") args
+    fn_name
+    (pp_list
+       ~pp_prefix:(fun fmt _ -> pp_print_string fmt " ")
+       ~pp_sep:(fun fmt _ -> pp_print_string fmt " ")
+       pp_print_string) args
+    (fun fmt l -> if not_empty l && paren then pp_print_string fmt ")") args
