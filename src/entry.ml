@@ -3,10 +3,17 @@ open Parsetree
 open Types
 open Config
 
+type error = {
+    error_loc : Location.t;
+    error_entry : string;
+    error_exn : exn;
+  }
+
 type primitive_entry = {
   prim_name : string;
   prim_type : type_repr;
   prim_may_raise : bool;
+  prim_loc : Location.t;
 }
 
 type function_entry = {
@@ -14,6 +21,7 @@ type function_entry = {
   func_type : type_repr;
   func_model : string option;
   func_may_raise : bool;
+  func_loc : Location.t;
 }
 
 type variant_entry = {
@@ -29,7 +37,8 @@ type type_entry = {
   type_name : string;
   type_params : string list;
   type_model : string option;
-  type_value : type_value
+  type_value : type_value;
+  type_loc : Location.t;
 }
 
 type mutually_recursive_types_entry = type_entry list
@@ -37,6 +46,7 @@ type mutually_recursive_types_entry = type_entry list
 type exception_entry = {
   exception_name : string;
   exception_args : mono_type_repr list;
+  exception_loc : Location.t;
 }
 
 type entry =
@@ -82,11 +92,30 @@ let get_attr_string name : attributes -> string option =
 let has_coq_model : attributes -> string option =
   get_attr_string "coq_model"
 
+let signature_ident = function
+  | Sig_value (ident, _, _)
+    | Sig_type (ident, _, _, _)
+    | Sig_typext (ident, _, _, _)
+    | Sig_module (ident, _, _, _, _)
+    | Sig_modtype (ident, _, _)
+    | Sig_class (ident, _, _, _)
+    | Sig_class_type (ident, _, _, _)
+    -> ident
+
+let signature_loc = function
+  | Sig_value (_, v, _) -> v.val_loc
+  | Sig_type (_, ty, _, _) -> ty.type_loc
+  | Sig_typext (_, ext, _, _) -> ext.ext_loc
+  | Sig_module (_, _, m, _, _) -> m.md_loc
+  | Sig_modtype (_, m, _) -> m.mtd_loc
+  | Sig_class (_, c, _, _) -> c.cty_loc
+  | Sig_class_type (_, c, _, _) -> c.clty_loc
+
 let args_of_constructor : Types.constructor_arguments -> mono_type_repr list = function
   | Cstr_tuple typs -> List.map mono_type_repr_of_type_expr typs
   | _ -> assert false
 
-let entry_of_value lf ident desc =
+let entry_of_value lf ident desc loc =
   let is_pure attrs model t =
     is_enabled lf PureModule
     || Repr.supposedly_pure t
@@ -105,14 +134,16 @@ let entry_of_value lf ident desc =
          func_type = repr;
          func_model = model;
          func_may_raise = may_raise;
+         func_loc = loc;
        }
   else EPrim {
          prim_name = name;
          prim_type = repr;
          prim_may_raise = may_raise;
+         prim_loc = loc;
        }
 
-let entry_of_type lf ident decl  =
+let entry_of_type lf ident decl loc =
   let to_variant_entry v = {
     variant_name = Ident.name v.cd_id;
     variant_args = args_of_constructor v.cd_args;
@@ -130,23 +161,32 @@ let entry_of_type lf ident decl  =
     type_name = Ident.name ident;
     type_model = has_coq_model decl.type_attributes;
     type_value = value decl.type_kind;
+    type_loc = loc;
   }
 
-let entry_of_exn ident cst =
+let entry_of_exn ident cst loc =
   EExn {
     exception_name = Ident.name ident;
     exception_args = args_of_constructor cst.ext_args;
+    exception_loc = loc;
   }
 
 let entry_of_signature lf (s : Types.signature_item) : entry =
+  let loc = signature_loc s in
   match s with
   | Sig_value (ident, desc, Exported) ->
-    entry_of_value lf ident desc
+    entry_of_value lf ident desc loc
   | Sig_type (ident, decl, _, Exported) ->
-    entry_of_type lf ident decl
+    entry_of_type lf ident decl loc
   | Sig_typext (ident, cst, Text_exception, Exported) ->
-    entry_of_exn ident cst
+    entry_of_exn ident cst loc
   | _ -> raise (UnsupportedOCamlSignature s)
+
+let error_of_signature s exn : error = {
+    error_loc = signature_loc s;
+    error_entry = Ident.name (signature_ident s);
+    error_exn = exn;
+  }
 
 type state = Unvisited | OnStack | Visited
 
