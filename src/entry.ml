@@ -46,32 +46,22 @@ type entry =
   | EExn of exception_entry
 
 exception UnsupportedOCamlSignature of Types.signature_item
-exception UnsupportedOCamlTypeKind of Types.type_kind
+exception UnsupportedGADT
+exception Anomaly
 
-let entry_of_signature lf (s : Types.signature_item)
-  : entry =
-  let transparent_types = is_enabled lf TransparentTypes in
-  let pure_module = is_enabled lf PureModule in
+let polymorphic_param (t : type_expr) : string =
+  match t.desc with
+  | Tvar (Some x) -> x
+  | Tvar None -> raise UnsupportedGADT
+  | _ -> raise Anomaly
 
-  let has_attr name : attributes -> bool =
-    List.exists (fun attr -> attr.attr_name.txt = name) in
+let polymorphic_params (decl : type_declaration) : string list =
+  List.map polymorphic_param decl.type_params
 
-  let has_pure_attr : attributes -> bool = has_attr "pure" in
+let has_attr name : attributes -> bool =
+  List.exists (fun attr -> attr.attr_name.txt = name)
 
-  let has_may_raise_attr : attributes -> bool = has_attr "may_raise" in
-
-  let to_mono = function
-    | TMono mono -> mono
-    | TPoly (_, mono) -> mono in
-
-  let is_pure_value = function
-    | TLambda (_, _) -> false
-    | _ -> true in
-
-  let is_pure attrs model t =
-    pure_module || is_pure_value t || Option.is_some model || has_pure_attr attrs
-  in
-
+let get_attr_string name : attributes -> string option =
   let expr_to_string = function
     | Pexp_constant (Pconst_string (str, _, _)) -> Some str
     | _ -> None in
@@ -80,77 +70,82 @@ let entry_of_signature lf (s : Types.signature_item)
     | Pstr_eval (expr, _) -> expr_to_string expr.pexp_desc
     | _ -> None in
 
-  let get_model attr =
-    if attr.attr_name.txt = "coq_model"
+  let get_attr attr =
+    if attr.attr_name.txt = name
     then match attr.attr_payload with
-      | PStr [ model ] -> struct_to_string model.pstr_desc
-      | _ -> None
+         | PStr [ model ] -> struct_to_string model.pstr_desc
+         | _ -> None
     else None in
 
-  let find_coq_model = Compat.find_map get_model in
+  Compat.find_map get_attr
 
-  let of_constructor_args = function
-    | Cstr_tuple typs -> List.map mono_type_repr_of_type_expr typs
-    | _ -> assert false in
+let has_coq_model : attributes -> string option =
+  get_attr_string "coq_model"
 
+let args_of_constructor : Types.constructor_arguments -> mono_type_repr list = function
+  | Cstr_tuple typs -> List.map mono_type_repr_of_type_expr typs
+  | _ -> assert false
+
+let entry_of_value lf ident desc =
+  let is_pure attrs model t =
+    is_enabled lf PureModule
+    || Repr.supposedly_pure t
+    || Option.is_some model
+    || has_attr "pure" attrs
+  in
+
+  let name = Ident.name ident in
+  let repr = type_repr_of_type_expr desc.val_type in
+  let model = has_coq_model desc.val_attributes in
+  let may_raise = has_attr "may_raise" desc.val_attributes in
+
+  if is_pure desc.val_attributes model repr
+  then EFunc {
+         func_name = name;
+         func_type = repr;
+         func_model = model;
+         func_may_raise = may_raise;
+       }
+  else EPrim {
+         prim_name = name;
+         prim_type = repr;
+         prim_may_raise = may_raise;
+       }
+
+let entry_of_type lf ident decl  =
+  let to_variant_entry v = {
+    variant_name = Ident.name v.cd_id;
+    variant_args = args_of_constructor v.cd_args;
+  } in
+
+  let value t =
+    if is_enabled lf TransparentTypes
+    then match t with
+         | Type_variant v -> Variant (List.map to_variant_entry v)
+         | _ -> Opaque
+    else Opaque in
+
+  EType {
+    type_params = polymorphic_params decl;
+    type_name = Ident.name ident;
+    type_model = has_coq_model decl.type_attributes;
+    type_value = value decl.type_kind;
+  }
+
+let entry_of_exn ident cst =
+  EExn {
+    exception_name = Ident.name ident;
+    exception_args = args_of_constructor cst.ext_args;
+  }
+
+let entry_of_signature lf (s : Types.signature_item) : entry =
   match s with
   | Sig_value (ident, desc, Exported) ->
-    let name = Ident.name ident in
-    let repr = type_repr_of_type_expr desc.val_type in
-    let model = find_coq_model desc.val_attributes in
-    let may_raise = has_may_raise_attr desc.val_attributes in
-
-    if is_pure desc.val_attributes model (to_mono repr)
-    then EFunc {
-        func_name = name;
-        func_type = repr;
-        func_model = model;
-        func_may_raise = may_raise;
-      }
-    else EPrim {
-        prim_name = name;
-        prim_type = repr;
-        prim_may_raise = may_raise;
-      }
+    entry_of_value lf ident desc
   | Sig_type (ident, decl, _, Exported) ->
-    let get_poly t =
-      match t.desc with
-      | Tvar (Some x) -> Some x
-      | _ -> None in
-
-    let minimize f l = List.sort_uniq String.compare (List.filter_map f l) in
-
-    let polys = minimize get_poly decl.type_params in
-
-    let to_variant_entry v = {
-      variant_name = Ident.name v.cd_id;
-      variant_args = of_constructor_args v.cd_args;
-    } in
-
-    let value t =
-      if transparent_types
-      then match t with
-        | Type_abstract -> Opaque
-        | Type_variant v -> Variant (List.map to_variant_entry v)
-        | t -> raise (UnsupportedOCamlTypeKind t)
-      else Opaque in
-
-    let name = Ident.name ident in
-
-    EType {
-      type_params = polys;
-      type_name = name;
-      type_model = find_coq_model decl.type_attributes;
-      type_value = value decl.type_kind;
-    }
+    entry_of_type lf ident decl
   | Sig_typext (ident, cst, Text_exception, Exported) ->
-    let name = Ident.name ident in
-    let ty = of_constructor_args cst.ext_args in
-
-    EExn {
-      exception_name = name;
-      exception_args = ty;
-    }
+    entry_of_exn ident cst
   | _ -> raise (UnsupportedOCamlSignature s)
 
 type state = Unvisited | OnStack | Visited

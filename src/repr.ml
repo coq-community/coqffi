@@ -9,6 +9,15 @@ type type_repr =
   | TMono of mono_type_repr
   | TPoly of (string list * mono_type_repr)
 
+let to_mono_type_repr = function
+  | TMono mono -> mono
+  | TPoly (_, mono) -> mono
+
+let supposedly_pure t =
+  match to_mono_type_repr t with
+  | TLambda (_, _) -> false
+  | _ -> true
+
 exception UnsupportedOCamlType of Types.type_expr
 
 let rec mono_type_repr_of_type_expr (t : Types.type_expr) : mono_type_repr =

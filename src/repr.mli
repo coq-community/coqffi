@@ -34,6 +34,10 @@ type type_repr =
     keep that in mind if we want to generate OCaml programs from manually
     defined [type_repr] values. *)
 
+val to_mono_type_repr : type_repr -> mono_type_repr
+
+val supposedly_pure : type_repr -> bool
+
 (** {1 Converting [Cmi_format]'s [type_expr] to [coqffi]’s [type_repr]} *)
 
 exception UnsupportedOCamlType of Types.type_expr
