@@ -1,5 +1,5 @@
 open Entry
-open Config
+open Feature
 
 type t = {
   interface_namespace : string list;

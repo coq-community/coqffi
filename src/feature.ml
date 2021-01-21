@@ -1,9 +1,11 @@
-type feature =
+type t =
   | TransparentTypes
   | PureModule
   | Interface
   | SimpleIO
   | FreeSpec
+
+type feature = t
 
 exception FreeSpecRequiresInterface
 

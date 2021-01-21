@@ -1,6 +1,6 @@
 open Cmi_format
 open Coqffi
-open Coqffi.Config
+open Coqffi.Feature
 open Coqffi.Interface
 open Cmdliner
 
@@ -159,7 +159,7 @@ let run_coqffi (input : string) (output : string option)
   try begin
     let (input, output, features) = parse () in
 
-    Config.check_features_consistency features;
+    check_features_consistency features;
 
     Format.(
       fprintf err_formatter "%a@?"
@@ -173,7 +173,7 @@ let run_coqffi (input : string) (output : string option)
     process models features input output
   end
   with
-  | Config.FreeSpecRequiresInterface ->
+  | FreeSpecRequiresInterface ->
     Format.fprintf Format.err_formatter
       "Error: The feature `freespec' requires the feature `interface' to be enabled"
 

@@ -1,4 +1,5 @@
 open Repr
+open Feature
 
 type primitive_entry = {
   prim_name : string;
@@ -46,7 +47,7 @@ type entry =
   | EType of type_entry
   | EExn of exception_entry
 
-val entry_of_signature : Config.features -> Types.signature_item -> entry
+val entry_of_signature : features -> Types.signature_item -> entry
 val error_of_signature : Types.signature_item -> exn -> Error.t
 
 val dependencies : type_entry -> string list

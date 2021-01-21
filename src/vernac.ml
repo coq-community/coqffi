@@ -1,7 +1,7 @@
 open Entry
 open Format
 open Interface
-open Config
+open Feature
 open Repr
 open Lazylist
 open Pp

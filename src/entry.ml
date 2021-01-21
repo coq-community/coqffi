@@ -1,7 +1,7 @@
 open Repr
 open Parsetree
 open Types
-open Config
+open Feature
 open Error
 
 type primitive_entry = {
