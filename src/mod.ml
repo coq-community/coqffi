@@ -4,15 +4,15 @@ open Repr
 open Error
 
 type t = {
-  interface_namespace : string list;
-  interface_name : string;
-  interface_types : type_entry list;
-  interface_functions : function_entry list;
-  interface_primitives : primitive_entry list;
-  interface_exceptions : exception_entry list;
+  mod_namespace : string list;
+  mod_name : string;
+  mod_types : type_entry list;
+  mod_functions : function_entry list;
+  mod_primitives : primitive_entry list;
+  mod_exceptions : exception_entry list;
 }
 
-let empty_interface (modname : string) =
+let empty (modname : string) =
   let rec namespace_and_path acc = function
     | [x] -> (List.rev acc, String.capitalize_ascii x)
     | x :: rst -> namespace_and_path (String.capitalize_ascii x :: acc) rst
@@ -20,33 +20,33 @@ let empty_interface (modname : string) =
 
   let (namespace, name) = namespace_and_path [] (Str.split (Str.regexp "__") modname)
   in {
-    interface_namespace = namespace;
-    interface_name = name;
-    interface_types = [];
-    interface_functions = [];
-    interface_primitives = [];
-    interface_exceptions = [];
+    mod_namespace = namespace;
+    mod_name = name;
+    mod_types = [];
+    mod_functions = [];
+    mod_primitives = [];
+    mod_exceptions = [];
   }
 
-let interface_of_cmi_infos ~features (info : cmi_infos) =
+let of_cmi_infos ~features (info : cmi_infos) =
   let add_primitive_entry (m : t) (pr : primitive_entry) : t = {
     m with
-    interface_primitives = m.interface_primitives @ [pr]
+    mod_primitives = m.mod_primitives @ [pr]
   } in
 
   let add_function_entry (m : t) (f : function_entry) : t = {
     m with
-    interface_functions = m.interface_functions @ [f]
+    mod_functions = m.mod_functions @ [f]
   } in
 
   let add_type_entry (m : t) (t : type_entry) : t = {
     m with
-    interface_types = m.interface_types @ [t]
+    mod_types = m.mod_types @ [t]
   } in
 
   let add_exception_entry (m : t) (e : exception_entry) : t = {
     m with
-    interface_exceptions = m.interface_exceptions @ [e]
+    mod_exceptions = m.mod_exceptions @ [e]
   } in
 
   let add_entry (m : t) = function
@@ -62,10 +62,10 @@ let interface_of_cmi_infos ~features (info : cmi_infos) =
       m
   in
 
-  List.fold_left foldf (empty_interface info.cmi_name) info.cmi_sign
+  List.fold_left foldf (empty info.cmi_name) info.cmi_sign
 
 let qualified_name m name =
-  String.concat "." (m.interface_namespace @ [m.interface_name; name])
+  String.concat "." (m.mod_namespace @ [m.mod_name; name])
 
 let translate tbl m =
   let translate_function tbl f = {
@@ -130,7 +130,7 @@ let translate tbl m =
   let tbl' = List.fold_left
       (fun tbl t -> Translation.preserve t.type_name tbl)
       tbl
-      m.interface_types in
+      m.mod_types in
 
   let safe error translate x =
     try
@@ -141,12 +141,12 @@ let translate tbl m =
 
   {
     m with
-    interface_types =
-      List.filter_map (safe error_type @@ translate_type tbl') m.interface_types;
-    interface_functions =
-      List.filter_map (safe error_function @@ translate_function tbl') m.interface_functions;
-    interface_primitives =
-      List.filter_map (safe error_primitive @@ translate_primitive tbl') m.interface_primitives;
-    interface_exceptions =
-      List.filter_map (safe error_exception @@ translate_exception tbl') m.interface_exceptions;
+    mod_types =
+      List.filter_map (safe error_type @@ translate_type tbl') m.mod_types;
+    mod_functions =
+      List.filter_map (safe error_function @@ translate_function tbl') m.mod_functions;
+    mod_primitives =
+      List.filter_map (safe error_primitive @@ translate_primitive tbl') m.mod_primitives;
+    mod_exceptions =
+      List.filter_map (safe error_exception @@ translate_exception tbl') m.mod_exceptions;
   }

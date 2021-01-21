@@ -1,14 +1,12 @@
 open Cmi_format
 open Coqffi
-open Coqffi.Feature
-open Coqffi.Interface
 open Cmdliner
 
 let process models features input ochannel =
   read_cmi input
-  |> interface_of_cmi_infos ~features
-  |> translate Translation.types_table
-  |> Vernac.of_interface features models
+  |> Mod.of_cmi_infos ~features
+  |> Mod.translate Translation.types_table
+  |> Vernac.of_mod features models
   |> Format.fprintf ochannel "%a@?" Vernac.pp_vernac
 
 exception TooManyArguments
@@ -42,7 +40,7 @@ let features_opt =
      comprehensive list of the features available." in
 
   let feature_enum tname =
-    let name = feature_name tname in [
+    let name = Feature.name tname in [
       name, (tname, true);
       "no-" ^ name, (tname, false)
     ] in
@@ -147,7 +145,7 @@ let coqffi_info =
   Term.(info "coqffi" ~exits:default_exits ~doc ~man ~version:"coqffi.dev")
 
 let run_coqffi (input : string) (output : string option)
-    (features : features) (models : string list) =
+    (features : Feature.features) (models : string list) =
 
   let parse _ =
     let ochannel = match output with
@@ -159,7 +157,7 @@ let run_coqffi (input : string) (output : string option)
   try begin
     let (input, output, features) = parse () in
 
-    check_features_consistency features;
+    Feature.check_features_consistency features;
 
     Format.(
       fprintf err_formatter "%a@?"
@@ -167,13 +165,13 @@ let run_coqffi (input : string) (output : string option)
            (fun fmt f ->
               fprintf fmt
                 "Warning: Feature `%s' has been selected several times.@ "
-                (feature_name f)))
-        (find_duplicates features));
+                (Feature.name f)))
+        (Feature.find_duplicates features));
 
     process models features input output
   end
   with
-  | FreeSpecRequiresInterface ->
+  | Feature.FreeSpecRequiresInterface ->
     Format.fprintf Format.err_formatter
       "Error: The feature `freespec' requires the feature `interface' to be enabled"
 

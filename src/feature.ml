@@ -11,7 +11,7 @@ exception FreeSpecRequiresInterface
 
 type features = (feature * bool) list
 
-let feature_name = function
+let name = function
   | TransparentTypes -> "transparent-types"
   | PureModule -> "pure-module"
   | Interface -> "interface"

@@ -9,7 +9,7 @@ type feature = t
 
 exception FreeSpecRequiresInterface
 
-val feature_name : feature -> string
+val name : feature -> string
 
 type features = (feature * bool) list
 
