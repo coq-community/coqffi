@@ -40,8 +40,6 @@ val supposedly_pure : type_repr -> bool
 
 (** {1 Converting [Cmi_format]'s [type_expr] to [coqffi]’s [type_repr]} *)
 
-exception UnsupportedOCamlType of Types.type_expr
-
 val mono_type_repr_of_type_expr : Types.type_expr -> mono_type_repr
 
 val type_repr_of_type_expr : Types.type_expr -> type_repr
@@ -88,8 +86,6 @@ val dependencies : type_repr -> string list
 
     See the {!module:Translation} module for more information on how to get a
     translation table. *)
-
-exception UnknownOCamlType of string
 
 val translate_mono_type_repr : Translation.t -> mono_type_repr -> mono_type_repr
 

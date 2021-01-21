@@ -1,11 +1,5 @@
 open Repr
 
-type error = {
-    error_loc : Location.t;
-    error_entry : string;
-    error_exn : exn;
-  }
-
 type primitive_entry = {
   prim_name : string;
   prim_type : type_repr;
@@ -53,9 +47,7 @@ type entry =
   | EExn of exception_entry
 
 val entry_of_signature : Config.features -> Types.signature_item -> entry
-val error_of_signature : Types.signature_item -> exn -> error
-
-exception UnsupportedOCamlSignature of Types.signature_item
+val error_of_signature : Types.signature_item -> exn -> Error.t
 
 val dependencies : type_entry -> string list
 

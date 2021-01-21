@@ -173,18 +173,6 @@ let run_coqffi (input : string) (output : string option)
     process models features input output
   end
   with
-  | Entry.UnsupportedOCamlSignature s ->
-    Format.fprintf Format.err_formatter
-      "Error: Use of unsupported OCaml construction: %a"
-      Printtyp.signature [s]
-  | Repr.UnsupportedOCamlType t ->
-    Format.fprintf Format.err_formatter
-      "Error: Unsupported OCaml type construction %a"
-      Printtyp.type_expr t
-  | Repr.UnknownOCamlType t ->
-    Format.fprintf Format.err_formatter
-      "Error: Type %s is not supported by the selected profile"
-      t
   | Config.FreeSpecRequiresInterface ->
     Format.fprintf Format.err_formatter
       "Error: The feature `freespec' requires the feature `interface' to be enabled"

@@ -1,6 +1,7 @@
 open Cmi_format
 open Entry
 open Repr
+open Error
 
 type t = {
   interface_namespace : string list;
@@ -57,10 +58,7 @@ let interface_of_cmi_infos ~features (info : cmi_infos) =
   let foldf m s =
     try entry_of_signature features s |> add_entry m
     with e ->
-      let err = error_of_signature s e in
-      Format.fprintf Format.err_formatter "%a: Unsupported entry %s\n"
-        Location.print_loc err.error_loc
-        err.error_entry;
+      pp_error Format.err_formatter (error_of_signature s e);
       m
   in
 
@@ -78,7 +76,7 @@ let translate tbl m =
   let error_function f e = {
       error_loc = f.func_loc;
       error_entry = f.func_name;
-      error_exn = e;
+      error_exn = error_kind_of_exn e;
     } in
 
   let translate_primitive tbl prim = {
@@ -89,7 +87,7 @@ let translate tbl m =
   let error_primitive p e = {
       error_loc = p.prim_loc;
       error_entry = p.prim_name;
-      error_exn = e;
+      error_exn = error_kind_of_exn e;
     } in
 
   let translate_exception tbl e = {
@@ -100,7 +98,7 @@ let translate tbl m =
   let error_exception exn e = {
       error_loc = exn.exception_loc;
       error_entry = exn.exception_name;
-      error_exn = e;
+      error_exn = error_kind_of_exn e;
     } in
 
   let translate_type_value tbl = function
@@ -126,7 +124,7 @@ let translate tbl m =
   let error_type ty e = {
       error_loc = ty.type_loc;
       error_entry = ty.type_name;
-      error_exn = e;
+      error_exn = error_kind_of_exn e;
     } in
 
   let tbl' = List.fold_left
@@ -138,10 +136,7 @@ let translate tbl m =
     try
       Some (translate x)
     with e ->
-      let err = error x e in
-      Format.fprintf Format.err_formatter "%a: Could not translate the type of entry %s\n"
-        Location.print_loc err.error_loc
-        err.error_entry;
+      pp_error Format.err_formatter (error x e);
       None in
 
   {

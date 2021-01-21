@@ -1,4 +1,5 @@
 open Format
+open Error
 
 type mono_type_repr =
   | TLambda of (mono_type_repr * mono_type_repr)
@@ -18,8 +19,6 @@ let supposedly_pure t =
   | TLambda (_, _) -> false
   | _ -> true
 
-exception UnsupportedOCamlType of Types.type_expr
-
 let rec mono_type_repr_of_type_expr (t : Types.type_expr) : mono_type_repr =
   match t.desc with
   | Tvar (Some x) -> TParam (x, [])
@@ -32,7 +31,7 @@ let rec mono_type_repr_of_type_expr (t : Types.type_expr) : mono_type_repr =
   | Tconstr (name, types, _) ->
     TParam (Path.name name, (List.map (fun x -> mono_type_repr_of_type_expr x) types))
   | _ ->
-    raise (UnsupportedOCamlType t)
+    raise_error (UnsupportedOCamlType t)
 
 let type_repr_of_type_expr (t : Types.type_expr) : type_repr =
   let rec poly_vars (t : Types.type_expr) : string list =
@@ -47,7 +46,7 @@ let type_repr_of_type_expr (t : Types.type_expr) : type_repr =
        | Ttuple(l) ->
          Compat.concat_map poly_vars l
        | _ ->
-         raise (UnsupportedOCamlType t)) in
+         raise_error (UnsupportedOCamlType t)) in
 
   let mono = mono_type_repr_of_type_expr t in
 
@@ -72,8 +71,6 @@ let rec tlambda lx r =
   | x :: rst -> TLambda (x, tlambda rst r)
   | [] -> r
 
-exception UnknownOCamlType of string
-
 let rec translate_mono_type_repr (tbl : Translation.t) = function
   | TLambda (t1, t2) ->
     TLambda (translate_mono_type_repr tbl t1, translate_mono_type_repr tbl t2)
@@ -82,7 +79,7 @@ let rec translate_mono_type_repr (tbl : Translation.t) = function
   | TParam (name, typ_list) ->
     (match Translation.find tbl ~ocaml:name with
      | Some name' -> TParam (name', List.map (translate_mono_type_repr tbl) typ_list)
-     | None -> raise (UnknownOCamlType name))
+     | None -> raise_error (UnknownOCamlType name))
 
 let translate_type_repr (tbl : Translation.t) = function
   | TMono mono -> TMono (translate_mono_type_repr tbl mono)

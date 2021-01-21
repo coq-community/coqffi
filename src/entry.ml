@@ -2,12 +2,7 @@ open Repr
 open Parsetree
 open Types
 open Config
-
-type error = {
-    error_loc : Location.t;
-    error_entry : string;
-    error_exn : exn;
-  }
+open Error
 
 type primitive_entry = {
   prim_name : string;
@@ -55,15 +50,11 @@ type entry =
   | EType of type_entry
   | EExn of exception_entry
 
-exception UnsupportedOCamlSignature of Types.signature_item
-exception UnsupportedGADT
-exception Anomaly
-
 let polymorphic_param (t : type_expr) : string =
   match t.desc with
   | Tvar (Some x) -> x
-  | Tvar None -> raise UnsupportedGADT
-  | _ -> raise Anomaly
+  | Tvar None -> raise_error UnsupportedGADT
+  | _ -> failwith "Type parameters should be made with [Tvar] and nothing else"
 
 let polymorphic_params (decl : type_declaration) : string list =
   List.map polymorphic_param decl.type_params
@@ -180,12 +171,12 @@ let entry_of_signature lf (s : Types.signature_item) : entry =
     entry_of_type lf ident decl loc
   | Sig_typext (ident, cst, Text_exception, Exported) ->
     entry_of_exn ident cst loc
-  | _ -> raise (UnsupportedOCamlSignature s)
+  | _ -> raise_error (UnsupportedOCamlSignature s)
 
 let error_of_signature s exn : error = {
     error_loc = signature_loc s;
     error_entry = Ident.name (signature_ident s);
-    error_exn = exn;
+    error_exn = error_kind_of_exn exn;
   }
 
 type state = Unvisited | OnStack | Visited
