@@ -35,18 +35,19 @@ type type_repr =
     defined [type_repr] values. *)
 
 val to_mono_type_repr : type_repr -> mono_type_repr
+val of_mono_type_repr : string list -> mono_type_repr -> type_repr
 
 val supposedly_pure : type_repr -> bool
 
 (** {1 Converting [Cmi_format]'s [type_expr] to [coqffi]’s [type_repr]} *)
-
-val mono_type_repr_of_type_expr : Types.type_expr -> mono_type_repr
 
 val type_repr_of_type_expr : Types.type_expr -> type_repr
 
 (** {1 Manipulating [type_repr]} *)
 
 (** {2 Heplers Functions} *)
+
+val mono_type_repr_of_type_expr : Types.type_expr -> mono_type_repr
 
 (** Create a function type, {e i.e.}, [tlambda [a; b; c] d ≡ a -> b ->
     c -> d] *)

@@ -41,16 +41,35 @@ type exception_entry = {
   exception_loc : Location.t;
 }
 
+type module_entry = {
+  mod_namespace : string list;
+  mod_name : string;
+  mod_intro : intro_entry list;
+  mod_functions : function_entry list;
+  mod_primitives : primitive_entry list;
+  mod_exceptions : exception_entry list;
+  mod_loc : Location.t;
+}
+
+and intro_entry =
+  | IntroType of type_entry
+  | IntroMod of module_entry
+
 type entry =
   | EPrim of primitive_entry
   | EFunc of function_entry
   | EType of type_entry
   | EExn of exception_entry
+  | EMod of module_entry
 
-val entry_of_signature : features -> Types.signature_item -> entry
-val error_of_signature : Types.signature_item -> exn -> Error.t
+val module_of_signatures : ?loc:(Location.t option) -> features -> string list -> string -> Types.signature -> module_entry
 
 val dependencies : type_entry -> string list
 
 val find_mutually_recursive_types
   : type_entry list -> mutually_recursive_types_entry list
+
+val translate_function : Translation.t -> function_entry -> function_entry
+val translate_primitive : Translation.t -> primitive_entry -> primitive_entry
+val translate_exception : Translation.t -> exception_entry -> exception_entry
+val translate_type : Translation.t -> type_entry -> type_entry

@@ -4,6 +4,8 @@ type 'a t =
   | LSeg of 'a * 'a list * 'a t Lazy.t
   | LNil
 
+let empty = LNil
+
 let push_list = function
   | [] -> fun l -> l
   | x :: r ->

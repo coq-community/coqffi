@@ -44,11 +44,26 @@ type exception_entry = {
   exception_loc : Location.t;
 }
 
+type module_entry = {
+  mod_namespace : string list;
+  mod_name : string;
+  mod_intro : intro_entry list;
+  mod_functions : function_entry list;
+  mod_primitives : primitive_entry list;
+  mod_exceptions : exception_entry list;
+  mod_loc : Location.t;
+}
+
+and intro_entry =
+  | IntroType of type_entry
+  | IntroMod of module_entry
+
 type entry =
   | EPrim of primitive_entry
   | EFunc of function_entry
   | EType of type_entry
   | EExn of exception_entry
+  | EMod of module_entry
 
 let polymorphic_param (t : type_expr) : string =
   match t.desc with
@@ -162,7 +177,55 @@ let entry_of_exn ident cst loc =
     exception_loc = loc;
   }
 
-let entry_of_signature lf (s : Types.signature_item) : entry =
+let add_primitive_entry (m : module_entry) (pr : primitive_entry) : module_entry = {
+  m with
+  mod_primitives = m.mod_primitives @ [pr]
+}
+
+let add_function_entry (m : module_entry) (f : function_entry) : module_entry = {
+  m with
+  mod_functions = m.mod_functions @ [f]
+}
+
+let add_type_entry (m : module_entry) (t : type_entry) : module_entry = {
+  m with
+  mod_intro = m.mod_intro @ [IntroType t]
+}
+
+let add_module_entry (m :module_entry) (e :module_entry) : module_entry = {
+  m with
+  mod_intro = m.mod_intro @ [IntroMod e]
+}
+
+let add_exception_entry (m :module_entry) (e : exception_entry) :module_entry = {
+  m with
+  mod_exceptions = m.mod_exceptions @ [e]
+}
+
+let error_of_signature s exn : error = {
+    error_loc = signature_loc s;
+    error_entry = Ident.name (signature_ident s);
+    error_exn = error_kind_of_exn exn;
+  }
+
+let add_entry (m :module_entry) = function
+  | EPrim pr -> add_primitive_entry m pr
+  | EFunc fn -> add_function_entry m fn
+  | EType t -> add_type_entry m t
+  | EExn e -> add_exception_entry m e
+  | EMod m' -> add_module_entry m m'
+
+let empty_module loc namespace name = {
+    mod_namespace = namespace;
+    mod_name = name;
+    mod_intro = [];
+    mod_functions = [];
+    mod_primitives = [];
+    mod_exceptions = [];
+    mod_loc = loc;
+  }
+
+let rec entry_of_signature namespace lf (s : Types.signature_item) : entry =
   let loc = signature_loc s in
   match s with
   | Sig_value (ident, desc, Exported) ->
@@ -171,13 +234,29 @@ let entry_of_signature lf (s : Types.signature_item) : entry =
     entry_of_type lf ident decl loc
   | Sig_typext (ident, cst, Text_exception, Exported) ->
     entry_of_exn ident cst loc
-  | _ -> raise_error (UnsupportedOCamlSignature s)
+  | Sig_module (name, _, decl, _, Exported) ->
+    (match entry_of_module lf namespace name decl with
+     | Some x -> x
+     | _ -> raise_error (UnsupportedOCamlSignature s))
+  | _ -> (* FIXME: this looks like it is a bit too strong *)
+    raise_error (UnsupportedOCamlSignature s)
 
-let error_of_signature s exn : error = {
-    error_loc = signature_loc s;
-    error_entry = Ident.name (signature_ident s);
-    error_exn = error_kind_of_exn exn;
-  }
+and entry_of_module lf namespace name decl =
+  match decl.md_type with
+  | Mty_signature sigs ->
+    Some (EMod (module_of_signatures ~loc:(Some decl.md_loc) lf namespace (Ident.name name) sigs))
+  | _ -> None
+
+and module_of_signatures ?(loc=None) lf namespace name sigs =
+  let foldf m s =
+    try entry_of_signature namespace lf s |> add_entry m
+    with e ->
+      pp_error Format.err_formatter (error_of_signature s e);
+      m
+  in
+
+  let loc = Option.value loc ~default:(Location.in_file (name ^ ".cmi")) in
+  List.fold_left foldf (empty_module loc namespace name) sigs
 
 type state = Unvisited | OnStack | Visited
 
@@ -267,3 +346,35 @@ let find_mutually_recursive_types tl =
       if unvisited !(v.node_state) then dfs v) matrix;
 
   List.rev !res
+
+let translate_function tbl f = {
+    f with
+    func_type = translate_type_repr tbl f.func_type
+  }
+
+let translate_primitive tbl prim = {
+    prim with
+    prim_type = translate_type_repr tbl prim.prim_type
+  }
+
+let translate_exception tbl e = {
+    e with
+    exception_args = List.map (translate_mono_type_repr tbl) e.exception_args
+  }
+
+let translate_variant tbl v = {
+    v with
+    variant_args = List.map (translate_mono_type_repr tbl) v.variant_args
+  }
+
+let translate_type_value tbl = function
+  | Variant l -> Variant (List.map (translate_variant tbl) l)
+  | Opaque -> Opaque
+
+let translate_type tbl typ =
+  let tbl' = List.fold_left (fun tbl t -> Translation.preserve t tbl)
+             tbl
+             typ.type_params in {
+    typ with
+    type_value = translate_type_value tbl' typ.type_value
+  }

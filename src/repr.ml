@@ -14,6 +14,11 @@ let to_mono_type_repr = function
   | TMono mono -> mono
   | TPoly (_, mono) -> mono
 
+let of_mono_type_repr params mono =
+  match params with
+  | [] -> TMono mono
+  | params -> TPoly (params, mono)
+
 let supposedly_pure t =
   match to_mono_type_repr t with
   | TLambda (_, _) -> false

@@ -181,6 +181,7 @@ type t =
   | Comment of string
   | Block of t Lazylist.t
   | CompactedBlock of t Lazylist.t
+  | Module of (string * t)
   | ConfigPrologue
   | FromRequireImport of from_require_import
   | FromRequireExport of from_require_export
@@ -222,6 +223,7 @@ let rec pp_vernac fmt = function
         "Generalizable All Variables."
       ]
 
+  | Module (name, v) -> pp_module fmt name v
   | FromRequireImport fri -> pp_from_require_import fmt fri
   | FromRequireExport fre -> pp_from_require_export fmt fre
   | Require req -> pp_require fmt req
@@ -230,8 +232,14 @@ let rec pp_vernac fmt = function
   | Typeclass cls -> pp_typeclass fmt cls
   | Instance inst -> pp_instance fmt inst
   | Axiom ax -> pp_axiom fmt ax
-  | ExtractConstant extr -> pp_extract_constant  fmt extr
+  | ExtractConstant extr -> pp_extract_constant fmt extr
   | ExtractInductive ind -> pp_extract_inductive fmt ind
+
+and pp_module fmt name v =
+  fprintf fmt "@[<v>@[<v 2>Module %s.@ %a@]@ End %s.@]"
+    name
+    pp_vernac v
+    name
 
 let block_of_list l = Block (of_list l)
 let compacted_block_of_list l = CompactedBlock (of_list l)
@@ -315,95 +323,46 @@ let functions_vernac m =
     compacted_block_of_list @@ List.map to_extr m.mod_functions;
   ]
 
-let types_vernac features m vernacs =
-  let mut_types = find_mutually_recursive_types m.mod_types in
-  let transparent = is_enabled features TransparentTypes in
-  let to_type args mono = match args with
-    | [] -> TMono mono
-    | params -> TPoly (params, mono) in
 
-  let to_constructor t v = {
+let variant_entry_to_constructor (t : type_entry) (v : variant_entry) : constructor = {
     constructor_name = v.variant_name;
     constructor_prototype = {
-      prototype_type_args = [];
-      prototype_args = List.map (fun x -> TMono x) v.variant_args;
-      prototype_ret_type = to_type
-          []
-          (TParam
-             (t.type_name,
-              List.map (fun x -> TParam (x, [])) t.type_params));
+        prototype_type_args = [];
+        prototype_args = List.map (fun x -> TMono x) v.variant_args;
+        prototype_ret_type =
+          TMono
+            (TParam
+               (t.type_name,
+                List.map (fun x -> TParam (x, [])) t.type_params));
+      }
+  }
+
+
+let type_entry_to_vernac features (t : type_entry) : t =
+  let transparent = is_enabled features TransparentTypes in
+  match (t.type_value, t.type_model, transparent) with
+  | (Variant l, None, true) -> Inductive [{
+      inductive_name = t.type_name;
+      inductive_type_args = t.type_params;
+      inductive_constructors = List.map (variant_entry_to_constructor t) l;
+      inductive_type = TMono type_sort_mono;
+    }]
+  | (_, Some m, _) -> Definition {
+      def_name = t.type_name;
+      def_typeclass_args = [];
+      def_prototype = {
+        prototype_type_args = [];
+        prototype_args = [];
+        prototype_ret_type = of_mono_type_repr t.type_params type_sort_mono;
+      };
+      def_body = fun fmt _ -> pp_print_string fmt m;
     }
-  } in
-
-  let type_entry_to_vernac t =
-    match (t.type_value, t.type_model, transparent) with
-    | (Variant l, None, true) -> Inductive [{
-        inductive_name = t.type_name;
-        inductive_type_args = t.type_params;
-        inductive_constructors = List.map (to_constructor t) l;
-        inductive_type = to_type [] type_sort_mono;
-      }]
-    | (_, Some m, _) -> Definition {
-        def_name = t.type_name;
-        def_typeclass_args = [];
-        def_prototype = {
-          prototype_type_args = [];
-          prototype_args = [];
-          prototype_ret_type = to_type t.type_params type_sort_mono;
-        };
-        def_body = fun fmt _ -> pp_print_string fmt m;
-      }
-    | _ -> Axiom {
-        axiom_name = t.type_name;
-        axiom_type = to_type t.type_params type_sort_mono
-      } in
-
-  let type_entry_to_inductive t =
-    match (t.type_value, t.type_model, transparent) with
-    | (Variant l, None, true) -> {
-        inductive_name = t.type_name;
-        inductive_type_args = t.type_params;
-        inductive_constructors = List.map (to_constructor t) l;
-        inductive_type = to_type [] type_sort_mono;
-      }
-    | _ -> assert false in
-
-  let mut_type_entries_to_ind t = [
-    Inductive (List.map type_entry_to_inductive t)
-  ] in
-
-  let type_entries_to_vernac = function
-    | (t :: _) as mut_types ->
-      (match (t.type_value, t.type_model, transparent) with
-       | (Variant _, None, true) -> mut_type_entries_to_ind mut_types
-       | _ -> List.map type_entry_to_vernac mut_types)
-    | [] -> [] in
-
-  let to_extract t = match (t.type_value, t.type_model, transparent) with
-    | (Variant l, None, true) ->
-      ExtractInductive {
-        inductive_qualid = t.type_name;
-        inductive_target = qualified_name m t.type_name;
-        inductive_variants_target =
-          List.map (fun x -> qualified_name m x.variant_name) l
-      }
-    | _ ->
-      ExtractConstant {
-        constant_qualid = t.type_name;
-        constant_type_vars = t.type_params;
-        constant_target = qualified_name m t.type_name
-      }
-  in
-
-  vernacs
-  |++ [
-    Section "Types";
-    block_of_list @@ Compat.concat_map type_entries_to_vernac mut_types;
-    compacted_block_of_list @@ List.map to_extract m.mod_types;
-  ]
+  | _ -> Axiom {
+      axiom_name = t.type_name;
+      axiom_type = of_mono_type_repr t.type_params type_sort_mono
+    }
 
 let io_primitives_vernac m =
-  (* TODO: tailrec? *)
   let to_axiom prim =
     let axiom_type =
       type_lift "IO" (may_raise_t prim.prim_may_raise prim.prim_type) in
@@ -700,6 +659,73 @@ let primitives_vernac features m vernacs =
   |> is_enabled features Interface @? mod_vernac m
   |> is_enabled features FreeSpec @? semantics_vernac m
 
+let rec module_vernac features models m vernac =
+  vernac
+  |> not (empty m.mod_intro) @? intros_vernac features models m
+  |> not (empty m.mod_exceptions) @? exceptions_vernac features m
+  |> not (empty m.mod_functions) @? functions_vernac m
+  |> not (empty m.mod_primitives) @? primitives_vernac features m
+
+and intros_vernac features models m vernacs =
+  let transparent = is_enabled features TransparentTypes in
+  let intros = Mod.compute_intro_list m in
+
+  let type_entry_to_inductive t =
+    match (t.type_value, t.type_model, transparent) with
+    | (Variant l, None, true) -> {
+        inductive_name = t.type_name;
+        inductive_type_args = t.type_params;
+        inductive_constructors = List.map (variant_entry_to_constructor t) l;
+        inductive_type = TMono type_sort_mono;
+      }
+    | _ -> failwith "something went wrong" in
+
+  let mut_type_entries_to_ind t = [
+    Inductive (List.map type_entry_to_inductive t)
+  ] in
+
+  let type_entries_to_vernac = function
+    | (t :: _) as mut_types ->
+      (match (t.type_value, t.type_model, transparent) with
+       | (Variant _, None, true) -> mut_type_entries_to_ind mut_types
+       | _ -> List.map (type_entry_to_vernac features) mut_types)
+    | [] -> [] in
+
+  let module_to_vernac (m : Mod.t) =
+    [Module (m.mod_name, Block (module_vernac features models m Lazylist.empty))] in
+
+  let intro_list_to_vernac (l : intro_list) =
+    List.flatten
+      (Mod.map_intro_list
+         type_entries_to_vernac
+         module_to_vernac
+         l) in
+
+  let to_extract = function
+    | IntroType t ->
+      (match (t.type_value, t.type_model, transparent) with
+       | (Variant l, None, true) ->
+         Some (ExtractInductive {
+                   inductive_qualid = t.type_name;
+                   inductive_target = qualified_name m t.type_name;
+                   inductive_variants_target =
+                     List.map (fun x -> qualified_name m x.variant_name) l
+           })
+       | _ ->
+         Some (ExtractConstant {
+                   constant_qualid = t.type_name;
+                   constant_type_vars = t.type_params;
+                   constant_target = qualified_name m t.type_name
+      }))
+    | _ -> None
+  in
+
+  vernacs
+  |++ [
+    block_of_list @@ intro_list_to_vernac intros;
+    compacted_block_of_list @@ List.filter_map to_extract m.mod_intro;
+  ]
+
 let of_mod features models m =
   Block
     (of_list [
@@ -707,8 +733,5 @@ let of_mod features models m =
         ConfigPrologue;
       ]
      |> requires_vernac features models
-     |> not (empty m.mod_types) @? types_vernac features m
-     |> not (empty m.mod_exceptions) @? exceptions_vernac features m
-     |> not (empty m.mod_functions) @? functions_vernac m
-     |> not (empty m.mod_primitives) @? primitives_vernac features m
+     |> module_vernac features models m
      |+ Comment "The generated file ends here.")

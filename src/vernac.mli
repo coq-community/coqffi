@@ -69,6 +69,7 @@ type t =
   | Comment of string
   | Block of t Lazylist.t
   | CompactedBlock of t Lazylist.t
+  | Module of (string * t)
   | ConfigPrologue
   | FromRequireImport of from_require_import
   | FromRequireExport of from_require_export

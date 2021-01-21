@@ -1,5 +1,6 @@
 type 'a t
 
+val empty : 'a t
 val push : 'a -> 'a t -> 'a t
 val push_list : 'a list -> 'a t -> 'a t
 val of_list : 'a list -> 'a t

@@ -27,6 +27,7 @@ This will be the initial release of `coqffi`.
 - **Feature:** ~coqffi~ will no longer abort when confronting an input
   it cannot handle, but will rather print a warning explaining why
   a given entry will not be part of the generated Coq module
+- **Features:** ~coqffi~ now supports signature modules
 - **Fix:** Make sure module names are always capitalized
 
 ## `coqffi.1.0.0~beta2`
