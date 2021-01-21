@@ -396,9 +396,11 @@ let types_vernac features m vernacs =
   in
 
   vernacs
-  |+ Section "Types"
-  |++ Compat.concat_map type_entries_to_vernac mut_types
-  |+ block_of_list @@ List.map to_extract m.interface_types
+  |++ [
+    Section "Types";
+    block_of_list @@ Compat.concat_map type_entries_to_vernac mut_types;
+    compacted_block_of_list @@ List.map to_extract m.interface_types;
+  ]
 
 let io_primitives_vernac m =
   (* TODO: tailrec? *)
