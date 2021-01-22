@@ -22,13 +22,13 @@ This will be the initial release of `coqffi`.
   `Exn` typeclass provided by the `CoqFFI` theory
 - **Feature:** Support the `may_raise` attribute to mark pure function
   and impure primivites susceptible to raise exceptions
-- **Feature:** ~coqffi~ will no longer abort when confronting an input
+- **Feature:** `coqffi` will no longer abort when confronting an input
   it cannot handle, but will rather print a warning explaining why
   a given entry will not be part of the generated Coq module
-- **Feature:** ~coqffi~ now supports signature modules
-- **Feature:** ~coqffi~ now uses aliases for some OCaml operators,
+- **Feature:** `coqffi` now supports signature modules
+- **Feature:** `coqffi` now uses aliases for some OCaml operators,
   and Gallina reserved keywords
-- **Feature:** ~coqffi~ now supports unamed OCaml polymorphic types
+- **Feature:** `coqffi` now supports unamed OCaml polymorphic types
 - **Fix:** Make sure module names are always capitalized
 
 ## `coqffi.1.0.0~beta2`
