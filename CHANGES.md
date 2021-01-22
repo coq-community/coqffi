@@ -12,8 +12,6 @@ This will be the initial release of `coqffi`.
 - **Breaking Change:** The `coq_model` attribute implies the marked
   value is pure (it was previously ignored when used in conjuction
   with the `impure` attribute)
-- **Breaking Change:** The `CoqFFI.Extraction` module does not
-  export the `CoqFFI.Data.Seq` module anymore
 - **Feature:** Add a new feature to assume all OCaml values of
   the input OCaml module interface are pure (`-fpure-module`)
 - **Feature:** Add `Seq.t` and `result` to the list of the primitive
