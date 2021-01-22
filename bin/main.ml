@@ -6,7 +6,7 @@ let process models features input ochannel =
   read_cmi input
   |> Mod.of_cmi_infos ~features
   |> Mod.translate Translation.types_table
-  |> Vernac.of_mod features models
+  |> Vernac.of_mod Alias.default features models
   |> Format.fprintf ochannel "%a@?" Vernac.pp_vernac
 
 exception TooManyArguments

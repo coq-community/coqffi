@@ -279,13 +279,14 @@ let requires_vernac features models =
      |> is_enabled features FreeSpec @? requires_freespec
      |++ List.map (fun x -> Require { require_module = x }) models)
 
-let functions_vernac m =
+let functions_vernac aliases m =
   let to_def f =
     let func_type = may_raise_t f.func_may_raise f.func_type in
+    let func_name = Alias.coq_name aliases f.func_name in
 
     match f.func_model with
     | Some model -> Definition {
-        def_name = f.func_name;
+        def_name = func_name;
         def_typeclass_args = [];
         def_prototype = {
           prototype_type_args = [];
@@ -294,11 +295,12 @@ let functions_vernac m =
         };
         def_body = (fun fmt _ -> pp_print_string fmt model)
       }
-    | _ -> Axiom { axiom_name = f.func_name; axiom_type = func_type }
+    | _ -> Axiom { axiom_name = func_name; axiom_type = func_type }
   in
 
   let to_extr f =
-    let target = qualified_name m f.func_name in
+    let target = qualified_name m (Alias.ocaml_name aliases f.func_name) in
+    let func_name = Alias.coq_name aliases f.func_name in
 
     let func_extract f =
       if f.func_may_raise
@@ -312,7 +314,7 @@ let functions_vernac m =
       else target in
 
     ExtractConstant {
-      constant_qualid = f.func_name;
+      constant_qualid = func_name;
       constant_type_vars = [];
       constant_target = func_extract f
     } in
@@ -362,20 +364,23 @@ let type_entry_to_vernac features (t : type_entry) : t =
       axiom_type = of_mono_type_repr t.type_params type_sort_mono
     }
 
-let io_primitives_vernac m =
+let io_primitives_vernac aliases m =
   let to_axiom prim =
     let axiom_type =
       type_lift "IO" (may_raise_t prim.prim_may_raise prim.prim_type) in
+    let axiom_name = Alias.coq_name aliases prim.prim_name in
     Axiom {
-      axiom_name = sprintf "io_%s" prim.prim_name;
+      axiom_name = sprintf "io_%s" axiom_name;
       axiom_type = axiom_type;
     } in
 
   let to_extract_constant prim =
+    let axiom_name = Alias.coq_name aliases prim.prim_name in
+    let ocaml_name = Alias.ocaml_name aliases prim.prim_name in
     let proto = type_repr_to_prototype_repr prim.prim_type in
     let args = call_vars proto in
     let pp_call = pp_fun_call
-                    (qualified_name m prim.prim_name)
+                    (qualified_name m ocaml_name)
                     args in
     let body =
       asprintf "(%a)"
@@ -383,7 +388,7 @@ let io_primitives_vernac m =
     in
 
     ExtractConstant {
-      constant_qualid = sprintf "io_%s" prim.prim_name;
+      constant_qualid = sprintf "io_%s" axiom_name;
       constant_type_vars = [];
       constant_target =
         asprintf "@[<h>(fun%a k__ -> k__ %s)@]"
@@ -398,7 +403,9 @@ let io_primitives_vernac m =
       instance_type =
         TMono (TParam (sprintf "Monad%s" m.mod_name, [TParam ("IO", [])]));
       instance_members =
-        List.map (fun prim -> (prim.prim_name, sprintf "io_%s" prim.prim_name))
+        List.map (fun prim ->
+            let axiom_name = Alias.coq_name aliases prim.prim_name in
+            (axiom_name, sprintf "io_%s" axiom_name))
           m.mod_primitives
     } in
 
@@ -409,13 +416,14 @@ let io_primitives_vernac m =
     instance_vernac;
   ]
 
-let mod_vernac m vernacs =
+let interface_vernac aliases m vernacs =
   let prim_to_constructor prim =
+    let prim_name = Alias.coq_name aliases prim.prim_name in
     let prim_type = type_lift
                       (String.uppercase_ascii m.mod_name)
                       (may_raise_t prim.prim_may_raise prim.prim_type) in
     {
-      constructor_name = String.capitalize_ascii prim.prim_name;
+      constructor_name = String.capitalize_ascii prim_name;
       constructor_prototype = {
           prototype_type_args = [];
           prototype_args = [];
@@ -424,10 +432,11 @@ let mod_vernac m vernacs =
   } in
 
   let prim_to_inj_helper prim =
+    let prim_name = Alias.coq_name aliases prim.prim_name in
     let inj_type = may_raise_t prim.prim_may_raise prim.prim_type in
     let proto = Repr.type_repr_to_prototype_repr (type_lift "m" inj_type) in
     Definition {
-      def_name = sprintf "inj_%s" prim.prim_name;
+      def_name = sprintf "inj_%s" prim_name;
       def_typeclass_args = [
         sprintf
           "Inject %s m"
@@ -436,7 +445,7 @@ let mod_vernac m vernacs =
       def_prototype = proto;
       def_body = fun fmt _ ->
         fprintf fmt "inject (%s %a)"
-          (String.capitalize_ascii prim.prim_name)
+          (String.capitalize_ascii prim_name)
           (pp_print_list ~pp_sep:pp_print_space pp_print_string) (call_vars proto)
     }
   in
@@ -453,7 +462,7 @@ let mod_vernac m vernacs =
       instance_type = TMono (TParam (monad_name, [TParam ("m", [])]));
       instance_members =
         List.map (fun x ->
-            let n = x.prim_name in
+            let n = Alias.coq_name aliases x.prim_name in
             (n, sprintf "inj_%s" n))
           m.mod_primitives
     } in
@@ -475,13 +484,13 @@ let mod_vernac m vernacs =
   |++ List.map prim_to_inj_helper m.mod_primitives
   |+ inj_instance
 
-let semantics_vernac m vernacs =
+let semantics_vernac aliases m vernacs =
   let mod_name = String.uppercase_ascii m.mod_name in
   let mod_type =
     TParam (mod_name, []) in
 
   let prim_target prim =
-    let target_name = qualified_name m prim.prim_name in
+    let target_name = qualified_name m (Alias.ocaml_name aliases prim.prim_name) in
     if prim.prim_may_raise
     then let proto = type_repr_to_prototype_repr prim.prim_type in
          let args = call_vars proto in
@@ -495,16 +504,22 @@ let semantics_vernac m vernacs =
   vernacs
   |++ [
     Subsection "FreeSpec Semantics";
-    compacted_block_of_list @@ List.map (fun prim -> Axiom {
-      axiom_name = sprintf "unsafe_%s" prim.prim_name;
-      axiom_type = may_raise_t prim.prim_may_raise prim.prim_type;
-    }) m.mod_primitives;
+    compacted_block_of_list @@
+      List.map (fun prim ->
+          let prim_name = Alias.coq_name aliases prim.prim_name in
+          Axiom {
+              axiom_name = sprintf "unsafe_%s" prim_name;
+              axiom_type = may_raise_t prim.prim_may_raise prim.prim_type;
+        }) m.mod_primitives;
 
-    compacted_block_of_list @@ List.map (fun prim -> ExtractConstant {
-      constant_qualid = sprintf "unsafe_%s" prim.prim_name;
-      constant_type_vars = [];
-      constant_target = prim_target prim;
-    }) m.mod_primitives;
+    compacted_block_of_list @@
+      List.map (fun prim ->
+          let prim_name = Alias.coq_name aliases prim.prim_name in
+          ExtractConstant {
+              constant_qualid = sprintf "unsafe_%s" prim_name;
+              constant_type_vars = [];
+              constant_target = prim_target prim;
+        }) m.mod_primitives;
 
     Definition {
       def_name = sprintf "%s_unsafe_semantics"
@@ -522,13 +537,14 @@ let semantics_vernac m vernacs =
           mod_name
           (pp_print_list ~pp_sep:pp_print_space
              (fun fmt prim ->
+               let prim_name = Alias.coq_name aliases prim.prim_name in
                 let proto = type_repr_to_prototype_repr prim.prim_type in
                 let args = call_vars proto in
                 fprintf fmt "@[<hov 2>| @[<h>%s %a@]@ => @[<h>unsafe_%s %a@]@]"
-                  (String.capitalize_ascii prim.prim_name)
+                  (String.capitalize_ascii prim_name)
                   (pp_print_list ~pp_sep:pp_print_space
                      pp_print_string) args
-                  prim.prim_name
+                  prim_name
                   (pp_print_list ~pp_sep:pp_print_space
                      pp_print_string) args)) m.mod_primitives
     }
@@ -636,17 +652,18 @@ let exceptions_vernac _features m vernacs =
   |+ Section "OCaml Exceptions"
   |+ Block (List.fold_left exception_vernac (of_list []) m.mod_exceptions)
 
-let primitives_vernac features m vernacs =
+let primitives_vernac aliases features m vernacs =
   let prim_to_members prim =
     let prim_type = may_raise_t prim.prim_may_raise prim.prim_type in
-    (prim.prim_name, type_lift "m" prim_type) in
+    let prim_name = Alias.coq_name aliases prim.prim_name in
+    (prim_name, type_lift "m" prim_type) in
 
   let monad_vernac = Typeclass {
      class_name = sprintf "Monad%s" m.mod_name;
      class_typeclass_args = [];
      class_args = ["m", TMono (tlambda [type_sort_mono] type_sort_mono)];
      class_type = type_sort;
-     class_members = List.map prim_to_members m.mod_primitives;
+     class_members = List.map (prim_to_members) m.mod_primitives;
    } in
 
   vernacs
@@ -655,18 +672,18 @@ let primitives_vernac features m vernacs =
     Subsection "Monad Definition";
     monad_vernac;
   ]
-  |> is_enabled features SimpleIO @? io_primitives_vernac m
-  |> is_enabled features Interface @? mod_vernac m
-  |> is_enabled features FreeSpec @? semantics_vernac m
+  |> is_enabled features SimpleIO @? io_primitives_vernac aliases m
+  |> is_enabled features Interface @? interface_vernac aliases m
+  |> is_enabled features FreeSpec @? semantics_vernac aliases m
 
-let rec module_vernac features models m vernac =
+let rec module_vernac aliases features models m vernac =
   vernac
-  |> not (empty m.mod_intro) @? intros_vernac features models m
+  |> not (empty m.mod_intro) @? intros_vernac aliases features models m
   |> not (empty m.mod_exceptions) @? exceptions_vernac features m
-  |> not (empty m.mod_functions) @? functions_vernac m
-  |> not (empty m.mod_primitives) @? primitives_vernac features m
+  |> not (empty m.mod_functions) @? functions_vernac aliases m
+  |> not (empty m.mod_primitives) @? primitives_vernac aliases features m
 
-and intros_vernac features models m vernacs =
+and intros_vernac aliases features models m vernacs =
   let transparent = is_enabled features TransparentTypes in
   let intros = Mod.compute_intro_list m in
 
@@ -692,7 +709,7 @@ and intros_vernac features models m vernacs =
     | [] -> [] in
 
   let module_to_vernac (m : Mod.t) =
-    [Module (m.mod_name, Block (module_vernac features models m Lazylist.empty))] in
+    [Module (m.mod_name, Block (module_vernac aliases features models m Lazylist.empty))] in
 
   let intro_list_to_vernac (l : intro_list) =
     List.flatten
@@ -726,12 +743,12 @@ and intros_vernac features models m vernacs =
     compacted_block_of_list @@ List.filter_map to_extract m.mod_intro;
   ]
 
-let of_mod features models m =
+let of_mod aliases features models m =
   Block
     (of_list [
         Comment "This file has been generated by coqffi.";
         ConfigPrologue;
       ]
      |> requires_vernac features models
-     |> module_vernac features models m
+     |> module_vernac aliases features models m
      |+ Comment "The generated file ends here.")

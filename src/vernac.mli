@@ -82,6 +82,6 @@ type t =
   | ExtractConstant of extract_constant
   | ExtractInductive of extract_inductive
 
-val of_mod : Feature.features -> string list -> Mod.t -> t
+val of_mod : Alias.table -> Feature.features -> string list -> Mod.t -> t
 
 val pp_vernac : Format.formatter -> t -> unit

@@ -45,6 +45,10 @@
   (target Modules.v)
   (action (run coqffi -finterface %{cmi:modules} -ffreespec -o %{target})))
 
+(rule
+  (target Aliases.v)
+  (action (run coqffi -finterface %{cmi:aliases} -ffreespec -o %{target})))
+
 (coq.theory
   (name Examples)
   (theories CoqFFI))
