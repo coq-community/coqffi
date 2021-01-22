@@ -65,14 +65,30 @@ type entry =
   | EExn of exception_entry
   | EMod of module_entry
 
-let polymorphic_param (t : type_expr) : string =
-  match t.desc with
-  | Tvar (Some x) -> x
-  | Tvar None -> raise_error UnsupportedGADT
-  | _ -> failwith "Type parameters should be made with [Tvar] and nothing else"
-
 let polymorphic_params (decl : type_declaration) : string list =
-  List.map polymorphic_param decl.type_params
+  let minimize = List.sort_uniq String.compare in
+
+  let existing_params params =
+    let polymorphic_param (t : type_expr) : string option =
+      match t.desc with
+      | Tvar (Some "_") | Tvar None -> None
+      | Tvar (Some x) -> Some x
+      | _ -> failwith "Type parameters should be made with [Tvar] and nothing else" in
+
+    minimize (List.filter_map polymorphic_param params) in
+
+  let (_, res) = Compat.fold_left_map
+      (fun params t ->
+        match t.desc with
+        | Tvar (Some "_") | Tvar None ->
+          let (x, params) = pick_param params in
+          (params, x)
+        | Tvar (Some x) -> (params, x)
+        | _ -> failwith "Type parameters should be made with [Tvar] and nothing else")
+      (make_params_pool @@ existing_params decl.type_params)
+      decl.type_params in
+
+  res
 
 let has_attr name : attributes -> bool =
   List.exists (fun attr -> attr.attr_name.txt = name)

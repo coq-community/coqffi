@@ -153,10 +153,9 @@ let pp_extract_constant fmt extr =
   fprintf fmt "@[<hov 2>Extract Constant %s%a@ => \"%a%s\".@]"
     extr.constant_qualid
     (pp_list
-       ~pp_prefix:(fun fmt _ -> pp_print_char fmt '"')
-       ~pp_suffix:(fun fmt _ -> pp_print_char fmt '"')
+       ~pp_prefix:(fun fmt _ -> pp_print_char fmt ' ')
        ~pp_sep:(fun fmt _ -> pp_print_string fmt " ")
-       (fun fmt -> fprintf fmt "'%s")) extr.constant_type_vars
+       (fun fmt -> fprintf fmt "\"'%s\"")) extr.constant_type_vars
     print_args_prod extr.constant_type_vars
     extr.constant_target
 

@@ -1,10 +1,25 @@
+diff --git a/src/compat.ml b/src/compat.ml
+index acd26ec..0185959 100644
+--- a/src/compat.ml
++++ b/src/compat.ml
+@@ -1,3 +1,9 @@
+ let concat_map = List.concat_map
+ let find_map = List.find_map
+-let fold_left_map = List.fold_left_map
++let fold_left_map f acc l =
++  let rec aux acc lacc = function
++    | [] -> acc, List.rev lacc
++    | x :: l ->
++       let acc, x = f acc x in
++       aux acc (x :: lacc) l in
++  aux acc [] l
 diff --git a/src/entry.ml b/src/entry.ml
-index 2c86491..701d2e9 100644
+index 7e8e74e..89b3117 100644
 --- a/src/entry.ml
 +++ b/src/entry.ml
-@@ -62,7 +62,7 @@ let entry_of_signature lf (s : Types.signature_item)
-   in
+@@ -95,7 +95,7 @@ let has_attr name : attributes -> bool =
  
+ let get_attr_string name : attributes -> string option =
    let expr_to_string = function
 -    | Pexp_constant (Pconst_string (str, _, _)) -> Some str
 +    | Pexp_constant (Pconst_string (str, _)) -> Some str
@@ -12,10 +27,10 @@ index 2c86491..701d2e9 100644
  
    let struct_to_string = function
 diff --git a/theories/Data/Seq.v b/theories/Data/Seq.v
-index 4521dee..a7563b8 100644
+index 8b58040..5a79184 100644
 --- a/theories/Data/Seq.v
 +++ b/theories/Data/Seq.v
-@@ -79,10 +79,6 @@ Module SeqExtraction.
+@@ -80,10 +80,6 @@ Module SeqExtraction.
      [ "Stdlib.Seq.Nil" "Stdlib.Seq.Cons" ].
    Extract Constant empty => "Stdlib.Seq.empty".
    Extract Constant ret => "Stdlib.Seq.return".

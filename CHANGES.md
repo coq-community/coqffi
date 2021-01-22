@@ -28,6 +28,7 @@ This will be the initial release of `coqffi`.
 - **Feature:** ~coqffi~ now supports signature modules
 - **Feature:** ~coqffi~ now uses aliases for some OCaml operators,
   and Gallina reserved keywords
+- **Feature:** ~coqffi~ now supports unamed OCaml polymorphic types
 - **Fix:** Make sure module names are always capitalized
 
 ## `coqffi.1.0.0~beta2`

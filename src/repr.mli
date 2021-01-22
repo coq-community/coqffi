@@ -103,6 +103,11 @@ type prototype_repr = {
 
 val type_repr_to_prototype_repr : type_repr -> prototype_repr
 
+type params_pool
+
+val make_params_pool : string list -> params_pool
+val pick_param : params_pool -> string * params_pool
+
 (** {2 Pretty-printing Coq Terms} *)
 
 (** Output [TLambda] values as [t0 -> .. -> tn] *)

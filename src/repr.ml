@@ -24,38 +24,123 @@ let supposedly_pure t =
   | TLambda (_, _) -> false
   | _ -> true
 
-let rec mono_type_repr_of_type_expr (t : Types.type_expr) : mono_type_repr =
+(*
+let type_params : string Seq.t =
+  let type_params = List.to_seq
+                      [ "a"; "b"; "c"; "d"; "e"; "f"; "g"; "h"; "i"; "j"; "k";
+                      "l"; "m"; "n"; "o"; "p"; "q"; "r"; "s"; "t"; "u"; "v";
+                      "w"; "x"; "y"; "z" ] in
+  let rec aux prev =
+    let next = Seq.flat_map (fun x -> Seq.map (fun t -> t ^ x) type_params) prev in
+    Seq.append next (aux next) in
+
+  Seq.append type_params (aux type_params)
+*)
+
+type params_pool = string Seq.t
+
+let make_params_pool (existing_params : string list) : params_pool =
+  let rec lazy_append (x : 'a Seq.t) (y : 'a Seq.t Lazy.t) : 'a Seq.t =
+    match x () with
+    | Nil -> Lazy.force y
+    | Cons (x, rst) -> fun _ -> Cons (x, lazy_append rst y) in
+
+  let type_params = List.to_seq
+                      [ "a"; "b"; "c"; "d"; "e"; "f"; "g"; "h"; "i"; "j"; "k";
+                      "l"; "m"; "n"; "o"; "p"; "q"; "r"; "s"; "t"; "u"; "v";
+                      "w"; "x"; "y"; "z" ] in
+  let rec aux prev =
+    let next = Seq.flat_map (fun x -> Seq.map (fun t -> t ^ x) type_params) prev in
+    lazy_append next (lazy (aux next)) in
+
+  let rec remove potential_params existing_params _ =
+    let open Seq in
+    match (potential_params (), existing_params) with
+    | (Cons (x, pot), y :: ext) ->
+      if x = y
+      then remove pot ext ()
+      else Cons (x, fun _ -> remove pot ext ())
+    | pot, [] -> pot
+    | Nil, _ -> Nil in
+
+  remove (lazy_append type_params (lazy (aux type_params))) existing_params
+
+let pick_param params =
+  let open Seq in
+  match params () with
+  | Cons (x, rst) -> (x, rst)
+  | Nil -> failwith "This should not happen since [type_params] is a stream"
+
+let rec named_poly_vars (t : Types.type_expr) : string list =
+  let minimize = List.sort_uniq String.compare in
+  minimize
+    (match t.desc with
+     | Tvar (Some "_") | Tvar None -> []
+     | Tvar (Some x) -> [x]
+     | Tarrow (_, t1, t2, _) ->
+       List.merge String.compare (named_poly_vars t1) (named_poly_vars t2)
+     | Tconstr (_, types, _) ->
+       Compat.concat_map (fun x -> named_poly_vars x) types
+     | Ttuple(l) ->
+       Compat.concat_map named_poly_vars l
+     | _ ->
+       raise_error (UnsupportedOCamlType t))
+
+let rec mono_type_repr_of_type_expr_with_params params (t : Types.type_expr)
+        : params_pool * mono_type_repr =
   match t.desc with
-  | Tvar (Some x) -> TParam (x, [])
+  | Tvar (Some "_") | Tvar None ->
+    let (p, params) = pick_param params in
+    (params, TParam (p, []))
+  | Tvar (Some x) ->
+    (params, TParam (x, []))
   | Tarrow (_ , t1, t2, _) ->
-    let i1 = mono_type_repr_of_type_expr t1 in
-    let i2 = mono_type_repr_of_type_expr t2 in
-    TLambda (i1, i2)
+    let (params, i1) = mono_type_repr_of_type_expr_with_params params t1 in
+    let (params, i2) = mono_type_repr_of_type_expr_with_params params t2 in
+    (params, TLambda (i1, i2))
   | Ttuple l ->
-    TProd (List.map mono_type_repr_of_type_expr l)
+    let (params, l) = Compat.fold_left_map mono_type_repr_of_type_expr_with_params params l in
+    (params, TProd l)
   | Tconstr (name, types, _) ->
-    TParam (Path.name name, (List.map (fun x -> mono_type_repr_of_type_expr x) types))
+    let (params, t) = Compat.fold_left_map mono_type_repr_of_type_expr_with_params params types in
+    (params, TParam (Path.name name, t))
   | _ ->
     raise_error (UnsupportedOCamlType t)
 
+let mono_type_repr_of_type_expr (t : Types.type_expr) : mono_type_repr =
+  let ext = named_poly_vars t in
+  snd (mono_type_repr_of_type_expr_with_params (make_params_pool ext) t)
+
+let all_poly_vars params t : string list =
+  let minimize = List.sort_uniq String.compare in
+
+  let rec poly_vars params (t : Types.type_expr) : params_pool * string list =
+    match t.desc with
+    | Tvar (Some "_") | Tvar None ->
+      let (x, params) = pick_param params in
+      (params, [x])
+    | Tvar (Some x) -> (params, [x])
+    | Tarrow (_, t1, t2, _) ->
+      let (params, l1) = poly_vars params t1 in
+      let (params, l2) = poly_vars params t2 in
+      (params, List.merge String.compare l1 l2)
+    | Tconstr (_, types, _) ->
+      let (params, ll) = Compat.fold_left_map poly_vars params types in
+      (params, List.flatten ll)
+    | Ttuple l ->
+      let (params, ll) = Compat.fold_left_map poly_vars params l in
+      (params, List.flatten ll)
+    | _ ->
+      raise_error (UnsupportedOCamlType t) in
+
+  minimize @@ snd (poly_vars params t)
+
 let type_repr_of_type_expr (t : Types.type_expr) : type_repr =
-  let rec poly_vars (t : Types.type_expr) : string list =
-    let minimize = List.sort_uniq String.compare in
-    minimize
-      (match t.desc with
-       | Tvar (Some x) -> [x]
-       | Tarrow (_, t1, t2, _) ->
-         List.merge String.compare (poly_vars t1) (poly_vars t2)
-       | Tconstr (_, types, _) ->
-         Compat.concat_map (fun x -> poly_vars x) types
-       | Ttuple(l) ->
-         Compat.concat_map poly_vars l
-       | _ ->
-         raise_error (UnsupportedOCamlType t)) in
+  let ext = named_poly_vars t in
 
-  let mono = mono_type_repr_of_type_expr t in
+  let (_, mono) = mono_type_repr_of_type_expr_with_params (make_params_pool ext) t in
 
-  match poly_vars t with
+  match all_poly_vars (make_params_pool ext) t with
   | [] -> TMono mono
   | l -> TPoly (l, mono)
 
