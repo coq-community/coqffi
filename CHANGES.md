@@ -2,7 +2,7 @@
 
 This will be the initial release of `coqffi`.
 
-## Unreleased
+## `coqffi.1.0.0~beta3`
 
 - **Breaking Change:** OCaml functions are now assumed impure and can
   be explicitly marked as pure with the `pure` attribute, while the
