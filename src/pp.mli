@@ -4,7 +4,9 @@ val pp_if_not_empty : (formatter -> unit -> unit) -> formatter
   -> 'a list
   -> unit
 
-val pp_list : ?pp_prefix:(formatter -> unit -> unit)
+val pp_list :
+  ?enclose:('a list -> bool)
+  -> ?pp_prefix:(formatter -> unit -> unit)
   -> ?pp_suffix:(formatter -> unit -> unit)
   -> pp_sep:(formatter -> unit -> unit)
   -> (formatter -> 'a -> unit)

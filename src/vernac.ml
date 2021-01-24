@@ -594,6 +594,10 @@ let exceptions_vernac _features m vernacs =
 
     let vars = call_vars proxy_proto in
 
+    let enclose = function
+      | _ :: _ :: _ -> true
+      | _ -> false in
+
     let to_exn_extract =
       ExtractConstant {
           constant_qualid = to_exn;
@@ -604,8 +608,10 @@ let exceptions_vernac _features m vernacs =
                                  ~pp_sep:pp_print_space
                                  pp_print_string) vars
                               exn_name
-                              (pp_list ~pp_prefix:pp_print_space
-                                 ~pp_sep:pp_print_space
+                              (pp_list ~enclose
+                                 ~pp_prefix:(fun fmt _ -> pp_print_string fmt " (")
+                                 ~pp_sep:(fun fmt _ -> pp_print_string fmt ", ")
+                                 ~pp_suffix:(fun fmt _ -> pp_print_string fmt ")")
                                  pp_print_string) vars
         } in
 
@@ -615,8 +621,10 @@ let exceptions_vernac _features m vernacs =
           constant_type_vars = [];
           constant_target = asprintf "@[<h>(function | %s%a => Some (%s%a) | _ => None)@]"
                               exn_name
-                              (pp_list ~pp_prefix:pp_print_space
-                                 ~pp_sep:pp_print_space
+                              (pp_list ~enclose
+                                 ~pp_prefix:(fun fmt _ -> pp_print_string fmt " (")
+                                 ~pp_sep:(fun fmt _ -> pp_print_string fmt ", ")
+                                 ~pp_suffix:(fun fmt _ -> pp_print_string fmt ")")
                                  pp_print_string) vars
                               proxy_constructor_name
                               (pp_list ~pp_prefix:pp_print_space

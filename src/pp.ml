@@ -1,15 +1,19 @@
 open Format
 open Repr
 
-let pp_list ?(pp_prefix=fun _ _ -> ()) ?(pp_suffix=fun _ _ -> ())
-    ~pp_sep pp fmt =
-  function
-  | _ :: _ as l -> begin
+let print_prefix_suffix = function
+  | _ :: _ -> true
+  | [] -> false
+
+let pp_list ?(enclose=print_prefix_suffix)
+      ?(pp_prefix=fun _ _ -> ()) ?(pp_suffix=fun _ _ -> ())
+      ~pp_sep pp fmt l =
+  if enclose l
+  then begin
       pp_prefix fmt ();
       pp_print_list ~pp_sep pp fmt l;
       pp_suffix fmt ();
     end
-  | _ -> ()
 
 let not_empty = function
   | _ :: _ -> true
