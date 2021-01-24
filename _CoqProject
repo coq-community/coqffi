@@ -1,7 +1,12 @@
 -R _build/default/theories/ CoqFFI
 
-_build/default/theories/Data/String.v
+_build/default/theories/Interface.v
+_build/default/theories/Exn.v
+
 _build/default/theories/Data/Int.v
 _build/default/theories/Data/IntFacts.v
+_build/default/theories/Data/Result.v
+_build/default/theories/Data/Seq.v
+_build/default/theories/Data/String.v
+
 _build/default/theories/Extraction.v
-_build/default/theories/Interface.v
