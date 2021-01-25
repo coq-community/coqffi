@@ -5,7 +5,9 @@ This will be the initial release of `coqffi`.
 ## Unreleased
 
 - **Fix:** Complete the list of reserved Gallina keywords using [the
-  Coq reference manual][coq-refman].
+  Coq reference manual][coq-refman]
+- **Fix:** `coqffi` will not fail when confronted to an OCaml type of
+  the form `type foo = Foo { bar : bool; foobar : int }`
 
   [coq-refman]: https://coq.github.io/doc/v8.9/refman/language/gallina-specification-language.html
 

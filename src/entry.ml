@@ -173,9 +173,11 @@ let entry_of_type lf ident decl loc =
 
   let value t =
     if is_enabled lf TransparentTypes
-    then match t with
-         | Type_variant v -> Variant (List.map to_variant_entry v)
-         | _ -> Opaque
+    then try
+        match t with
+        | Type_variant v -> Variant (List.map to_variant_entry v)
+        | _ -> Opaque
+      with _ -> Opaque
     else Opaque in
 
   EType {
