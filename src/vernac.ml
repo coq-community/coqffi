@@ -219,7 +219,8 @@ let rec pp_vernac fmt = function
         "Set Implicit Arguments.";
         "Unset Strict Implicit.";
         "Set Contextual Implicit.";
-        "Generalizable All Variables."
+        "Generalizable All Variables.";
+        "Close Scope nat_scope.";
       ]
 
   | Module (name, v) -> pp_module fmt name v

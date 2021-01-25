@@ -8,6 +8,8 @@ This will be the initial release of `coqffi`.
   Coq reference manual][coq-refman]
 - **Fix:** `coqffi` will not fail when confronted to an OCaml type of
   the form `type foo = Foo { bar : bool; foobar : int }`
+- **Fix:** Close the `nat_scope` scope in generated module to avoid
+  confusion between `prod` and the `nat` multiplication
 
   [coq-refman]: https://coq.github.io/doc/v8.9/refman/language/gallina-specification-language.html
 
