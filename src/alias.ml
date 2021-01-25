@@ -32,6 +32,7 @@ let default =
   |> add_operator ~ocaml:">" ~coq:"gtb"
   |> add_operator ~ocaml:">=" ~coq:"geb"
   |> add_keyword ~ocaml:"return" ~coq:"ret"
+  |> add_keyword ~ocaml:"exists" ~coq:"exist"
 
 let ocaml_name t orig =
   match Table.find_opt orig t with
