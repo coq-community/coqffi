@@ -2,6 +2,13 @@
 
 This will be the initial release of `coqffi`.
 
+## Unreleased
+
+- **Fix:** Complete the list of reserved Gallina keywords using [the
+  Coq reference manual][coq-refman].
+
+  [coq-refman]: https://coq.github.io/doc/v8.9/refman/language/gallina-specification-language.html
+
 ## `coqffi.1.0.0~beta3`
 
 - **Breaking Change:** OCaml functions are now assumed impure and can

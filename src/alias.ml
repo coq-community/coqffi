@@ -13,11 +13,14 @@ let add_operator ~ocaml ~coq tbl =
       alias_operator = true;
     } tbl
 
-let add_keyword ~ocaml ~coq tbl =
+let add_alias ~ocaml ~coq tbl =
   Table.add ocaml {
-      alias_coq = coq ;
+      alias_coq = coq;
       alias_operator = false;
     } tbl
+
+let add_keyword ~coq tbl =
+  add_alias ~ocaml:coq ~coq:(coq ^ "_") tbl
 
 let default =
   Table.empty
@@ -31,8 +34,32 @@ let default =
   |> add_operator ~ocaml:"<=" ~coq:"leb"
   |> add_operator ~ocaml:">" ~coq:"gtb"
   |> add_operator ~ocaml:">=" ~coq:"geb"
-  |> add_keyword ~ocaml:"return" ~coq:"ret"
-  |> add_keyword ~ocaml:"exists" ~coq:"exist"
+  |> add_alias ~ocaml:"_" ~coq:"___"
+  |> add_keyword ~coq:"as"
+  |> add_keyword ~coq:"at"
+  |> add_keyword ~coq:"cofix"
+  |> add_keyword ~coq:"else"
+  |> add_keyword ~coq:"end"
+  |> add_keyword ~coq:"exists"
+  |> add_keyword ~coq:"exists2"
+  |> add_keyword ~coq:"fix"
+  |> add_keyword ~coq:"for"
+  |> add_keyword ~coq:"forall"
+  |> add_keyword ~coq:"fun"
+  |> add_keyword ~coq:"if"
+  |> add_keyword ~coq:"IF"
+  |> add_keyword ~coq:"in"
+  |> add_keyword ~coq:"let"
+  |> add_keyword ~coq:"match"
+  |> add_keyword ~coq:"mod"
+  |> add_keyword ~coq:"Prop"
+  |> add_keyword ~coq:"return"
+  |> add_keyword ~coq:"Set"
+  |> add_keyword ~coq:"then"
+  |> add_keyword ~coq:"Type"
+  |> add_keyword ~coq:"using"
+  |> add_keyword ~coq:"where"
+  |> add_keyword ~coq:"with"
 
 let ocaml_name t orig =
   match Table.find_opt orig t with
