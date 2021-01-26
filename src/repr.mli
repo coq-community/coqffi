@@ -88,9 +88,9 @@ val dependencies : type_repr -> string list
     See the {!module:Translation} module for more information on how to get a
     translation table. *)
 
-val translate_mono_type_repr : Translation.t -> mono_type_repr -> mono_type_repr
+val translate_mono_type_repr : rev_namespace:string list -> Translation.t -> mono_type_repr -> mono_type_repr
 
-val translate_type_repr : Translation.t -> type_repr -> type_repr
+val translate_type_repr : rev_namespace:string list -> Translation.t -> type_repr -> type_repr
 
 val type_sort_mono : mono_type_repr
 val type_sort : type_repr

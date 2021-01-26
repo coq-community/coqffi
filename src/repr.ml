@@ -161,21 +161,28 @@ let rec tlambda lx r =
   | x :: rst -> TLambda (x, tlambda rst r)
   | [] -> r
 
-let rec translate_mono_type_repr (tbl : Translation.t) = function
+let rec translate_mono_type_repr ~rev_namespace (tbl : Translation.t) = function
   | TLambda (t1, t2) ->
-    TLambda (translate_mono_type_repr tbl t1, translate_mono_type_repr tbl t2)
+    let t1' = translate_mono_type_repr ~rev_namespace tbl t1 in
+    let t2' = translate_mono_type_repr ~rev_namespace tbl t2 in
+    TLambda (t1', t2')
   | TProd typ_list ->
-    TProd (List.map (translate_mono_type_repr tbl) typ_list)
-  | TParam (name, typ_list) ->
-    (match Translation.find tbl ~ocaml:name with
-     | Some name' -> TParam (name', List.map (translate_mono_type_repr tbl) typ_list)
-     | None -> raise_error (UnknownOCamlType name))
+    TProd (List.map (translate_mono_type_repr ~rev_namespace tbl) typ_list)
+  | TParam (ocaml, typ_list) ->
+    (match Translation.find ~rev_namespace tbl ~ocaml with
+     | Some name' ->
+       let typ_list' = List.map (translate_mono_type_repr ~rev_namespace tbl) typ_list in
+       TParam (name', typ_list')
+     | None -> raise_error (UnknownOCamlType ocaml))
 
-let translate_type_repr (tbl : Translation.t) = function
-  | TMono mono -> TMono (translate_mono_type_repr tbl mono)
+let translate_type_repr ~rev_namespace (tbl : Translation.t) = function
+  | TMono mono -> TMono (translate_mono_type_repr ~rev_namespace tbl mono)
   | TPoly (polys, mono) ->
-    let tbl' = List.fold_left (fun tbl t -> Translation.preserve t tbl) tbl polys in
-    TPoly (polys, translate_mono_type_repr tbl' mono)
+    let tbl' =
+      List.fold_left
+        (fun tbl t -> Translation.preserve ~rev_namespace t tbl)
+        tbl polys in
+    TPoly (polys, translate_mono_type_repr ~rev_namespace tbl' mono)
 
 let rec mono_dependencies (t : mono_type_repr) : string list =
   let merge : string list -> string list -> string list =

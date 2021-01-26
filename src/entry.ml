@@ -365,34 +365,34 @@ let find_mutually_recursive_types tl =
 
   List.rev !res
 
-let translate_function tbl f = {
+let translate_function ~rev_namespace tbl f = {
     f with
-    func_type = translate_type_repr tbl f.func_type
+    func_type = translate_type_repr ~rev_namespace tbl f.func_type
   }
 
-let translate_primitive tbl prim = {
+let translate_primitive ~rev_namespace tbl prim = {
     prim with
-    prim_type = translate_type_repr tbl prim.prim_type
+    prim_type = translate_type_repr ~rev_namespace tbl prim.prim_type
   }
 
-let translate_exception tbl e = {
+let translate_exception ~rev_namespace tbl e = {
     e with
-    exception_args = List.map (translate_mono_type_repr tbl) e.exception_args
+    exception_args = List.map (translate_mono_type_repr ~rev_namespace tbl) e.exception_args
   }
 
-let translate_variant tbl v = {
+let translate_variant ~rev_namespace tbl v = {
     v with
-    variant_args = List.map (translate_mono_type_repr tbl) v.variant_args
+    variant_args = List.map (translate_mono_type_repr ~rev_namespace tbl) v.variant_args
   }
 
-let translate_type_value tbl = function
-  | Variant l -> Variant (List.map (translate_variant tbl) l)
+let translate_type_value ~rev_namespace tbl = function
+  | Variant l -> Variant (List.map (translate_variant ~rev_namespace tbl) l)
   | Opaque -> Opaque
 
-let translate_type tbl typ =
-  let tbl' = List.fold_left (fun tbl t -> Translation.preserve t tbl)
+let translate_type ~rev_namespace tbl typ =
+  let tbl' = List.fold_left (fun tbl t -> Translation.preserve ~rev_namespace t tbl)
              tbl
              typ.type_params in {
     typ with
-    type_value = translate_type_value tbl' typ.type_value
+    type_value = translate_type_value ~rev_namespace tbl' typ.type_value
   }

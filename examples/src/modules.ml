@@ -5,3 +5,7 @@ module T = struct
 end
 
 type t' = bool T.t
+
+module T' = struct
+  let y : int T.t = T.x
+end

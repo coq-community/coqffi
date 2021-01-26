@@ -5,3 +5,7 @@ module T : sig
 end
 
 type t' = bool T.t
+
+module T' : sig
+  val y : int T.t
+end

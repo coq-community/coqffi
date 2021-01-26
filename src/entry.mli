@@ -69,7 +69,7 @@ val dependencies : type_entry -> string list
 val find_mutually_recursive_types
   : type_entry list -> mutually_recursive_types_entry list
 
-val translate_function : Translation.t -> function_entry -> function_entry
-val translate_primitive : Translation.t -> primitive_entry -> primitive_entry
-val translate_exception : Translation.t -> exception_entry -> exception_entry
-val translate_type : Translation.t -> type_entry -> type_entry
+val translate_function : rev_namespace:(string list) -> Translation.t -> function_entry -> function_entry
+val translate_primitive : rev_namespace:(string list) -> Translation.t -> primitive_entry -> primitive_entry
+val translate_exception : rev_namespace:(string list) -> Translation.t -> exception_entry -> exception_entry
+val translate_type : rev_namespace:(string list) -> Translation.t -> type_entry -> type_entry

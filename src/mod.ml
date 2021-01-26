@@ -83,15 +83,7 @@ let error_intro i =
   | IntroType t -> error_type t
   | IntroMod m -> error_mod m
 
-let rec update_table tbl m =
-  let aux tbl = function
-    | IntroType t -> Translation.preserve t.type_name tbl
-    | IntroMod m -> update_table tbl m in
-  List.fold_left aux tbl m.mod_intro
-
-let rec translate tbl m =
-  let tbl' = update_table tbl m in
-
+let rec translate_module ?(rev_namespace=[]) tbl m =
   let safe error translate x =
     try
       Some (translate x)
@@ -102,15 +94,31 @@ let rec translate tbl m =
   {
     m with
     mod_intro =
-      List.filter_map (safe error_intro @@ translate_intro tbl') m.mod_intro;
+      List.filter_map (safe error_intro @@ translate_intro ~rev_namespace tbl) m.mod_intro;
     mod_functions =
-      List.filter_map (safe error_function @@ translate_function tbl') m.mod_functions;
+      List.filter_map (safe error_function @@ translate_function ~rev_namespace tbl) m.mod_functions;
     mod_primitives =
-      List.filter_map (safe error_primitive @@ translate_primitive tbl') m.mod_primitives;
+      List.filter_map (safe error_primitive @@ translate_primitive ~rev_namespace tbl) m.mod_primitives;
     mod_exceptions =
-      List.filter_map (safe error_exception @@ translate_exception tbl') m.mod_exceptions;
+      List.filter_map (safe error_exception @@ translate_exception ~rev_namespace tbl) m.mod_exceptions;
   }
 
-and translate_intro tbl = function
-  | IntroType t -> IntroType (translate_type tbl t)
-  | IntroMod m -> IntroMod (translate tbl m)
+and translate_intro ~rev_namespace tbl = function
+  | IntroType t -> IntroType (translate_type ~rev_namespace tbl t)
+  | IntroMod m -> let rev_namespace = m.mod_name :: rev_namespace in
+                  IntroMod (translate_module ~rev_namespace tbl m)
+
+let rec update_table rev_namespace tbl m =
+  let aux tbl = function
+    | IntroType t ->
+       Translation.preserve ~rev_namespace t.type_name tbl
+    | IntroMod m ->
+       update_table (m.mod_name :: rev_namespace) tbl m in
+  List.fold_left aux tbl m.mod_intro
+
+let translate tbl m =
+  (* FIXME: To support shadowing, we should update the translation
+     table while we are translating, not computing it ahead of
+     time. *)
+  let tbl' = update_table [] tbl m in
+  translate_module ~rev_namespace:[] tbl' m

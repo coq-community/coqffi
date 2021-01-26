@@ -10,6 +10,8 @@ This will be the initial release of `coqffi`.
   the form `type foo = Foo { bar : bool; foobar : int }`
 - **Fix:** Close the `nat_scope` scope in generated module to avoid
   confusion between `prod` and the `nat` multiplication
+- **Fix:** `coqffi` now translates correctly the types used outside of
+  the module which introduces them
 
   [coq-refman]: https://coq.github.io/doc/v8.9/refman/language/gallina-specification-language.html
 
