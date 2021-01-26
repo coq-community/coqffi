@@ -71,20 +71,22 @@ let pick_param params =
   | Cons (x, rst) -> (x, rst)
   | Nil -> failwith "This should not happen since [type_params] is a stream"
 
-let rec named_poly_vars (t : Types.type_expr) : string list =
+let named_poly_vars (t : Types.type_expr) : string list =
   let minimize = List.sort_uniq String.compare in
-  minimize
-    (match t.desc with
-     | Tvar (Some "_") | Tvar None -> []
-     | Tvar (Some x) -> [x]
-     | Tarrow (_, t1, t2, _) ->
-       List.merge String.compare (named_poly_vars t1) (named_poly_vars t2)
-     | Tconstr (_, types, _) ->
-       Compat.concat_map (fun x -> named_poly_vars x) types
-     | Ttuple(l) ->
-       Compat.concat_map named_poly_vars l
-     | _ ->
-       raise_error (UnsupportedOCamlType t))
+  let rec named_poly_vars (t : Types.type_expr) =
+    match t.desc with
+    | Tvar (Some "_") | Tvar None -> []
+    | Tvar (Some x) -> [x]
+    | Tarrow (_, t1, t2, _) ->
+      List.merge String.compare (named_poly_vars t1) (named_poly_vars t2)
+    | Tconstr (_, types, _) ->
+      Compat.concat_map (fun x -> named_poly_vars x) types
+    | Ttuple(l) ->
+      Compat.concat_map named_poly_vars l
+    | _ ->
+      raise_error (UnsupportedOCamlType t) in
+
+  minimize (named_poly_vars t)
 
 let rec mono_type_repr_of_type_expr_with_params params (t : Types.type_expr)
         : params_pool * mono_type_repr =
