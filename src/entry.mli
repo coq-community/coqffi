@@ -18,7 +18,7 @@ type function_entry = {
 
 type variant_entry = {
   variant_name : string;
-  variant_args: mono_type_repr list;
+  variant_prototype : prototype_repr;
 }
 
 type type_value =
@@ -37,7 +37,7 @@ type mutually_recursive_types_entry = type_entry list
 
 type exception_entry = {
   exception_name : string;
-  exception_args : mono_type_repr list;
+  exception_prototype : prototype_repr;
   exception_loc : Location.t;
 }
 

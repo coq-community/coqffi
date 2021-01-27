@@ -21,7 +21,7 @@ type function_entry = {
 
 type variant_entry = {
   variant_name : string;
-  variant_args: mono_type_repr list;
+  variant_prototype : prototype_repr;
 }
 
 type type_value =
@@ -40,7 +40,7 @@ type mutually_recursive_types_entry = type_entry list
 
 type exception_entry = {
   exception_name : string;
-  exception_args : mono_type_repr list;
+  exception_prototype : prototype_repr;
   exception_loc : Location.t;
 }
 
@@ -133,8 +133,33 @@ let signature_loc = function
   | Sig_class (_, c, _, _) -> c.cty_loc
   | Sig_class_type (_, c, _, _) -> c.clty_loc
 
-let args_of_constructor : Types.constructor_arguments -> mono_type_repr list = function
-  | Cstr_tuple typs -> List.map mono_type_repr_of_type_expr typs
+let rec exclude cmp l1 l2 =
+  match (l1, l2) with
+  | (x1 :: rst1, x2 :: rst2) ->
+    (match cmp x1 x2 with
+     | x when x == 0 -> exclude cmp rst1 rst2
+     | x when x < 0 -> x1 :: exclude cmp rst1 l2
+     | _ -> x1 :: exclude cmp rst1 rst2)
+  | _, [] -> l1
+  | [], _ -> []
+
+let prototype_of_constructor params_type args ret =
+  let typify acc t =
+    match type_repr_of_type_expr t with
+    | TPoly (p, t) -> (p @ acc, TMono t)
+    | t -> (acc, t) in
+
+  match args with
+  | Cstr_tuple args ->
+    let (params_constr, typs) = Compat.fold_left_map typify [] args in
+    let params_constr = List.sort_uniq String.compare params_constr in
+    let params_type = List.sort_uniq String.compare params_type in
+
+    {
+      prototype_type_args = exclude String.compare params_constr params_type;
+      prototype_args = typs;
+      prototype_ret_type = ret;
+    }
   | _ -> assert false
 
 let entry_of_value lf ident desc loc =
@@ -166,10 +191,17 @@ let entry_of_value lf ident desc loc =
        }
 
 let entry_of_type lf ident decl loc =
-  let to_variant_entry v = {
-    variant_name = Ident.name v.cd_id;
-    variant_args = args_of_constructor v.cd_args;
-  } in
+  let params = polymorphic_params decl in
+  let type_name = Ident.name ident in
+  let default_type_ret =
+    TMono (TParam (type_name, List.map (fun x -> TParam (x, [])) params)) in
+
+  let to_variant_entry v =
+    let ret = Option.value ~default:default_type_ret
+              (Option.map type_repr_of_type_expr v.cd_res) in {
+      variant_name = Ident.name v.cd_id;
+      variant_prototype = prototype_of_constructor params v.cd_args ret;
+    } in
 
   let value t =
     if is_enabled lf TransparentTypes
@@ -181,17 +213,18 @@ let entry_of_type lf ident decl loc =
     else Opaque in
 
   EType {
-    type_params = polymorphic_params decl;
-    type_name = Ident.name ident;
+    type_name = type_name;
+    type_params = params;
     type_model = has_coq_model decl.type_attributes;
     type_value = value decl.type_kind;
     type_loc = loc;
   }
 
 let entry_of_exn ident cst loc =
+  let name = Ident.name ident in
   EExn {
-    exception_name = Ident.name ident;
-    exception_args = args_of_constructor cst.ext_args;
+    exception_name = name;
+    exception_prototype = prototype_of_constructor [] cst.ext_args (TMono (TParam (name, [])));
     exception_loc = loc;
   }
 
@@ -307,7 +340,7 @@ let dependencies t =
   | Variant l ->
     List.sort_uniq String.compare
       (Compat.concat_map
-         (fun e -> Compat.concat_map mono_dependencies e.variant_args) l)
+         (fun e -> Compat.concat_map dependencies e.variant_prototype.prototype_args) l)
   | Opaque -> []
 
 let find_mutually_recursive_types tl =
@@ -375,14 +408,23 @@ let translate_primitive ~rev_namespace tbl prim = {
     prim_type = translate_type_repr ~rev_namespace tbl prim.prim_type
   }
 
+let translate_prototype ~rev_namespace tbl p =
+  let tbl =
+    List.fold_left (fun tbl x -> Translation.preserve x tbl) tbl
+      p.prototype_type_args in
+  {
+    p with
+    prototype_args = List.map (translate_type_repr ~rev_namespace tbl) p.prototype_args
+  }
+
 let translate_exception ~rev_namespace tbl e = {
     e with
-    exception_args = List.map (translate_mono_type_repr ~rev_namespace tbl) e.exception_args
+    exception_prototype = translate_prototype ~rev_namespace tbl e.exception_prototype
   }
 
 let translate_variant ~rev_namespace tbl v = {
     v with
-    variant_args = List.map (translate_mono_type_repr ~rev_namespace tbl) v.variant_args
+    variant_prototype = translate_prototype ~rev_namespace  tbl v.variant_prototype
   }
 
 let translate_type_value ~rev_namespace tbl = function

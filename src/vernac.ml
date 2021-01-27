@@ -34,8 +34,10 @@ type constructor = {
 }
 
 let pp_constructor fmt c =
-  fprintf fmt "| @[<hov 2>@[<hov 2>%s%a%a@]@ : %a@]"
+  fprintf fmt "| @[<hov 2>@[<hov 2>%s%a%a%a%a@]@ : %a@]"
     c.constructor_name
+    (pp_if_not_empty pp_print_space) c.constructor_prototype.prototype_type_args
+    pp_type_args_list c.constructor_prototype.prototype_type_args
     (pp_if_not_empty pp_print_space) c.constructor_prototype.prototype_args
     pp_args_list c.constructor_prototype.prototype_args
     pp_type_repr c.constructor_prototype.prototype_ret_type
@@ -331,17 +333,9 @@ let functions_vernac aliases m =
   ]
 
 
-let variant_entry_to_constructor (t : type_entry) (v : variant_entry) : constructor = {
+let variant_entry_to_constructor (v : variant_entry) : constructor = {
     constructor_name = v.variant_name;
-    constructor_prototype = {
-        prototype_type_args = [];
-        prototype_args = List.map (fun x -> TMono x) v.variant_args;
-        prototype_ret_type =
-          TMono
-            (TParam
-               (t.type_name,
-                List.map (fun x -> TParam (x, [])) t.type_params));
-      }
+    constructor_prototype = v.variant_prototype;
   }
 
 
@@ -351,7 +345,7 @@ let type_entry_to_vernac features (t : type_entry) : t =
   | (Variant l, None, true) -> Inductive [{
       inductive_name = t.type_name;
       inductive_type_args = t.type_params;
-      inductive_constructors = List.map (variant_entry_to_constructor t) l;
+      inductive_constructors = List.map variant_entry_to_constructor l;
       inductive_type = TMono type_sort_mono;
     }]
   | (_, Some m, _) -> Definition {
@@ -564,9 +558,8 @@ let exceptions_vernac _features m vernacs =
     let proxy_type = TParam (proxy_name, []) in
 
     let proxy_proto = {
-        prototype_type_args = [];
-        prototype_args = List.map (fun mono -> TMono mono) e.exception_args;
-        prototype_ret_type = TMono (proxy_type);
+        e.exception_prototype with
+        prototype_ret_type = TMono proxy_type
       } in
 
     let proxy_inductive =
@@ -704,7 +697,7 @@ and intros_vernac aliases features models m vernacs =
     | (Variant l, None, true) -> {
         inductive_name = t.type_name;
         inductive_type_args = t.type_params;
-        inductive_constructors = List.map (variant_entry_to_constructor t) l;
+        inductive_constructors = List.map variant_entry_to_constructor l;
         inductive_type = TMono type_sort_mono;
       }
     | _ -> failwith "something went wrong" in

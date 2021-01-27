@@ -4,6 +4,8 @@ This will be the initial release of `coqffi`.
 
 ## Unreleased
 
+- **Fix:** Support polymorphic constructor such as `type box = Box :
+  'a -> box`
 - **Fix:** Complete the list of reserved Gallina keywords using [the
   Coq reference manual][coq-refman]
 - **Fix:** `coqffi` will not fail when confronted to an OCaml type of
