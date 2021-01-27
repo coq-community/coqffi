@@ -326,8 +326,8 @@ let functions_vernac aliases m =
 
   Lazylist.push_list [
     Section "Pure functions";
-    compacted_block_of_list @@ List.map to_def m.module_functions;
-    compacted_block_of_list @@ List.map to_extr m.module_functions;
+    compacted_block_of_list @@ List.map to_def m.mod_functions;
+    compacted_block_of_list @@ List.map to_extr m.mod_functions;
   ]
 
 
@@ -403,21 +403,21 @@ let io_primitives_vernac aliases m =
     } in
 
   let instance_vernac = Instance {
-      instance_name = sprintf "IO_Monad%s" m.module_name;
+      instance_name = sprintf "IO_Monad%s" m.mod_name;
       instance_typeclass_args = [];
       instance_type =
-        TMono (TParam (sprintf "Monad%s" m.module_name, [TParam ("IO", [])]));
+        TMono (TParam (sprintf "Monad%s" m.mod_name, [TParam ("IO", [])]));
       instance_members =
         List.map (fun prim ->
             let axiom_name = Alias.coq_name aliases prim.prim_name in
             (axiom_name, sprintf "io_%s" axiom_name))
-          m.module_primitives
+          m.mod_primitives
     } in
 
   Lazylist.push_list [
     Subsection "[IO] Instance";
-    compacted_block_of_list @@ List.map to_axiom m.module_primitives;
-    compacted_block_of_list @@ List.map to_extract_constant m.module_primitives;
+    compacted_block_of_list @@ List.map to_axiom m.mod_primitives;
+    compacted_block_of_list @@ List.map to_extract_constant m.mod_primitives;
     instance_vernac;
   ]
 
@@ -425,7 +425,7 @@ let interface_vernac aliases m vernacs =
   let prim_to_constructor prim =
     let prim_name = Alias.coq_name aliases prim.prim_name in
     let prim_type = type_lift
-                      (String.uppercase_ascii m.module_name)
+                      (String.uppercase_ascii m.mod_name)
                       (may_raise_t prim.prim_may_raise prim.prim_type) in
     {
       constructor_name = String.capitalize_ascii prim_name;
@@ -445,7 +445,7 @@ let interface_vernac aliases m vernacs =
       def_typeclass_args = [
         sprintf
           "Inject %s m"
-          (String.uppercase_ascii m.module_name)
+          (String.uppercase_ascii m.mod_name)
       ];
       def_prototype = proto;
       def_body = fun fmt _ ->
@@ -457,8 +457,8 @@ let interface_vernac aliases m vernacs =
 
   let inj_instance =
     let monad_name =
-      sprintf "Monad%s" @@ String.capitalize_ascii m.module_name in
-    let mod_name = String.uppercase_ascii m.module_name in
+      sprintf "Monad%s" @@ String.capitalize_ascii m.mod_name in
+    let mod_name = String.uppercase_ascii m.mod_name in
     Instance {
       instance_name = sprintf "Inject_%s" monad_name;
       instance_typeclass_args = [
@@ -469,14 +469,14 @@ let interface_vernac aliases m vernacs =
         List.map (fun x ->
             let n = Alias.coq_name aliases x.prim_name in
             (n, sprintf "inj_%s" n))
-          m.module_primitives
+          m.mod_primitives
     } in
 
   let mod_inductive = Inductive [{
-      inductive_name = String.uppercase_ascii m.module_name;
+      inductive_name = String.uppercase_ascii m.mod_name;
       inductive_type_args = [];
       inductive_constructors =
-        List.map prim_to_constructor m.module_primitives;
+        List.map prim_to_constructor m.mod_primitives;
       inductive_type = TMono (tlambda [type_sort_mono] type_sort_mono)
     }]
   in
@@ -486,11 +486,11 @@ let interface_vernac aliases m vernacs =
     Subsection "Interface datatype";
     mod_inductive
   ]
-  |++ List.map prim_to_inj_helper m.module_primitives
+  |++ List.map prim_to_inj_helper m.mod_primitives
   |+ inj_instance
 
 let semantics_vernac aliases m vernacs =
-  let mod_name = String.uppercase_ascii m.module_name in
+  let mod_name = String.uppercase_ascii m.mod_name in
   let mod_type =
     TParam (mod_name, []) in
 
@@ -515,7 +515,7 @@ let semantics_vernac aliases m vernacs =
           Axiom {
               axiom_name = sprintf "unsafe_%s" prim_name;
               axiom_type = may_raise_t prim.prim_may_raise prim.prim_type;
-        }) m.module_primitives;
+        }) m.mod_primitives;
 
     compacted_block_of_list @@
       List.map (fun prim ->
@@ -524,11 +524,11 @@ let semantics_vernac aliases m vernacs =
               constant_qualid = sprintf "unsafe_%s" prim_name;
               constant_type_vars = [];
               constant_target = prim_target prim;
-        }) m.module_primitives;
+        }) m.mod_primitives;
 
     Definition {
       def_name = sprintf "%s_unsafe_semantics"
-          (String.lowercase_ascii m.module_name);
+          (String.lowercase_ascii m.mod_name);
       def_typeclass_args = [];
       def_prototype = {
         prototype_type_args = [];
@@ -551,7 +551,7 @@ let semantics_vernac aliases m vernacs =
                      pp_print_string) args
                   prim_name
                   (pp_print_list ~pp_sep:pp_print_space
-                     pp_print_string) args)) m.module_primitives
+                     pp_print_string) args)) m.mod_primitives
     }
   ]
 
@@ -663,7 +663,7 @@ let exceptions_vernac _features m vernacs =
 
   vernacs
   |+ Section "OCaml Exceptions"
-  |+ Block (List.fold_left exception_vernac (of_list []) m.module_exceptions)
+  |+ Block (List.fold_left exception_vernac (of_list []) m.mod_exceptions)
 
 let primitives_vernac aliases features m vernacs =
   let prim_to_members prim =
@@ -672,11 +672,11 @@ let primitives_vernac aliases features m vernacs =
     (prim_name, type_lift "m" prim_type) in
 
   let monad_vernac = Typeclass {
-     class_name = sprintf "Monad%s" m.module_name;
+     class_name = sprintf "Monad%s" m.mod_name;
      class_typeclass_args = [];
      class_args = ["m", TMono (tlambda [type_sort_mono] type_sort_mono)];
      class_type = type_sort;
-     class_members = List.map (prim_to_members) m.module_primitives;
+     class_members = List.map (prim_to_members) m.mod_primitives;
    } in
 
   vernacs
@@ -691,14 +691,13 @@ let primitives_vernac aliases features m vernacs =
 
 let rec module_vernac aliases features models m vernac =
   vernac
-  |> not (empty m.module_intro) @? intros_vernac aliases features models m
-  |> not (empty m.module_exceptions) @? exceptions_vernac features m
-  |> not (empty m.module_functions) @? functions_vernac aliases m
-  |> not (empty m.module_primitives) @? primitives_vernac aliases features m
+  |> not (empty m.mod_intro) @? intros_vernac aliases features models m
+  |> not (empty m.mod_exceptions) @? exceptions_vernac features m
+  |> not (empty m.mod_functions) @? functions_vernac aliases m
+  |> not (empty m.mod_primitives) @? primitives_vernac aliases features m
 
 and intros_vernac aliases features models m vernacs =
   let transparent = is_enabled features TransparentTypes in
-  let intros = Mod.compute_intro_list m in
 
   let type_entry_to_inductive t =
     match (t.type_value, t.type_model, transparent) with
@@ -723,12 +722,12 @@ and intros_vernac aliases features models m vernacs =
 
   let module_to_vernac (m : Mod.t) =
     [CoqModule {
-       coqmod_name = m.module_name;
+       coqmod_name = m.mod_name;
        coqmod_content =
          Block (module_vernac aliases features models m Lazylist.empty)
     }] in
 
-  let intro_list_to_vernac (l : intro_list) =
+  let intro_list_to_vernac (l : intro list) =
     List.flatten
       (Mod.map_intro_list
          type_entries_to_vernac
@@ -736,28 +735,30 @@ and intros_vernac aliases features models m vernacs =
          l) in
 
   let to_extract = function
-    | IntroType t ->
-      (match (t.type_value, t.type_model, transparent) with
-       | (Variant l, None, true) ->
-         Some (ExtractInductive {
-                   inductive_qualid = t.type_name;
-                   inductive_target = qualified_name m t.type_name;
-                   inductive_variants_target =
-                     List.map (fun x -> qualified_name m x.variant_name) l
-           })
-       | _ ->
-         Some (ExtractConstant {
-                   constant_qualid = t.type_name;
-                   constant_type_vars = t.type_params;
-                   constant_target = qualified_name m t.type_name
-      }))
-    | _ -> None
+    | Right t ->
+      List.map
+        (fun t ->
+          match (t.type_value, t.type_model, transparent) with
+          | (Variant l, None, true) ->
+            ExtractInductive {
+                inductive_qualid = t.type_name;
+                inductive_target = qualified_name m t.type_name;
+                inductive_variants_target =
+                  List.map (fun x -> qualified_name m x.variant_name) l
+              }
+          | _ ->
+            ExtractConstant {
+                constant_qualid = t.type_name;
+                constant_type_vars = t.type_params;
+                constant_target = qualified_name m t.type_name
+        }) t
+    | _ -> []
   in
 
   vernacs
   |++ [
-    block_of_list @@ intro_list_to_vernac intros;
-    compacted_block_of_list @@ List.filter_map to_extract m.module_intro;
+    block_of_list @@ intro_list_to_vernac m.mod_intro;
+    compacted_block_of_list @@ Compat.concat_map to_extract m.mod_intro;
   ]
 
 let of_mod aliases features models m =

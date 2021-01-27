@@ -2,36 +2,52 @@ open Cmi_format
 open Entry
 open Error
 
-type t = module_entry
+type t = {
+    mod_namespace : string list;
+    mod_name : string;
+    mod_intro : intro list;
+    mod_functions : function_entry list;
+    mod_primitives : primitive_entry list;
+    mod_exceptions : exception_entry list;
+    mod_loc : Location.t;
+  }
 
-type intro_list =
-  | ConsTypes of (mutually_recursive_types_entry) list * intro_list
-  | ConsMod of t * intro_list
-  | Nil
+and intro =
+  | Right of mutually_recursive_types_entry
+  | Left of t
 
-let rec segment_module_intro : intro_entry list -> intro_list = function
-  | IntroMod m :: rst -> ConsMod (m, segment_module_intro rst)
+let rec of_module_entry (m : module_entry) : t =
+  let mod_intro = segment_module_intro m.module_intro in {
+      mod_intro;
+      mod_name = m.module_name;
+      mod_functions = m.module_functions;
+      mod_primitives = m.module_primitives;
+      mod_exceptions = m.module_exceptions;
+      mod_loc = m.module_loc;
+      mod_namespace = m.module_namespace
+    }
+
+and segment_module_intro : intro_entry list -> intro list = function
+  | IntroMod m :: rst -> Left (of_module_entry m) :: segment_module_intro rst
   | _ :: _ as l -> segment_module_intro_aux [] l
-  | [] -> Nil
+  | [] -> []
 
 and segment_module_intro_aux acc = function
   | IntroType t :: rst -> segment_module_intro_aux (t :: acc) rst
   | l -> match acc with
          | [] -> segment_module_intro l
-         | typs -> ConsTypes (find_mutually_recursive_types typs, segment_module_intro l)
+         | typs ->
+            let typs = List.map (fun x -> Right x) (find_mutually_recursive_types typs) in
+            typs @ segment_module_intro l
 
-let compute_intro_list m = segment_module_intro m.module_intro
+let dispatch f g = function
+  | Right mt -> f mt
+  | Left m -> g m
 
-let rec fold_intro_list for_mtyps for_mod acc = function
-  | ConsTypes (mtyps, rst) ->
-     fold_intro_list for_mtyps for_mod (List.fold_left for_mtyps acc mtyps) rst
-  | ConsMod (m, rst) -> fold_intro_list for_mtyps for_mod (for_mod acc m) rst
-  | Nil -> acc
+let fold_intro_list for_mtyps for_mod =
+  List.fold_left (fun acc -> dispatch (for_mtyps acc) (for_mod acc))
 
-let rec map_intro_list f g = function
-  | ConsTypes (mtyps, rst) -> List.map f mtyps @ map_intro_list f g rst
-  | ConsMod (m, rst) -> g m :: map_intro_list f g rst
-  | Nil -> []
+let map_intro_list f g = List.map (dispatch f g)
 
 let namespace_and_path modname =
   let rec namespace_and_path acc = function
@@ -41,12 +57,8 @@ let namespace_and_path modname =
 
   namespace_and_path [] (Str.split (Str.regexp "__") modname)
 
-let of_cmi_infos ~features (info : cmi_infos) =
-  let (namespace, name) = namespace_and_path info.cmi_name in
-  module_of_signatures features namespace name info.cmi_sign
-
 let qualified_name m name =
-  String.concat "." (m.module_namespace @ [m.module_name; name])
+  String.concat "." (m.mod_namespace @ [m.mod_name; name])
 
 let error_function f e = {
     error_loc = f.func_loc;
@@ -122,3 +134,9 @@ let translate tbl m =
      time. *)
   let tbl' = update_table [] tbl m in
   translate_module ~rev_namespace:[] tbl' m
+
+let of_cmi_infos ~features (info : cmi_infos) =
+  let (namespace, name) = namespace_and_path info.cmi_name in
+  module_of_signatures features namespace name info.cmi_sign
+  |> translate Translation.types_table
+  |> of_module_entry

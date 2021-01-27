@@ -1,27 +1,35 @@
 open Entry
 open Feature
 
-type t = module_entry
+type t = {
+    mod_namespace : string list;
+    mod_name : string;
+    mod_intro : intro list;
+    mod_functions : function_entry list;
+    mod_primitives : primitive_entry list;
+    mod_exceptions : exception_entry list;
+    mod_loc : Location.t;
+  }
 
-type intro_list
+and intro =
+  | Right of mutually_recursive_types_entry
+  | Left of t
 
 val of_cmi_infos : features:features -> Cmi_format.cmi_infos -> t
 
-val translate : Translation.t -> t -> t
+val translate : Translation.t -> module_entry -> module_entry
 
 val qualified_name : t -> string -> string
-
-val compute_intro_list : t -> intro_list
 
 val map_intro_list
     : (mutually_recursive_types_entry -> 'a)
       -> (t -> 'a)
-      -> intro_list
+      -> intro list
       -> 'a list
 
 val fold_intro_list
     : ('a -> mutually_recursive_types_entry -> 'a)
       -> ('a -> t -> 'a)
       -> 'a
-      -> intro_list
+      -> intro list
       -> 'a
