@@ -9,18 +9,18 @@ type intro_list =
   | ConsMod of t * intro_list
   | Nil
 
-let rec segment_mod_intro : intro_entry list -> intro_list = function
-  | IntroMod m :: rst -> ConsMod (m, segment_mod_intro rst)
-  | _ :: _ as l -> segment_mod_intro_aux [] l
+let rec segment_module_intro : intro_entry list -> intro_list = function
+  | IntroMod m :: rst -> ConsMod (m, segment_module_intro rst)
+  | _ :: _ as l -> segment_module_intro_aux [] l
   | [] -> Nil
 
-and segment_mod_intro_aux acc = function
-  | IntroType t :: rst -> segment_mod_intro_aux (t :: acc) rst
+and segment_module_intro_aux acc = function
+  | IntroType t :: rst -> segment_module_intro_aux (t :: acc) rst
   | l -> match acc with
-         | [] -> segment_mod_intro l
-         | typs -> ConsTypes (find_mutually_recursive_types typs, segment_mod_intro l)
+         | [] -> segment_module_intro l
+         | typs -> ConsTypes (find_mutually_recursive_types typs, segment_module_intro l)
 
-let compute_intro_list m = segment_mod_intro m.mod_intro
+let compute_intro_list m = segment_module_intro m.module_intro
 
 let rec fold_intro_list for_mtyps for_mod acc = function
   | ConsTypes (mtyps, rst) ->
@@ -46,7 +46,7 @@ let of_cmi_infos ~features (info : cmi_infos) =
   module_of_signatures features namespace name info.cmi_sign
 
 let qualified_name m name =
-  String.concat "." (m.mod_namespace @ [m.mod_name; name])
+  String.concat "." (m.module_namespace @ [m.module_name; name])
 
 let error_function f e = {
     error_loc = f.func_loc;
@@ -73,8 +73,8 @@ let error_type ty e = {
   }
 
 let error_mod m e = {
-    error_loc = m.mod_loc;
-    error_entry = m.mod_name;
+    error_loc = m.module_loc;
+    error_entry = m.module_name;
     error_exn = error_kind_of_exn e;
   }
 
@@ -93,19 +93,19 @@ let rec translate_module ?(rev_namespace=[]) tbl m =
 
   {
     m with
-    mod_intro =
-      List.filter_map (safe error_intro @@ translate_intro ~rev_namespace tbl) m.mod_intro;
-    mod_functions =
-      List.filter_map (safe error_function @@ translate_function ~rev_namespace tbl) m.mod_functions;
-    mod_primitives =
-      List.filter_map (safe error_primitive @@ translate_primitive ~rev_namespace tbl) m.mod_primitives;
-    mod_exceptions =
-      List.filter_map (safe error_exception @@ translate_exception ~rev_namespace tbl) m.mod_exceptions;
+    module_intro =
+      List.filter_map (safe error_intro @@ translate_intro ~rev_namespace tbl) m.module_intro;
+    module_functions =
+      List.filter_map (safe error_function @@ translate_function ~rev_namespace tbl) m.module_functions;
+    module_primitives =
+      List.filter_map (safe error_primitive @@ translate_primitive ~rev_namespace tbl) m.module_primitives;
+    module_exceptions =
+      List.filter_map (safe error_exception @@ translate_exception ~rev_namespace tbl) m.module_exceptions;
   }
 
 and translate_intro ~rev_namespace tbl = function
   | IntroType t -> IntroType (translate_type ~rev_namespace tbl t)
-  | IntroMod m -> let rev_namespace = m.mod_name :: rev_namespace in
+  | IntroMod m -> let rev_namespace = m.module_name :: rev_namespace in
                   IntroMod (translate_module ~rev_namespace tbl m)
 
 let rec update_table rev_namespace tbl m =
@@ -113,8 +113,8 @@ let rec update_table rev_namespace tbl m =
     | IntroType t ->
        Translation.preserve ~rev_namespace t.type_name tbl
     | IntroMod m ->
-       update_table (m.mod_name :: rev_namespace) tbl m in
-  List.fold_left aux tbl m.mod_intro
+       update_table (m.module_name :: rev_namespace) tbl m in
+  List.fold_left aux tbl m.module_intro
 
 let translate tbl m =
   (* FIXME: To support shadowing, we should update the translation

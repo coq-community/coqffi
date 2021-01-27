@@ -42,13 +42,13 @@ type exception_entry = {
 }
 
 type module_entry = {
-  mod_namespace : string list;
-  mod_name : string;
-  mod_intro : intro_entry list;
-  mod_functions : function_entry list;
-  mod_primitives : primitive_entry list;
-  mod_exceptions : exception_entry list;
-  mod_loc : Location.t;
+  module_namespace : string list;
+  module_name : string;
+  module_intro : intro_entry list;
+  module_functions : function_entry list;
+  module_primitives : primitive_entry list;
+  module_exceptions : exception_entry list;
+  module_loc : Location.t;
 }
 
 and intro_entry =

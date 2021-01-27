@@ -45,13 +45,13 @@ type exception_entry = {
 }
 
 type module_entry = {
-  mod_namespace : string list;
-  mod_name : string;
-  mod_intro : intro_entry list;
-  mod_functions : function_entry list;
-  mod_primitives : primitive_entry list;
-  mod_exceptions : exception_entry list;
-  mod_loc : Location.t;
+  module_namespace : string list;
+  module_name : string;
+  module_intro : intro_entry list;
+  module_functions : function_entry list;
+  module_primitives : primitive_entry list;
+  module_exceptions : exception_entry list;
+  module_loc : Location.t;
 }
 
 and intro_entry =
@@ -197,27 +197,27 @@ let entry_of_exn ident cst loc =
 
 let add_primitive_entry (m : module_entry) (pr : primitive_entry) : module_entry = {
   m with
-  mod_primitives = m.mod_primitives @ [pr]
+  module_primitives = m.module_primitives @ [pr]
 }
 
 let add_function_entry (m : module_entry) (f : function_entry) : module_entry = {
   m with
-  mod_functions = m.mod_functions @ [f]
+  module_functions = m.module_functions @ [f]
 }
 
 let add_type_entry (m : module_entry) (t : type_entry) : module_entry = {
   m with
-  mod_intro = m.mod_intro @ [IntroType t]
+  module_intro = m.module_intro @ [IntroType t]
 }
 
 let add_module_entry (m :module_entry) (e :module_entry) : module_entry = {
   m with
-  mod_intro = m.mod_intro @ [IntroMod e]
+  module_intro = m.module_intro @ [IntroMod e]
 }
 
 let add_exception_entry (m :module_entry) (e : exception_entry) :module_entry = {
   m with
-  mod_exceptions = m.mod_exceptions @ [e]
+  module_exceptions = m.module_exceptions @ [e]
 }
 
 let error_of_signature s exn : error = {
@@ -234,13 +234,13 @@ let add_entry (m :module_entry) = function
   | EMod m' -> add_module_entry m m'
 
 let empty_module loc namespace name = {
-    mod_namespace = namespace;
-    mod_name = name;
-    mod_intro = [];
-    mod_functions = [];
-    mod_primitives = [];
-    mod_exceptions = [];
-    mod_loc = loc;
+    module_namespace = namespace;
+    module_name = name;
+    module_intro = [];
+    module_functions = [];
+    module_primitives = [];
+    module_exceptions = [];
+    module_loc = loc;
   }
 
 let rec entry_of_signature namespace lf (s : Types.signature_item) : entry =
