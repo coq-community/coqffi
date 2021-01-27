@@ -63,13 +63,18 @@ type extract_inductive = {
   inductive_variants_target : string list;
 }
 
-type t =
+type coq_module = {
+    coqmod_name : string;
+    coqmod_content : t;
+  }
+
+and t =
   | Section of string
   | Subsection of string
   | Comment of string
   | Block of t Lazylist.t
   | CompactedBlock of t Lazylist.t
-  | Module of (string * t)
+  | CoqModule of coq_module
   | ConfigPrologue
   | FromRequireImport of from_require_import
   | FromRequireExport of from_require_export

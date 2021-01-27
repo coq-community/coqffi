@@ -174,13 +174,18 @@ let pp_extract_inductive fmt ind =
        ~pp_suffix:pp_print_space
        (fun fmt t -> fprintf fmt "\"%s\"" t)) ind.inductive_variants_target
 
-type t =
+type coq_module = {
+    coqmod_name : string;
+    coqmod_content : t;
+  }
+
+and t =
   | Section of string
   | Subsection of string
   | Comment of string
   | Block of t Lazylist.t
   | CompactedBlock of t Lazylist.t
-  | Module of (string * t)
+  | CoqModule of coq_module
   | ConfigPrologue
   | FromRequireImport of from_require_import
   | FromRequireExport of from_require_export
@@ -223,7 +228,7 @@ let rec pp_vernac fmt = function
         "Close Scope nat_scope.";
       ]
 
-  | Module (name, v) -> pp_module fmt name v
+  | CoqModule m -> pp_module fmt m
   | FromRequireImport fri -> pp_from_require_import fmt fri
   | FromRequireExport fre -> pp_from_require_export fmt fre
   | Require req -> pp_require fmt req
@@ -235,11 +240,11 @@ let rec pp_vernac fmt = function
   | ExtractConstant extr -> pp_extract_constant fmt extr
   | ExtractInductive ind -> pp_extract_inductive fmt ind
 
-and pp_module fmt name v =
+and pp_module fmt m =
   fprintf fmt "@[<v>@[<v 2>Module %s.@ %a@]@ End %s.@]"
-    name
-    pp_vernac v
-    name
+    m.coqmod_name
+    pp_vernac m.coqmod_content
+    m.coqmod_name
 
 let block_of_list l = Block (of_list l)
 let compacted_block_of_list l = CompactedBlock (of_list l)
@@ -717,7 +722,11 @@ and intros_vernac aliases features models m vernacs =
     | [] -> [] in
 
   let module_to_vernac (m : Mod.t) =
-    [Module (m.mod_name, Block (module_vernac aliases features models m Lazylist.empty))] in
+    [CoqModule {
+       coqmod_name = m.mod_name;
+       coqmod_content =
+         Block (module_vernac aliases features models m Lazylist.empty)
+    }] in
 
   let intro_list_to_vernac (l : intro_list) =
     List.flatten
