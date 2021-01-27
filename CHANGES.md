@@ -12,6 +12,8 @@ This will be the initial release of `coqffi`.
   confusion between `prod` and the `nat` multiplication
 - **Fix:** `coqffi` now translates correctly the types used outside of
   the module which introduces them
+- **Fix:** `coqffi` now generates axioms for types it cannot translate
+  (`-ftransparent-types`)
 
   [coq-refman]: https://coq.github.io/doc/v8.9/refman/language/gallina-specification-language.html
 

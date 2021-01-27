@@ -16,29 +16,24 @@ and intro =
   | Right of mutually_recursive_types_entry
   | Left of t
 
-let rec of_module_entry (m : module_entry) : t =
-  let mod_intro = segment_module_intro m.module_intro in {
-      mod_intro;
-      mod_name = m.module_name;
-      mod_functions = m.module_functions;
-      mod_primitives = m.module_primitives;
-      mod_exceptions = m.module_exceptions;
-      mod_loc = m.module_loc;
-      mod_namespace = m.module_namespace
-    }
+let translate_mutually_recursive_types ~rev_namespace
+      (tbl : Translation.t) (mt : mutually_recursive_types_entry)
+    : Translation.t * intro list =
+  let update_table tbl t = Translation.preserve ~rev_namespace t.type_name tbl in
+  let tbl' = List.fold_left update_table tbl mt in
 
-and segment_module_intro : intro_entry list -> intro list = function
-  | IntroMod m :: rst -> Left (of_module_entry m) :: segment_module_intro rst
-  | _ :: _ as l -> segment_module_intro_aux [] l
-  | [] -> []
+  let res = try
+      [Right (List.map (translate_type ~rev_namespace tbl') mt)]
+    with _ ->
+      (* Something went wrong when coqffi tried to translate the types
+         within a variant.  As a consequence, we treat each type of [mt]
+         as if it were opaque. *)
+      List.map
+        (fun t -> Right [translate_type ~rev_namespace tbl' { t with type_value = Opaque }])
+        mt
+  in
 
-and segment_module_intro_aux acc = function
-  | IntroType t :: rst -> segment_module_intro_aux (t :: acc) rst
-  | l -> match acc with
-         | [] -> segment_module_intro l
-         | typs ->
-            let typs = List.map (fun x -> Right x) (find_mutually_recursive_types typs) in
-            typs @ segment_module_intro l
+  (tbl', res)
 
 let dispatch f g = function
   | Right mt -> f mt
@@ -78,65 +73,61 @@ let error_exception exn e = {
     error_exn = error_kind_of_exn e;
   }
 
-let error_type ty e = {
-    error_loc = ty.type_loc;
-    error_entry = ty.type_name;
-    error_exn = error_kind_of_exn e;
-  }
+let safe_translate error translate x =
+  try
+    Some (translate x)
+  with e ->
+    pp_error Format.err_formatter (error x e);
+    None
 
-let error_mod m e = {
-    error_loc = m.module_loc;
-    error_entry = m.module_name;
-    error_exn = error_kind_of_exn e;
-  }
+let rec of_module_entry ?(rev_namespace=[]) tbl (m : module_entry) : Translation.t * t =
+  let (tbl, mod_intro) = segment_module_intro ~rev_namespace tbl m.module_intro in
+  let mod_functions =
+      List.filter_map
+        (safe_translate error_function @@ translate_function ~rev_namespace tbl)
+        m.module_functions in
+  let mod_primitives =
+      List.filter_map
+        (safe_translate error_primitive @@ translate_primitive ~rev_namespace tbl)
+        m.module_primitives in
+  let mod_exceptions =
+      List.filter_map
+        (safe_translate error_exception @@ translate_exception ~rev_namespace tbl)
+        m.module_exceptions in
 
-let error_intro i =
-  match i with
-  | IntroType t -> error_type t
-  | IntroMod m -> error_mod m
+  (tbl, {
+     mod_intro;
+     mod_name = m.module_name;
+     mod_functions;
+     mod_primitives;
+     mod_exceptions;
+     mod_loc = m.module_loc;
+     mod_namespace = m.module_namespace
+   })
 
-let rec translate_module ?(rev_namespace=[]) tbl m =
-  let safe error translate x =
-    try
-      Some (translate x)
-    with e ->
-      pp_error Format.err_formatter (error x e);
-      None in
+and segment_module_intro ~rev_namespace tbl : intro_entry list -> Translation.t * intro list = function
+  | [] -> (tbl, [])
+  | IntroMod m :: rst ->
+     let rev_namespace = m.module_name :: rev_namespace in
+     let (tbl, m) = of_module_entry ~rev_namespace tbl m in
+     let (tbl, rst) = segment_module_intro ~rev_namespace tbl rst in
+     (tbl, Left  m :: rst)
+  | l -> segment_module_intro_aux ~rev_namespace tbl [] l
 
-  {
-    m with
-    module_intro =
-      List.filter_map (safe error_intro @@ translate_intro ~rev_namespace tbl) m.module_intro;
-    module_functions =
-      List.filter_map (safe error_function @@ translate_function ~rev_namespace tbl) m.module_functions;
-    module_primitives =
-      List.filter_map (safe error_primitive @@ translate_primitive ~rev_namespace tbl) m.module_primitives;
-    module_exceptions =
-      List.filter_map (safe error_exception @@ translate_exception ~rev_namespace tbl) m.module_exceptions;
-  }
-
-and translate_intro ~rev_namespace tbl = function
-  | IntroType t -> IntroType (translate_type ~rev_namespace tbl t)
-  | IntroMod m -> let rev_namespace = m.module_name :: rev_namespace in
-                  IntroMod (translate_module ~rev_namespace tbl m)
-
-let rec update_table rev_namespace tbl m =
-  let aux tbl = function
-    | IntroType t ->
-       Translation.preserve ~rev_namespace t.type_name tbl
-    | IntroMod m ->
-       update_table (m.module_name :: rev_namespace) tbl m in
-  List.fold_left aux tbl m.module_intro
-
-let translate tbl m =
-  (* FIXME: To support shadowing, we should update the translation
-     table while we are translating, not computing it ahead of
-     time. *)
-  let tbl' = update_table [] tbl m in
-  translate_module ~rev_namespace:[] tbl' m
+and segment_module_intro_aux ~rev_namespace tbl acc = function
+  | IntroType t :: rst -> segment_module_intro_aux ~rev_namespace tbl (t :: acc) rst
+  | l -> match acc with
+         | [] -> segment_module_intro ~rev_namespace tbl l
+         | typs ->
+            let (tbl, typs) = Compat.fold_left_map
+                         (translate_mutually_recursive_types ~rev_namespace)
+                         tbl
+                         (find_mutually_recursive_types typs) in
+            let (tbl, rst) = segment_module_intro ~rev_namespace tbl l in
+            (tbl, List.concat typs @ rst)
 
 let of_cmi_infos ~features (info : cmi_infos) =
   let (namespace, name) = namespace_and_path info.cmi_name in
   module_of_signatures features namespace name info.cmi_sign
-  |> translate Translation.types_table
-  |> of_module_entry
+  |> of_module_entry Translation.types_table
+  |> snd

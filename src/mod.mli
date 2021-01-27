@@ -17,8 +17,6 @@ and intro =
 
 val of_cmi_infos : features:features -> Cmi_format.cmi_infos -> t
 
-val translate : Translation.t -> module_entry -> module_entry
-
 val qualified_name : t -> string -> string
 
 val map_intro_list
