@@ -149,10 +149,15 @@ let prototype_of_constructor params_type args ret =
     | TPoly (p, t) -> (p @ acc, TMono t)
     | t -> (acc, t) in
 
+  let monoify = function
+    | TPoly (p, t) -> (p, TMono t)
+    | t -> ([], t) in
+
   match args with
   | Cstr_tuple args ->
+    let (params_ret, ret) = monoify ret in
     let (params_constr, typs) = Compat.fold_left_map typify [] args in
-    let params_constr = List.sort_uniq String.compare params_constr in
+    let params_constr = List.sort_uniq String.compare (params_ret @ params_constr) in
     let params_type = List.sort_uniq String.compare params_type in
 
     {
