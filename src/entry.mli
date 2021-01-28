@@ -28,6 +28,7 @@ type type_value =
 type type_entry = {
   type_name : string;
   type_params : string list;
+  type_arity : int;
   type_model : string option;
   type_value : type_value;
   type_loc : Location.t;

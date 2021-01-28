@@ -71,6 +71,14 @@ let pick_param params =
   | Cons (x, rst) -> (x, rst)
   | Nil -> failwith "This should not happen since [type_params] is a stream"
 
+let pick_params =
+  let rec aux acc n params =
+    if 0 < n
+    then let (p, params) = pick_param params in
+         aux (p :: acc) (n-1) params
+    else (List.rev acc, params)
+  in aux []
+
 let named_poly_vars (t : Types.type_expr) : string list =
   let minimize = List.sort_uniq String.compare in
   let rec named_poly_vars (t : Types.type_expr) =

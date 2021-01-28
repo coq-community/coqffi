@@ -31,6 +31,7 @@ type type_value =
 type type_entry = {
   type_name : string;
   type_params : string list;
+  type_arity : int;
   type_model : string option;
   type_value : type_value;
   type_loc : Location.t;
@@ -65,7 +66,15 @@ type entry =
   | EExn of exception_entry
   | EMod of module_entry
 
-let polymorphic_params (decl : type_declaration) : string list =
+let arity (decl : type_declaration) : int =
+  let aux (lacc, racc) (t : type_expr) : int * int =
+    match t.desc with
+    | Tvar (Some "_") | Tvar None -> lacc + 1, racc + 1
+    | _ -> lacc, racc + 1 in
+  let (unamed, all) = List.fold_left aux (0, 0) decl.type_params in
+  if unamed <> 0 then all else 0
+
+let polymorphic_params is_gadt (decl : type_declaration) : string list =
   let minimize = List.sort_uniq String.compare in
 
   let existing_params params =
@@ -77,18 +86,19 @@ let polymorphic_params (decl : type_declaration) : string list =
 
     minimize (List.filter_map polymorphic_param params) in
 
-  let (_, res) = Compat.fold_left_map
-      (fun params t ->
-        match t.desc with
-        | Tvar (Some "_") | Tvar None ->
-          let (x, params) = pick_param params in
-          (params, x)
-        | Tvar (Some x) -> (params, x)
-        | _ -> failwith "Type parameters should be made with [Tvar] and nothing else")
-      (make_params_pool @@ existing_params decl.type_params)
-      decl.type_params in
-
-  res
+  if not is_gadt
+  then Compat.fold_left_map
+       (fun params t ->
+         match t.desc with
+         | Tvar (Some "_") | Tvar None ->
+           let (x, params) = pick_param params in
+           (params, x)
+         | Tvar (Some x) -> (params, x)
+         | _ -> failwith "Type parameters should be made with [Tvar] and nothing else")
+       (make_params_pool @@ existing_params decl.type_params)
+       decl.type_params
+       |> snd
+  else []
 
 let has_attr name : attributes -> bool =
   List.exists (fun attr -> attr.attr_name.txt = name)
@@ -196,7 +206,8 @@ let entry_of_value lf ident desc loc =
        }
 
 let entry_of_type lf ident decl loc =
-  let params = polymorphic_params decl in
+  let unamed_params = arity decl in
+  let params = polymorphic_params (0 < unamed_params) decl in
   let type_name = Ident.name ident in
   let default_type_ret =
     TMono (TParam (type_name, List.map (fun x -> TParam (x, [])) params)) in
@@ -223,13 +234,14 @@ let entry_of_type lf ident decl loc =
     type_model = has_coq_model decl.type_attributes;
     type_value = value decl.type_kind;
     type_loc = loc;
+    type_arity = unamed_params;
   }
 
 let entry_of_exn ident cst loc =
   let name = Ident.name ident in
   EExn {
     exception_name = name;
-    exception_prototype = prototype_of_constructor [] cst.ext_args (TMono (TParam (name, [])));
+    exception_prototype = prototype_of_constructor [] cst.ext_args (TMono (TParam ("exn", [])));
     exception_loc = loc;
   }
 
@@ -419,7 +431,8 @@ let translate_prototype ~rev_namespace tbl p =
       p.prototype_type_args in
   {
     p with
-    prototype_args = List.map (translate_type_repr ~rev_namespace tbl) p.prototype_args
+    prototype_args = List.map (translate_type_repr ~rev_namespace tbl) p.prototype_args;
+    prototype_ret_type = translate_type_repr ~rev_namespace tbl p.prototype_ret_type;
   }
 
 let translate_exception ~rev_namespace tbl e = {

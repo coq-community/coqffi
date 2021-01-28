@@ -4,6 +4,7 @@ This will be the initial release of `coqffi`.
 
 ## Unreleased
 
+- **Feature:** Support OCaml GADT (`-ftransparent-types`)
 - **Fix:** Support polymorphic constructor such as `type box = Box :
   'a -> box`
 - **Fix:** Complete the list of reserved Gallina keywords using [the

@@ -338,6 +338,10 @@ let variant_entry_to_constructor (v : variant_entry) : constructor = {
     constructor_prototype = v.variant_prototype;
   }
 
+let rec ind_type arity =
+  if arity == 0
+  then type_sort_mono
+  else TLambda (type_sort_mono, ind_type (arity - 1))
 
 let type_entry_to_vernac features (t : type_entry) : t =
   let transparent = is_enabled features TransparentTypes in
@@ -346,7 +350,7 @@ let type_entry_to_vernac features (t : type_entry) : t =
       inductive_name = t.type_name;
       inductive_type_args = t.type_params;
       inductive_constructors = List.map variant_entry_to_constructor l;
-      inductive_type = TMono type_sort_mono;
+      inductive_type = TMono (ind_type t.type_arity);
     }]
   | (_, Some m, _) -> Definition {
       def_name = t.type_name;
@@ -354,13 +358,13 @@ let type_entry_to_vernac features (t : type_entry) : t =
       def_prototype = {
         prototype_type_args = [];
         prototype_args = [];
-        prototype_ret_type = of_mono_type_repr t.type_params type_sort_mono;
+        prototype_ret_type = of_mono_type_repr t.type_params (ind_type t.type_arity);
       };
       def_body = fun fmt _ -> pp_print_string fmt m;
     }
   | _ -> Axiom {
       axiom_name = t.type_name;
-      axiom_type = of_mono_type_repr t.type_params type_sort_mono
+      axiom_type = of_mono_type_repr t.type_params (ind_type t.type_arity)
     }
 
 let io_primitives_vernac aliases m =
@@ -698,7 +702,7 @@ and intros_vernac aliases features models m vernacs =
         inductive_name = t.type_name;
         inductive_type_args = t.type_params;
         inductive_constructors = List.map variant_entry_to_constructor l;
-        inductive_type = TMono type_sort_mono;
+        inductive_type = TMono (ind_type t.type_arity);
       }
     | _ -> failwith "something went wrong" in
 
@@ -740,9 +744,12 @@ and intros_vernac aliases features models m vernacs =
                   List.map (fun x -> qualified_name m x.variant_name) l
               }
           | _ ->
+            let type_params =
+              fst (pick_params t.type_arity (make_params_pool []))
+              @ t.type_params in
             ExtractConstant {
                 constant_qualid = t.type_name;
-                constant_type_vars = t.type_params;
+                constant_type_vars = type_params;
                 constant_target = qualified_name m t.type_name
         }) t
     | _ -> []

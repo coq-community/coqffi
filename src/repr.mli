@@ -107,6 +107,7 @@ type params_pool
 
 val make_params_pool : string list -> params_pool
 val pick_param : params_pool -> string * params_pool
+val pick_params : int -> params_pool -> string list * params_pool
 
 (** {2 Pretty-printing Coq Terms} *)
 
