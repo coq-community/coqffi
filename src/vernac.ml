@@ -745,7 +745,7 @@ and intros_vernac aliases features models m vernacs =
               }
           | _ ->
             let type_params =
-              fst (pick_params t.type_arity (make_params_pool []))
+              fst (pick_params t.type_arity (make_params_pool t.type_params))
               @ t.type_params in
             ExtractConstant {
                 constant_qualid = t.type_name;
