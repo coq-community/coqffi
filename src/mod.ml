@@ -119,6 +119,12 @@ and segment_module_intro_aux ~rev_namespace tbl acc = function
   | l -> match acc with
          | [] -> segment_module_intro ~rev_namespace tbl l
          | typs ->
+            (* We have constructed the list backward, so we need to
+               reverse it before searching for mutually recursive
+               type, so that we do not need to perform a complex
+               analysis on types’ dependencies to decide their order
+               of declaration. *)
+            let typs = List.rev typs in
             let (tbl, typs) = Compat.fold_left_map
                          (translate_mutually_recursive_types ~rev_namespace)
                          tbl

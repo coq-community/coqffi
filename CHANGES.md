@@ -17,6 +17,8 @@ This will be the initial release of `coqffi`.
   the module which introduces them
 - **Fix:** `coqffi` now generates axioms for types it cannot translate
   (`-ftransparent-types`)
+- **Fix:** Preserve the initial order of types declarations as much as
+  necessary
 
   [coq-refman]: https://coq.github.io/doc/v8.9/refman/language/gallina-specification-language.html
 

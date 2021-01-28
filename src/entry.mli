@@ -67,6 +67,8 @@ val module_of_signatures : ?loc:(Location.t option) -> features -> string list -
 
 val dependencies : type_entry -> string list
 
+(** For [find_mutually_recursive_types l] to produce a correct output wrt. to
+    type entries ordering, [l] should be correct wrt. the same criteria. *)
 val find_mutually_recursive_types
   : type_entry list -> mutually_recursive_types_entry list
 

@@ -329,6 +329,7 @@ and module_of_signatures ?(loc=None) lf namespace name sigs =
 type state = Unvisited | OnStack | Visited
 
 type node = {
+  node_pos : int;
   node_state : state ref;
   node_type : type_entry;
   node_deps : string list;
@@ -336,7 +337,8 @@ type node = {
   node_low : int ref;
 }
 
-let new_node t deps = {
+let new_node t pos deps = {
+  node_pos = pos;
   node_state = ref Unvisited;
   node_type = t;
   node_deps = deps;
@@ -357,27 +359,31 @@ let dependencies t =
   | Variant l ->
     List.sort_uniq String.compare
       (Compat.concat_map
-         (fun e -> Compat.concat_map dependencies e.variant_prototype.prototype_args) l)
+         (fun e ->
+           let typs =
+             e.variant_prototype.prototype_ret_type :: e.variant_prototype.prototype_args in
+           Compat.concat_map dependencies typs) l)
   | Opaque -> []
 
 let find_mutually_recursive_types tl =
+  let input_length = List.length tl in
   let id : int ref = ref 0 in
 
   let stack : (node list) ref = ref [] in
 
-  let res : ((type_entry list) list) ref = ref [] in
+  let res : ((node list) list) ref = ref [] in
 
   let nodes = List.map (fun t -> t.type_name) tl in
 
   let matrix : (string, node) Hashtbl.t = begin
-    let tbl = Hashtbl.create (List.length tl) in
-    List.iter
-      (fun t ->
+    let tbl = Hashtbl.create input_length in
+    List.iteri
+      (fun i t ->
          let deps = dependencies t in
          let min_deps = List.filter
              (fun x -> List.exists (String.equal x) deps)
              nodes in
-         Hashtbl.add tbl t.type_name (new_node t min_deps))
+         Hashtbl.add tbl t.type_name (new_node t i min_deps))
       tl;
     tbl
   end in
@@ -388,8 +394,8 @@ let find_mutually_recursive_types tl =
       stack := rst;
       node.node_state := Visited;
       node.node_low := !(at.node_id);
-      if !(node.node_id) == !(at.node_id) then [node.node_type]
-      else node.node_type :: empty_stack at
+      if !(node.node_id) == !(at.node_id) then [node]
+      else node :: empty_stack at
     | _ -> assert false in
 
   let rec dfs at =
@@ -413,7 +419,12 @@ let find_mutually_recursive_types tl =
   Hashtbl.iter (fun _ v ->
       if unvisited !(v.node_state) then dfs v) matrix;
 
-  List.rev !res
+  List.map (fun l -> List.map (fun x -> x.node_type) l)
+    (List.sort (fun mt1 mt2 ->
+      let mt1 = List.fold_left (fun acc t -> min acc t.node_pos) input_length mt1 in
+      let mt2 = List.fold_left (fun acc t -> min acc t.node_pos) input_length mt2 in
+
+      Int.compare mt1 mt2) !res)
 
 let translate_function ~rev_namespace tbl f = {
     f with
