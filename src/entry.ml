@@ -66,15 +66,7 @@ type entry =
   | EExn of exception_entry
   | EMod of module_entry
 
-let arity (decl : type_declaration) : int =
-  let aux (lacc, racc) (t : type_expr) : int * int =
-    match t.desc with
-    | Tvar (Some "_") | Tvar None -> lacc + 1, racc + 1
-    | _ -> lacc, racc + 1 in
-  let (unamed, all) = List.fold_left aux (0, 0) decl.type_params in
-  if unamed <> 0 then all else 0
-
-let polymorphic_params is_gadt (decl : type_declaration) : string list =
+let polymorphic_params (decl : type_declaration) : string list =
   let minimize = List.sort_uniq String.compare in
 
   let existing_params params =
@@ -86,8 +78,7 @@ let polymorphic_params is_gadt (decl : type_declaration) : string list =
 
     minimize (List.filter_map polymorphic_param params) in
 
-  if not is_gadt
-  then Compat.fold_left_map
+  Compat.fold_left_map
        (fun params t ->
          match t.desc with
          | Tvar (Some "_") | Tvar None ->
@@ -98,7 +89,6 @@ let polymorphic_params is_gadt (decl : type_declaration) : string list =
        (make_params_pool @@ existing_params decl.type_params)
        decl.type_params
        |> snd
-  else []
 
 let has_attr name : attributes -> bool =
   List.exists (fun attr -> attr.attr_name.txt = name)
@@ -206,35 +196,127 @@ let entry_of_value lf ident desc loc =
        }
 
 let entry_of_type lf ident decl loc =
-  let unamed_params = arity decl in
-  let params = polymorphic_params (0 < unamed_params) decl in
   let type_name = Ident.name ident in
-  let default_type_ret =
-    TMono (TParam (type_name, List.map (fun x -> TParam (x, [])) params)) in
 
-  let to_variant_entry v =
-    let ret = Option.value ~default:default_type_ret
+  (* Our goal is to compute a [type_entry] value for a given type
+     declaration. The main difficulty of this approach is that OCaml
+     is _way_ more permissive than Coq wrt. how a type in defined.
+
+     For a parameterized inductive types, e,g,.
+
+        Inductive foo (a : Type) := ...
+
+     Coq enforces that the type of each constructor of [foo] is [foo
+     a]. If we want two constructors to be of different types, we will
+     have to do something like
+
+         Inductive foo : Type -> Type := ...
+
+     OCaml does not have any restriction of the sort, so one can have
+
+         type 'a t =
+           | Foo : int t
+           | Bar : bool t
+
+     For such a type, coqffi needs to generate [Inductive t : Type ->
+     Type]. Similarly, coqffi needs to deal with unamed parameters,
+     identified with [_]. Another way to define [t] is
+
+         type _ t =
+           | Foo : int t
+           | Bar : bool t
+
+     This means [coqffi] needs to do quite a bit of processing.
+
+     First, we collect the type parameters. The [polymorphic_params]
+     will give a name to each unamed parameters, using a [params_pool]
+     from the [Repr] module. *)
+
+  let params = polymorphic_params decl in
+
+  (* Then, we compute two versions of the default type of the
+     constructors. A potentially polymorphic one, and a monomorphic
+     one.
+
+     The polymorphic version is used to compute the
+     [prototype_repr] value associated to each constructor. *)
+
+  let poly_default_type_ret =
+    of_mono_type_repr params (TParam (type_name, List.map (fun x -> TParam (x, [])) params)) in
+
+  let to_variant_entry params v =
+    let ret = Option.value ~default:poly_default_type_ret
               (Option.map type_repr_of_type_expr v.cd_res) in {
       variant_name = Ident.name v.cd_id;
       variant_prototype = prototype_of_constructor params v.cd_args ret;
     } in
 
-  let value t =
+  (* NB: Constructors of the form [Bar of int] do not have any type
+     information, compared to [Foo : int -> t]. And of course, the two
+     forms can be mixed together within the same type definition.
+
+     This value is “monoified” once the prototype is constructed,
+     since the [prototype_repr] record as a field for type arguments.
+     As a consequence, when we try to verify (where we test if all
+     constructors use the “correct” set of parameters introduced by
+     the type declaration), we use the monomorphic version. *)
+
+  let mono_default_type_ret =
+    TMono (TParam (type_name, List.map (fun x -> TParam (x, [])) params)) in
+
+  let unify v = v.variant_prototype.prototype_ret_type = mono_default_type_ret in
+
+  (* We can now define two functions to contruct [type_value]
+     terms. The first one expects the constructors to use the correct
+     set of parameters. It call [to_variant_entry] with [params],
+     which means the type parameters in [param] will not appear as
+     type parameters specific to a given constructor. Prior to
+     returning the result it has computed, this functions check it is
+     consistent. It will return [None] if not. *)
+
+  let type_value_with_unification decl =
     if is_enabled lf TransparentTypes
     then try
-        match t with
-        | Type_variant v -> Variant (List.map to_variant_entry v)
+        match decl.type_kind with
+        | Type_variant v -> let l = List.map (to_variant_entry params) v in
+                            if List.for_all unify l
+                            then Some (Variant l)
+                            else None
+        | _ -> Some Opaque
+      with
+        _ -> Some Opaque
+    else Some Opaque in
+
+  (* The other function will call [to_variant_entry] with an empty set
+     of type parameters, because we will only call them when we will
+     define inductive types without named type parameters (of the form
+     [Inductive t : Type -> Type ... := ...]). *)
+
+  let type_value_without_unification decl =
+    if is_enabled lf TransparentTypes
+    then try
+        match decl.type_kind with
+        | Type_variant v -> Variant (List.map (to_variant_entry []) v)
         | _ -> Opaque
       with _ -> Opaque
     else Opaque in
 
+  (* Et voila. First, we try with [type_value_with_unification], and
+     if it fails, [type_value_without_unification]. *)
+
+  let (type_params, type_arity, type_value) =
+    match type_value_with_unification decl with
+    | Some type_value -> (params, 0, type_value)
+    | None -> ([], List.length params, type_value_without_unification decl)
+  in
+
   EType {
-    type_name = type_name;
-    type_params = params;
+    type_name;
+    type_params;
     type_model = has_coq_model decl.type_attributes;
-    type_value = value decl.type_kind;
+    type_value;
     type_loc = loc;
-    type_arity = unamed_params;
+    type_arity;
   }
 
 let entry_of_exn ident cst loc =
