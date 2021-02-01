@@ -15,8 +15,11 @@ let error_kind_of_exn = function
 
 let pp_error_kind fmt = let open Format in function
   | UnsupportedOCamlSignature s ->
-     fprintf fmt "Use of unsupported OCaml construction: %a"
-       Printtyp.signature [s]
+     (try
+       fprintf fmt "Use of unsupported OCaml construction: %a"
+         Printtyp.signature [s]
+     with
+       _ -> pp_print_string fmt "<unrepresentable construction>")
   | UnsupportedGADT ->
      fprintf fmt
        "GADT are currently not supported by coqffi"
