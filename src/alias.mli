@@ -1,8 +1,3 @@
-type t = {
-    alias_coq : string;
-    alias_operator : bool;
-  }
-
 type table
 
 val default : table
