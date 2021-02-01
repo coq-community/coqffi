@@ -53,6 +53,11 @@
   (target Unamed.v)
   (action (run coqffi -finterface %{cmi:unamed} -ffreespec -o %{target})))
 
+(rule
+  (target WithConfig.v)
+  (deps config.coqffi)
+  (action (run coqffi -c config.coqffi -finterface %{cmi:config} -ffreespec -o %{target})))
+
 (coq.theory
   (name Examples)
   (theories CoqFFI))

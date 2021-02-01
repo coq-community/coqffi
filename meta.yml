@@ -50,6 +50,11 @@ dependencies:
     version: '{>= "1.0.4"}'
   description: |-
     [Cmdliner](http://erratique.ch/software/cmdliner) 1.0.4 or later
+- opam:
+    name: sexplib
+    version: '{>= "0.14"}'
+  description: |-
+    [Sexplib](https://github.com/janestreet/sexplib) 0.14 or later
 
 namespace: CoqFFI
 

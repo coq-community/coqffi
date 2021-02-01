@@ -2,4 +2,4 @@
   (name main)
   (public_name coqffi)
   (package coq-coqffi)
-  (libraries compiler-libs.common coqffi cmdliner))
+  (libraries sexplib compiler-libs.common coqffi cmdliner))

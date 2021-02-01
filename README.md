@@ -40,6 +40,7 @@ Coq development, and configures the Coq extraction mechanism accordingly.
 - Compatible OCaml versions: 4.08 or later
 - Additional dependencies:
   - [Cmdliner](http://erratique.ch/software/cmdliner) 1.0.4 or later
+  - [Sexplib](https://github.com/janestreet/sexplib) 0.14 or later
   - [Dune](https://dune.build) 2.5 or later
 - Coq namespace: `CoqFFI`
 - Related publication(s): none

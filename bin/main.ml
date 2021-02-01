@@ -2,10 +2,10 @@ open Cmi_format
 open Coqffi
 open Cmdliner
 
-let process models features input ochannel =
+let process models aliases features input ochannel =
   read_cmi input
   |> Mod.of_cmi_infos ~features
-  |> Vernac.of_mod Alias.default features models
+  |> Vernac.of_mod aliases features models
   |> Format.fprintf ochannel "%a@?" Vernac.pp_vernac
 
 exception TooManyArguments
@@ -15,6 +15,10 @@ let input_cmi_arg =
   let doc =
     "The compiled interface ($(b,.cmi)) of the OCaml module to be used in Coq" in
   Arg.(required & pos 0 (some string) None & info [] ~docv:"INPUT" ~doc)
+
+let config_arg =
+  let doc = "A configuration file" in
+  Arg.(value & opt (some string) None & info ["c"; "config"] ~docv:"CONFIG" ~doc)
 
 let output_arg =
   let doc = "The name of the Coq file to generate" in
@@ -143,7 +147,7 @@ let coqffi_info =
   ] in
   Term.(info "coqffi" ~exits:default_exits ~doc ~man ~version:"coqffi.dev")
 
-let run_coqffi (input : string) (output : string option)
+let run_coqffi (input : string) (config : string option) (output : string option)
     (features : Feature.features) (models : string list) =
 
   let parse _ =
@@ -156,6 +160,13 @@ let run_coqffi (input : string) (output : string option)
   try begin
     let (input, output, features) = parse () in
 
+    let config =
+      Option.value ~default:Config.empty
+        (Option.map Config.from_path config)
+    in
+
+    let aliases = Config.feed_aliases config Alias.default in
+
     Feature.check_features_consistency features;
 
     Format.(
@@ -167,16 +178,36 @@ let run_coqffi (input : string) (output : string option)
                 (Feature.name f)))
         (Feature.find_duplicates features));
 
-    process models features input output
+    process models aliases features input output
   end
   with
   | Feature.FreeSpecRequiresInterface ->
     Format.fprintf Format.err_formatter
       "Error: The feature `freespec' requires the feature `interface' to be enabled"
+  | Config.SectionShouldBeList (secname, sexp) ->
+    Format.fprintf Format.err_formatter
+      "Error: Error in the configuration file; `%s' should be a list, but is `%a'"
+      secname
+      Sexplib.Sexp.pp sexp
+  | Config.FieldShouldBeString (fieldname, sexp) ->
+    Format.fprintf Format.err_formatter
+      "Error: Error in the configuration file; `%s' should be a string in `%a'"
+      fieldname
+      Sexplib.Sexp.pp sexp
+  | Config.MissingField (fieldname, sexp) ->
+    Format.fprintf Format.err_formatter
+      "Error: Error in the configuration file; expecting field `%s' in `%a'"
+      fieldname
+      Sexplib.Sexp.pp sexp
+  | Config.IllFormedAliasesEntry sexp ->
+    Format.fprintf Format.err_formatter
+      "Error: Error in the configuration file; `%a' in not a correct alias entry"
+      Sexplib.Sexp.pp sexp
 
 let coqffi_t =
   Term.(const run_coqffi
         $ input_cmi_arg
+        $ config_arg
         $ output_arg
         $ features_opt
         $ models_opt)
