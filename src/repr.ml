@@ -24,19 +24,6 @@ let supposedly_pure t =
   | TLambda (_, _) -> false
   | _ -> true
 
-(*
-let type_params : string Seq.t =
-  let type_params = List.to_seq
-                      [ "a"; "b"; "c"; "d"; "e"; "f"; "g"; "h"; "i"; "j"; "k";
-                      "l"; "m"; "n"; "o"; "p"; "q"; "r"; "s"; "t"; "u"; "v";
-                      "w"; "x"; "y"; "z" ] in
-  let rec aux prev =
-    let next = Seq.flat_map (fun x -> Seq.map (fun t -> t ^ x) type_params) prev in
-    Seq.append next (aux next) in
-
-  Seq.append type_params (aux type_params)
-*)
-
 type params_pool = string Seq.t
 
 let make_params_pool (existing_params : string list) : params_pool =
