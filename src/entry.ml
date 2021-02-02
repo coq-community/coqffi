@@ -11,6 +11,12 @@ type primitive_entry = {
   prim_loc : Location.t;
 }
 
+type lwt_entry = {
+  lwt_name : string;
+  lwt_type : type_repr;
+  lwt_loc : Location.t;
+}
+
 type function_entry = {
   func_name : string;
   func_type : type_repr;
@@ -51,6 +57,7 @@ type module_entry = {
   module_intro : intro_entry list;
   module_functions : function_entry list;
   module_primitives : primitive_entry list;
+  module_lwt : lwt_entry list;
   module_exceptions : exception_entry list;
   module_loc : Location.t;
 }
@@ -61,6 +68,7 @@ and intro_entry =
 
 type entry =
   | EPrim of primitive_entry
+  | ELwt of lwt_entry
   | EFunc of function_entry
   | EType of type_entry
   | EExn of exception_entry
@@ -167,7 +175,7 @@ let prototype_of_constructor params_type args ret =
     }
   | _ -> assert false
 
-let entry_of_value lf ident desc loc =
+let entry_of_value lf lwt_alias ident desc loc =
   let is_pure attrs model t =
     is_enabled lf PureModule
     || Repr.supposedly_pure t
@@ -180,6 +188,10 @@ let entry_of_value lf ident desc loc =
   let model = has_coq_model desc.val_attributes in
   let may_raise = has_attr "may_raise" desc.val_attributes in
 
+  let unwrap_lwt = function
+    | TParam (type_name, [param]) when lwt_alias = Some type_name -> param
+    | t -> t in
+
   if is_pure desc.val_attributes model repr
   then EFunc {
          func_name = name;
@@ -188,12 +200,18 @@ let entry_of_value lf ident desc loc =
          func_may_raise = may_raise;
          func_loc = loc;
        }
-  else EPrim {
-         prim_name = name;
-         prim_type = repr;
-         prim_may_raise = may_raise;
-         prim_loc = loc;
+  else if asynchronous ~lwt_alias repr
+  then ELwt {
+         lwt_name = name;
+         lwt_type = map_codomain unwrap_lwt repr;
+         lwt_loc = loc;
        }
+  else EPrim {
+          prim_name = name;
+          prim_type = repr;
+          prim_may_raise = may_raise;
+          prim_loc = loc;
+        }
 
 let entry_of_type lf ident decl loc =
   let type_name = Ident.name ident in
@@ -352,6 +370,11 @@ let add_exception_entry (m :module_entry) (e : exception_entry) :module_entry = 
   module_exceptions = m.module_exceptions @ [e]
 }
 
+let add_lwt_entry (m : module_entry) (l : lwt_entry) : module_entry = {
+  m with
+  module_lwt = m.module_lwt @ [l]
+}
+
 let error_of_signature s exn : error = {
     error_loc = signature_loc s;
     error_entry = Ident.name (signature_ident s);
@@ -360,6 +383,7 @@ let error_of_signature s exn : error = {
 
 let add_entry (m :module_entry) = function
   | EPrim pr -> add_primitive_entry m pr
+  | ELwt l -> add_lwt_entry m l
   | EFunc fn -> add_function_entry m fn
   | EType t -> add_type_entry m t
   | EExn e -> add_exception_entry m e
@@ -371,35 +395,36 @@ let empty_module loc namespace name = {
     module_intro = [];
     module_functions = [];
     module_primitives = [];
+    module_lwt = [];
     module_exceptions = [];
     module_loc = loc;
   }
 
-let rec entry_of_signature namespace lf (s : Types.signature_item) : entry =
+let rec entry_of_signature namespace lf lwt_alias (s : Types.signature_item) : entry =
   let loc = signature_loc s in
   match s with
   | Sig_value (ident, desc, Exported) ->
-    entry_of_value lf ident desc loc
+    entry_of_value lf lwt_alias ident desc loc
   | Sig_type (ident, decl, _, Exported) ->
     entry_of_type lf ident decl loc
   | Sig_typext (ident, cst, Text_exception, Exported) ->
     entry_of_exn ident cst loc
   | Sig_module (name, _, decl, _, Exported) ->
-    (match entry_of_module lf namespace name decl with
+    (match entry_of_module lf lwt_alias namespace name decl with
      | Some x -> x
      | _ -> raise_error (UnsupportedOCamlSignature s))
   | _ -> (* FIXME: this looks like it is a bit too strong *)
     raise_error (UnsupportedOCamlSignature s)
 
-and entry_of_module lf namespace name decl =
+and entry_of_module lf lwt_alias namespace name decl =
   match decl.md_type with
   | Mty_signature sigs ->
-    Some (EMod (module_of_signatures ~loc:(Some decl.md_loc) lf namespace (Ident.name name) sigs))
+    Some (EMod (module_of_signatures ~loc:(Some decl.md_loc) lf lwt_alias namespace (Ident.name name) sigs))
   | _ -> None
 
-and module_of_signatures ?(loc=None) lf namespace name sigs =
+and module_of_signatures ?(loc=None) lf lwt_alias namespace name sigs =
   let foldf m s =
-    try entry_of_signature namespace lf s |> add_entry m
+    try entry_of_signature namespace lf lwt_alias s |> add_entry m
     with e ->
       pp_error Format.err_formatter (error_of_signature s e);
       m
@@ -509,6 +534,11 @@ let translate_function ~rev_namespace tbl f = {
 let translate_primitive ~rev_namespace tbl prim = {
     prim with
     prim_type = translate_type_repr ~rev_namespace tbl prim.prim_type
+  }
+
+let translate_lwt ~rev_namespace tbl lwt = {
+    lwt with
+    lwt_type = translate_type_repr ~rev_namespace tbl lwt.lwt_type
   }
 
 let translate_prototype ~rev_namespace tbl p =

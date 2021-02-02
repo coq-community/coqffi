@@ -4,6 +4,7 @@ type t =
   | Interface
   | SimpleIO
   | FreeSpec
+  | Lwt
 
 type feature = t
 
@@ -17,6 +18,7 @@ let name = function
   | Interface -> "interface"
   | SimpleIO -> "simple-io"
   | FreeSpec -> "freespec"
+  | Lwt -> "lwt"
 
 let find_duplicates : features -> feature list =
   let rec find_dup dups = function
@@ -26,6 +28,8 @@ let find_duplicates : features -> feature list =
         rst
     | [] -> List.sort_uniq compare dups in
   find_dup []
+
+let is_set lf f = List.assoc_opt f lf
 
 let rec is_enabled lf f =
   Option.value ~default:(default lf f) @@ List.assoc_opt f lf
@@ -38,6 +42,15 @@ let is_disabled lf f = not (is_enabled lf f)
 
 let support_impure_values lf = is_enabled lf SimpleIO || is_enabled lf FreeSpec
 
-let check_features_consistency lf =
+exception LwtExplicitelyDisableButLwtAliasSet
+
+let check_features_consistency lwt_alias lf =
   if is_enabled lf FreeSpec && is_disabled lf Interface
-  then raise FreeSpecRequiresInterface
+  then raise FreeSpecRequiresInterface;
+
+  match lwt_alias, is_set lf Lwt with
+  | Some lwt_alias, Some true -> (Some lwt_alias, lf)
+  | Some _, Some false -> raise LwtExplicitelyDisableButLwtAliasSet
+  | Some lwt_alias, None -> (Some lwt_alias, (Lwt, true) :: lf)
+  | None, Some true -> (Some "Lwt.t", lf)
+  | _, _ -> (None, lf)

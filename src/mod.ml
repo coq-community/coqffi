@@ -8,6 +8,7 @@ type t = {
     mod_intro : intro list;
     mod_functions : function_entry list;
     mod_primitives : primitive_entry list;
+    mod_lwt : lwt_entry list;
     mod_exceptions : exception_entry list;
     mod_loc : Location.t;
   }
@@ -67,6 +68,12 @@ let error_primitive p e = {
     error_exn = error_kind_of_exn e;
   }
 
+let error_lwt p e = {
+    error_loc = p.lwt_loc;
+    error_entry = p.lwt_name;
+    error_exn = error_kind_of_exn e;
+  }
+
 let error_exception exn e = {
     error_loc = exn.exception_loc;
     error_entry = exn.exception_name;
@@ -90,6 +97,10 @@ let rec of_module_entry ?(rev_namespace=[]) tbl (m : module_entry) : Translation
       List.filter_map
         (safe_translate error_primitive @@ translate_primitive ~rev_namespace tbl)
         m.module_primitives in
+  let mod_lwt =
+      List.filter_map
+        (safe_translate error_lwt @@ translate_lwt ~rev_namespace tbl)
+        m.module_lwt in
   let mod_exceptions =
       List.filter_map
         (safe_translate error_exception @@ translate_exception ~rev_namespace tbl)
@@ -100,6 +111,7 @@ let rec of_module_entry ?(rev_namespace=[]) tbl (m : module_entry) : Translation
      mod_name = m.module_name;
      mod_functions;
      mod_primitives;
+     mod_lwt;
      mod_exceptions;
      mod_loc = m.module_loc;
      mod_namespace = m.module_namespace
@@ -132,8 +144,8 @@ and segment_module_intro_aux ~rev_namespace tbl acc = function
             let (tbl, rst) = segment_module_intro ~rev_namespace tbl l in
             (tbl, List.concat typs @ rst)
 
-let of_cmi_infos ~features (info : cmi_infos) =
+let of_cmi_infos ~features ~lwt_alias (info : cmi_infos) =
   let (namespace, name) = namespace_and_path info.cmi_name in
-  module_of_signatures features namespace name info.cmi_sign
+  module_of_signatures features lwt_alias namespace name info.cmi_sign
   |> of_module_entry Translation.types_table
   |> snd

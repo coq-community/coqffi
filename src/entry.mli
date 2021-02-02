@@ -8,6 +8,12 @@ type primitive_entry = {
   prim_loc : Location.t;
 }
 
+type lwt_entry = {
+  lwt_name : string;
+  lwt_type : type_repr;
+  lwt_loc : Location.t;
+}
+
 type function_entry = {
   func_name : string;
   func_type : type_repr;
@@ -48,6 +54,7 @@ type module_entry = {
   module_intro : intro_entry list;
   module_functions : function_entry list;
   module_primitives : primitive_entry list;
+  module_lwt : lwt_entry list;
   module_exceptions : exception_entry list;
   module_loc : Location.t;
 }
@@ -58,12 +65,13 @@ and intro_entry =
 
 type entry =
   | EPrim of primitive_entry
+  | ELwt of lwt_entry
   | EFunc of function_entry
   | EType of type_entry
   | EExn of exception_entry
   | EMod of module_entry
 
-val module_of_signatures : ?loc:(Location.t option) -> features -> string list -> string -> Types.signature -> module_entry
+val module_of_signatures : ?loc:(Location.t option) -> features -> string option -> string list -> string -> Types.signature -> module_entry
 
 val dependencies : type_entry -> string list
 
@@ -74,5 +82,6 @@ val find_mutually_recursive_types
 
 val translate_function : rev_namespace:(string list) -> Translation.t -> function_entry -> function_entry
 val translate_primitive : rev_namespace:(string list) -> Translation.t -> primitive_entry -> primitive_entry
+val translate_lwt : rev_namespace:(string list) -> Translation.t -> lwt_entry -> lwt_entry
 val translate_exception : rev_namespace:(string list) -> Translation.t -> exception_entry -> exception_entry
 val translate_type : rev_namespace:(string list) -> Translation.t -> type_entry -> type_entry

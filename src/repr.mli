@@ -38,6 +38,7 @@ val to_mono_type_repr : type_repr -> mono_type_repr
 val of_mono_type_repr : string list -> mono_type_repr -> type_repr
 
 val supposedly_pure : type_repr -> bool
+val asynchronous : lwt_alias:(string option) -> type_repr -> bool
 
 (** {1 Converting [Cmi_format]'s [type_expr] to [coqffi]’s [type_repr]} *)
 

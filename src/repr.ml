@@ -24,6 +24,14 @@ let supposedly_pure t =
   | TLambda (_, _) -> false
   | _ -> true
 
+let asynchronous ~lwt_alias typ =
+  let rec mono_asynchronous = function
+    | TLambda (_, r) -> mono_asynchronous r
+    | TParam (type_name, [_]) when lwt_alias = Some type_name -> true
+    | _ -> false in
+
+  mono_asynchronous (to_mono_type_repr typ)
+
 type params_pool = string Seq.t
 
 let make_params_pool (existing_params : string list) : params_pool =

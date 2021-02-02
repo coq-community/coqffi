@@ -2,9 +2,9 @@ open Cmi_format
 open Coqffi
 open Cmdliner
 
-let process models aliases features input ochannel =
+let process models lwt_alias aliases features input ochannel =
   read_cmi input
-  |> Mod.of_cmi_infos ~features
+  |> Mod.of_cmi_infos ~features ~lwt_alias
   |> Vernac.of_mod aliases features models
   |> Format.fprintf ochannel "%a@?" Vernac.pp_vernac
 
@@ -19,6 +19,10 @@ let input_cmi_arg =
 let config_arg =
   let doc = "A configuration file" in
   Arg.(value & opt (some string) None & info ["c"; "config"] ~docv:"CONFIG" ~doc)
+
+let lwt_alias_arg =
+  let doc = "The alias to Lwt.t used in the OCaml module" in
+  Arg.(value & opt (some string) None & info ["lwt-alias"] ~docv:"LWT ALIAS" ~doc)
 
 let output_arg =
   let doc = "The name of the Coq file to generate" in
@@ -55,6 +59,7 @@ let features_opt =
         feature_enum Interface;
         feature_enum SimpleIO;
         feature_enum FreeSpec;
+        feature_enum Lwt;
       ]) in
 
   Arg.(value & opt_all features_enum [] & info ["f"] ~doc ~docv:"FEATURE")
@@ -122,6 +127,18 @@ let coqffi_info =
       feature needs to be enabled). It is disable by default."
     );
 
+    `P "$(b,lwt)"; `Noblank;
+    `I (
+      "$(b,no-lwt)", "When the $(b,lwt) feature is enabled,
+      $(b,coqffi) reserved a special treatment to values of type
+      $(i,Lwt.t). They are marked as “asynchronous primitives,” and
+      are gathered in a dedicated typeclass. The name of the $(b,Lwt)
+      type can be changed using the $(b,--lwt-alias) option, and using
+      this option enables the $(b,lwt) feature. The $(b,-r) option is
+      expected to be use to make a type $(i,Lwt.t) available to the
+      generated Coq module. It is disabled by default."
+    );
+
     `S "SUPPORTED TYPES";
 
     `P "In addition to tuples and types introduced in the input module,
@@ -147,8 +164,8 @@ let coqffi_info =
   ] in
   Term.(info "coqffi" ~exits:default_exits ~doc ~man ~version:"coqffi.dev")
 
-let run_coqffi (input : string) (config : string option) (output : string option)
-    (features : Feature.features) (models : string list) =
+let run_coqffi (input : string) (config : string option) (lwt_alias : string option)
+    (output : string option) (features : Feature.features) (models : string list) =
 
   let parse _ =
     let ochannel = match output with
@@ -167,7 +184,8 @@ let run_coqffi (input : string) (config : string option) (output : string option
 
     let aliases = Config.feed_aliases config Alias.default in
 
-    Feature.check_features_consistency features;
+    let (lwt_alias, features) =
+      Feature.check_features_consistency lwt_alias features in
 
     Format.(
       fprintf err_formatter "%a@?"
@@ -178,12 +196,15 @@ let run_coqffi (input : string) (config : string option) (output : string option
                 (Feature.name f)))
         (Feature.find_duplicates features));
 
-    process models aliases features input output
+    process models lwt_alias aliases features input output
   end
   with
   | Feature.FreeSpecRequiresInterface ->
     Format.fprintf Format.err_formatter
       "Error: The feature `freespec' requires the feature `interface' to be enabled"
+  | Feature.LwtExplicitelyDisableButLwtAliasSet ->
+    Format.fprintf Format.err_formatter
+      "Error: The feature `lwt' was explicitely disabled, yet an alias for the `Lwt.t' has been specified"
   | Config.SectionShouldBeList (secname, sexp) ->
     Format.fprintf Format.err_formatter
       "Error: Error in the configuration file; `%s' should be a list, but is `%a'"
@@ -208,6 +229,7 @@ let coqffi_t =
   Term.(const run_coqffi
         $ input_cmi_arg
         $ config_arg
+        $ lwt_alias_arg
         $ output_arg
         $ features_opt
         $ models_opt)
