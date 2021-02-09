@@ -44,7 +44,17 @@ let support_impure_values lf = is_enabled lf SimpleIO || is_enabled lf FreeSpec
 
 exception LwtExplicitelyDisableButLwtAliasSet
 
-let check_features_consistency lwt_alias lf =
+let check_features_consistency lwt_alias lf ~wduplicate =
+  let open Format in
+
+  let warning fmt feature =
+    fprintf fmt
+      "Warning: Feature `%s' has been selected several times.@ "
+      (name feature) in
+
+  if wduplicate
+  then fprintf err_formatter "%a@?" (pp_print_list warning) (find_duplicates lf);
+
   if is_enabled lf FreeSpec && is_disabled lf Interface
   then raise FreeSpecRequiresInterface;
 

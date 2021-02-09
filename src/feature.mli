@@ -22,5 +22,5 @@ val is_disabled : features -> feature -> bool
 
 val support_impure_values : features -> bool
 
-val check_features_consistency : string option -> features -> (string option * features)
+val check_features_consistency : string option -> features -> wduplicate:bool -> (string option * features)
 (** Throw an exception if an inconsistency is found. *)

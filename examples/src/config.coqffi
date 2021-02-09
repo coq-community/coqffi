@@ -1,3 +1,5 @@
+(operators
+  (@+ add_spec))
+
 (aliases
-  (operator (:ocaml @+ :coq add_spec))
-  (alias (:ocaml t :coq tv)))
+  (:ocaml t :coq tv))

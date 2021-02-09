@@ -1,9 +1,17 @@
+open Coqffi
 open Sexplib
 
-type t
+type t = {
+    config_aliases : Alias.table;
+  }
+
 val empty : t
-val from_path : string -> t
-val feed_aliases : t -> Coqffi.Alias.table -> Coqffi.Alias.table
+
+type lang
+
+val empty_lang : lang
+val from_path : string -> lang
+val feed_aliases : lang -> t -> t
 
 exception FieldShouldBeString of string * Sexp.t
 exception SectionShouldBeList of string * Sexp.t

@@ -1,11 +1,12 @@
 open Cmi_format
 open Coqffi
 open Cmdliner
+open Config
 
-let process models lwt_alias aliases features input ochannel =
+let process models lwt_alias config features input ochannel =
   read_cmi input
   |> Mod.of_cmi_infos ~features ~lwt_alias
-  |> Vernac.of_mod aliases features models
+  |> Vernac.of_mod config.config_aliases features models
   |> Format.fprintf ochannel "%a@?" Vernac.pp_vernac
 
 exception TooManyArguments
@@ -16,9 +17,9 @@ let input_cmi_arg =
     "The compiled interface ($(b,.cmi)) of the OCaml module to be used in Coq" in
   Arg.(required & pos 0 (some string) None & info [] ~docv:"INPUT" ~doc)
 
-let config_arg =
-  let doc = "A configuration file" in
-  Arg.(value & opt (some string) None & info ["c"; "config"] ~docv:"CONFIG" ~doc)
+let aliases_arg =
+  let doc = "A configuration file containing aliases" in
+  Arg.(value & opt (some string) None & info ["a"; "aliases"] ~docv:"ALIASES" ~doc)
 
 let lwt_alias_arg =
   let doc = "The alias to Lwt.t used in the OCaml module" in
@@ -164,8 +165,10 @@ let coqffi_info =
   ] in
   Term.(info "coqffi" ~exits:default_exits ~doc ~man ~version:"coqffi.dev")
 
-let run_coqffi (input : string) (config : string option) (lwt_alias : string option)
+let run_coqffi (input : string) (aliases : string option) (lwt_alias : string option)
     (output : string option) (features : Feature.features) (models : string list) =
+
+  let config = Config.empty in
 
   let parse _ =
     let ochannel = match output with
@@ -177,26 +180,17 @@ let run_coqffi (input : string) (config : string option) (lwt_alias : string opt
   try begin
     let (input, output, features) = parse () in
 
-    let config =
-      Option.value ~default:Config.empty
-        (Option.map Config.from_path config)
+    let aliases =
+      Option.value ~default:Config.empty_lang
+        (Option.map Config.from_path aliases)
     in
 
-    let aliases = Config.feed_aliases config Alias.default in
+    let config = Config.feed_aliases aliases config in
 
     let (lwt_alias, features) =
-      Feature.check_features_consistency lwt_alias features in
+      Feature.check_features_consistency lwt_alias features ~wduplicate:true in
 
-    Format.(
-      fprintf err_formatter "%a@?"
-        (pp_print_list
-           (fun fmt f ->
-              fprintf fmt
-                "Warning: Feature `%s' has been selected several times.@ "
-                (Feature.name f)))
-        (Feature.find_duplicates features));
-
-    process models lwt_alias aliases features input output
+    process models lwt_alias config features input output
   end
   with
   | Feature.FreeSpecRequiresInterface ->
@@ -228,7 +222,7 @@ let run_coqffi (input : string) (config : string option) (lwt_alias : string opt
 let coqffi_t =
   Term.(const run_coqffi
         $ input_cmi_arg
-        $ config_arg
+        $ aliases_arg
         $ lwt_alias_arg
         $ output_arg
         $ features_opt

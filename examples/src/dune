@@ -57,7 +57,7 @@
 (rule
   (target WithConfig.v)
   (deps config.coqffi)
-  (action (run coqffi -c config.coqffi -finterface %{cmi:config} -ffreespec -o %{target})))
+  (action (run coqffi -a config.coqffi -finterface %{cmi:config} -ffreespec -o %{target})))
 
 (rule
   (target Async.v)
