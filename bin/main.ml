@@ -2,15 +2,21 @@ open Cmi_format
 open Coqffi
 open Cmdliner
 open Config
+open Format
 
-let process models lwt_alias config features input ochannel =
+let process coqns models lwt_alias config features input ochannel (wchannel : formatter option) =
+  let open Flow in
+  let flush fmt pp = fprintf fmt "%a@?" pp in
+
   read_cmi input
   |> Mod.of_cmi_infos ~features ~lwt_alias
-  |> Vernac.of_mod config.config_aliases features models
-  |> Format.fprintf ochannel "%a@?" Vernac.pp_vernac
+  |> (Vernac.of_mod config.config_aliases features models @> flush ochannel Vernac.pp_vernac 
+      || wchannel @? fun wc -> Witness.from_mod ~coqns @> flush wc Witness.pp)
+  |> qed
 
 exception TooManyArguments
 exception MissingInputArgument
+exception WitnessMissingOutputArgument
 
 let input_cmi_arg =
   let doc =
@@ -26,8 +32,12 @@ let lwt_alias_arg =
   Arg.(value & opt (some string) None & info ["lwt-alias"] ~docv:"LWT ALIAS" ~doc)
 
 let output_arg =
-  let doc = "The name of the Coq file to generate" in
+  let doc = "The name of the Coq module to generate" in
   Arg.(value & opt (some string) None & info ["o"; "output"] ~docv:"OUTPUT" ~doc)
+
+let directory_arg =
+  let doc = "The directory wherein to store the generated Coq module" in
+  Arg.(value & opt (some string) None & info ["d"; "directory"] ~docv:"DIRECTORY" ~doc)
 
 let models_opt =
   let doc =
@@ -61,6 +71,7 @@ let features_opt =
         feature_enum SimpleIO;
         feature_enum FreeSpec;
         feature_enum Lwt;
+        feature_enum Witness;
       ]) in
 
   Arg.(value & opt_all features_enum [] & info ["f"] ~doc ~docv:"FEATURE")
@@ -140,6 +151,17 @@ let coqffi_info =
       generated Coq module. It is disabled by default."
     );
 
+    `P "$(b,witness)"; `Noblank;
+    `I (
+      "$(b,no-lwt)", "When the $(b,witness) feature is enabled,
+      $(b,coqffi) generates an auxiliary file in addition to the Coq
+      module.  This file contains a summary of the type introduced by
+      the generated module, and is a suitable input file for the
+      $(b,-t) option. The name of the auxiliary file is derived from
+      the $(b,directory) and $(b,output) options (the $(i,.coqffi)
+      extension is used). It is disabled by default."
+    );
+
     `S "SUPPORTED TYPES";
 
     `P "In addition to tuples and types introduced in the input module,
@@ -166,19 +188,34 @@ let coqffi_info =
   Term.(info "coqffi" ~exits:default_exits ~doc ~man ~version:"coqffi.dev")
 
 let run_coqffi (input : string) (aliases : string option) (lwt_alias : string option)
-    (output : string option) (features : Feature.features) (models : string list) =
+    (output : string option) (directory : string option) (features : Feature.features)
+    (models : string list) =
 
   let config = Config.empty in
 
-  let parse _ =
-    let ochannel = match output with
+  let path directory output ext = match directory, output with
+    | Some directory, Some output -> Some (directory ^ "/" ^ output ^ "." ^ ext)
+    | None, Some output -> Some (output ^ "." ^ ext)
+    | _, _ -> None in
+
+  let output_path = path directory output "v" in
+
+  let witness_path = path directory output "coqffi" in
+
+  let coqns = Option.value ~default:"" output in
+
+  try begin
+    let ochannel = match output_path with
       | Some path -> open_out path |> Format.formatter_of_out_channel
       | _ -> Format.std_formatter in
 
-    (input, ochannel, features) in
-
-  try begin
-    let (input, output, features) = parse () in
+    let wchannel =
+      if Feature.is_enabled features Witness
+      then match witness_path with
+           | Some path -> Some (open_out path |> Format.formatter_of_out_channel)
+           | _ -> raise WitnessMissingOutputArgument
+                  (* -fwitness is set, we need to be able to decide a path for the witness *)
+      else None in
 
     let aliases =
       Option.value ~default:Config.empty_lang
@@ -190,7 +227,7 @@ let run_coqffi (input : string) (aliases : string option) (lwt_alias : string op
     let (lwt_alias, features) =
       Feature.check_features_consistency lwt_alias features ~wduplicate:true in
 
-    process models lwt_alias config features input output
+    process coqns models lwt_alias config features input ochannel wchannel
   end
   with
   | Feature.FreeSpecRequiresInterface ->
@@ -218,6 +255,9 @@ let run_coqffi (input : string) (aliases : string option) (lwt_alias : string op
     Format.fprintf Format.err_formatter
       "Error: Error in the configuration file; `%a' in not a correct alias entry"
       Sexplib.Sexp.pp sexp
+  | WitnessMissingOutputArgument ->
+    Format.fprintf Format.err_formatter
+      "Error: The `witness' feature is enabled, but no OUTPUT is given"
 
 let coqffi_t =
   Term.(const run_coqffi
@@ -225,6 +265,7 @@ let coqffi_t =
         $ aliases_arg
         $ lwt_alias_arg
         $ output_arg
+        $ directory_arg
         $ features_opt
         $ models_opt)
 

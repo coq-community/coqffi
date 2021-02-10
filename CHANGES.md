@@ -4,11 +4,18 @@ This will be the initial release of `coqffi`.
 
 ## Unreleased
 
+- **Breaking Change:** The semantics of the `OUTPUT` option (`-o`) of
+  `coqffi` has changed. It is now used to set the name of the Coq
+  module to generate (without `.v` extension). To output a file within
+  another directory than the current one, the `DIRECTORY` option
+  (`-d`) can be used
 - **Feature:** Support OCaml GADT (`-ftransparent-types`)
 - **Feature:** Users can defined their own aliases using a
-  configuration file (`-c CONFIG`)
+  configuration file (`-a ALIASES`)
 - **Feature:** Add a new feature to support asynchronous functions
   (powered by the `Lwt` framework) (`-flwt`)
+- **Feature:** `coqffi` can now generate a “witness file” which
+  summarizes the types introduced by the Coq module (`-fwitness`)
 - **Fix:** Support polymorphic constructor such as `type box = Box :
   'a -> box`
 - **Fix:** Complete the list of reserved Gallina keywords using [the

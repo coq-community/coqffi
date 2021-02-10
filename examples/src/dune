@@ -4,64 +4,64 @@
 
 (rule
   (target File.v)
-  (action (run coqffi -finterface %{cmi:file} -o %{target})))
+  (action (run coqffi -finterface %{cmi:file} -o File)))
 
 (rule
   (target Sleep.v)
-  (action (run coqffi %{cmi:sleep} -o %{target})))
+  (action (run coqffi %{cmi:sleep} -o Sleep)))
 
 (rule
   (target Rectypes.v)
-  (action (run coqffi -ftransparent-types %{cmi:rectypes} -o %{target})))
+  (action (run coqffi -ftransparent-types %{cmi:rectypes} -o Rectypes)))
 
 (rule
   (target TransparentPolytype.v)
-  (action (run coqffi -ftransparent-types %{cmi:polytype} -o %{target})))
+  (action (run coqffi -ftransparent-types %{cmi:polytype} -o TransparentPolytype)))
 
 (rule
   (target OpaquePolytype.v)
-  (action (run coqffi %{cmi:polytype} -o %{target})))
+  (action (run coqffi %{cmi:polytype} -o OpaquePolytype)))
 
 (rule
   (target PolyPrim.v)
-  (action (run coqffi %{cmi:polyprim} -o %{target})))
+  (action (run coqffi %{cmi:polyprim} -o PolyPrim)))
 
 (rule
   (target Poly.v)
-  (action (run coqffi -finterface %{cmi:poly} -o %{target})))
+  (action (run coqffi -finterface %{cmi:poly} -o Poly)))
 
 (rule
   (target Str.v)
-  (action (run coqffi -r Examples.StrModels -finterface %{cmi:str} -o %{target})))
+  (action (run coqffi -r Examples.StrModels -finterface %{cmi:str} -o Str)))
 
 (rule
   (target Exn.v)
-  (action (run coqffi -finterface %{cmi:exn} -o %{target})))
+  (action (run coqffi -finterface %{cmi:exn} -o Exn)))
 
 (rule
   (target Raise.v)
-  (action (run coqffi -finterface %{cmi:raise} -ffreespec -o %{target})))
+  (action (run coqffi -finterface %{cmi:raise} -ffreespec -o Raise)))
 
 (rule
   (target Modules.v)
-  (action (run coqffi -finterface %{cmi:modules} -ffreespec -o %{target})))
+  (action (run coqffi -finterface %{cmi:modules} -ffreespec -o Modules)))
 
 (rule
   (target Aliases.v)
-  (action (run coqffi -finterface %{cmi:aliases} -ffreespec -o %{target})))
+  (action (run coqffi -finterface %{cmi:aliases} -ffreespec -o Aliases)))
 
 (rule
   (target Unamed.v)
-  (action (run coqffi -finterface %{cmi:unamed} -ffreespec -o %{target})))
+  (action (run coqffi -finterface %{cmi:unamed} -ffreespec -o Unamed)))
 
 (rule
   (target WithConfig.v)
   (deps config.coqffi)
-  (action (run coqffi -a config.coqffi -finterface %{cmi:config} -ffreespec -o %{target})))
+  (action (run coqffi -a config.coqffi -finterface %{cmi:config} -ffreespec -o WithConfig)))
 
 (rule
   (target Async.v)
-  (action (run coqffi -flwt -r Examples.Lwt -finterface %{cmi:async} -ffreespec -o %{target})))
+  (action (run coqffi -flwt -r Examples.Lwt -finterface %{cmi:async} -ffreespec -o Async)))
 
 (coq.theory
   (name Examples)
