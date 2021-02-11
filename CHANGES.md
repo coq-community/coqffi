@@ -32,6 +32,7 @@ This will be the initial release of `coqffi`.
   (`-ftransparent-types`)
 - **Fix:** Correctly identify the extraction target for entries
   defined inside a module
+- **Fix:** Prevent naming conflicts between types and values
 
   [coq-refman]: https://coq.github.io/doc/v8.9/refman/language/gallina-specification-language.html
 
