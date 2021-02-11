@@ -423,6 +423,7 @@ and entry_of_module lf lwt_alias namespace name decl =
   | _ -> None
 
 and module_of_signatures ?(loc=None) lf lwt_alias namespace name sigs =
+  let namespace = namespace @ [name] in
   let foldf m s =
     try entry_of_signature namespace lf lwt_alias s |> add_entry m
     with e ->

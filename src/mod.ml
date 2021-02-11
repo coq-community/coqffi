@@ -54,7 +54,7 @@ let namespace_and_path modname =
   namespace_and_path [] (Str.split (Str.regexp "__") modname)
 
 let qualified_name m name =
-  String.concat "." (m.mod_namespace @ [m.mod_name; name])
+  String.concat "." (m.mod_namespace @ [name])
 
 let error_function f e = {
     error_loc = f.func_loc;

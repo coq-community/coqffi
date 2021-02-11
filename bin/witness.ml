@@ -18,6 +18,11 @@ let type_to_sexp ocamlns coqns typ =
 let mutually_recursive_type_to_sexp ocamlns coqns mt =
   List.map (type_to_sexp ocamlns coqns) mt
 
+let ns_to_string ~qualid =
+  let sep = if qualid then "." else "__" in function
+  | base :: rst -> base ^ sep ^ String.concat "." rst
+  | _ -> assert false
+
 let rec intro_to_sexp ocamlns coqns = function
   | Right mt -> mutually_recursive_type_to_sexp ocamlns coqns mt
   | Left m ->
@@ -25,8 +30,13 @@ let rec intro_to_sexp ocamlns coqns = function
      from_mod ~coqns m
 
 and from_mod ~coqns (m : Mod.t) =
-  let ocamlns = String.concat "." (m.mod_namespace @ [m.mod_name]) in
-  Compat.concat_map (intro_to_sexp ocamlns coqns) m.mod_intro
+  let ocamlns = ns_to_string ~qualid:true m.mod_namespace in
+  let ocamlns' = ns_to_string ~qualid:false m.mod_namespace in
+
+  List.concat [
+      Compat.concat_map (intro_to_sexp ocamlns coqns) m.mod_intro;
+      Compat.concat_map (intro_to_sexp ocamlns' coqns) m.mod_intro;
+    ]
 
 let pp fmt witness =
   let open Format in
