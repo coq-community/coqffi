@@ -16,7 +16,7 @@ and intro =
   | Right of mutually_recursive_types_entry
   | Left of t
 
-val of_cmi_infos : features:features -> lwt_alias:(string option) -> Cmi_format.cmi_infos -> t
+val of_cmi_infos : translations:Translation.t -> features:features -> lwt_alias:(string option) -> Cmi_format.cmi_infos -> t
 
 val qualified_name : t -> string -> string
 

@@ -3,6 +3,7 @@ open Sexplib
 
 type t = {
     config_aliases : Alias.table;
+    config_translations : Translation.t;
   }
 
 type lang = Sexp.t list
@@ -18,7 +19,8 @@ let sexpl_fold_left f acc = function
   | a -> f acc a
 
 let empty = {
-    config_aliases = Alias.default
+    config_aliases = Alias.default;
+    config_translations = Translation.types_table;
   }
 
 let empty_lang = []
@@ -72,4 +74,31 @@ let feed_aliases (l : lang) (c : t) : t =
     |> feed_section "aliases" add_alias
     |> feed_section "keywords" add_keyword in
 
-  { config_aliases }
+  { c with config_aliases }
+
+let feed_translations (c : t) (l : lang) =
+  let translations = get_optional_section "translations" l in
+
+  let config_translations = sexpl_fold_left
+    (fun t -> function
+      | Sexp.List [Sexp.Atom ocaml; Sexp.Atom "."; Sexp.Atom coq] ->
+         Translation.translate ~coq ~ocaml t
+      | l -> raise (IllFormedAliasesEntry l))
+    c.config_translations
+    translations in
+
+  { c with config_translations }
+
+let feed_translations_list (l : lang list) (c : t) =
+  List.fold_left feed_translations c l
+
+let config_from_path aliases includes =
+  let aliases = Option.value ~default:empty_lang
+                         (Option.map from_path aliases) in
+
+  let includes = List.map from_path includes in
+
+  let config = empty in
+
+  feed_aliases aliases config
+  |> feed_translations_list includes

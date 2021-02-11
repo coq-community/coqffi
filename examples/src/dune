@@ -63,6 +63,15 @@
   (target Async.v)
   (action (run coqffi -flwt -r Examples.Lwt -finterface %{cmi:async} -ffreespec -o Async)))
 
+(rule
+  (targets M1.v M1.coqffi)
+  (action (run coqffi -fwitness %{cmi:m1} -o M1)))
+
+(rule
+  (targets M2.v)
+  (deps M1.coqffi)
+  (action (run coqffi -rM1 -IM1.coqffi %{cmi:m2} -o M2)))
+
 (coq.theory
   (name Examples)
   (theories CoqFFI))

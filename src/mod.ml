@@ -144,8 +144,8 @@ and segment_module_intro_aux ~rev_namespace tbl acc = function
             let (tbl, rst) = segment_module_intro ~rev_namespace tbl l in
             (tbl, List.concat typs @ rst)
 
-let of_cmi_infos ~features ~lwt_alias (info : cmi_infos) =
+let of_cmi_infos ~translations ~features ~lwt_alias (info : cmi_infos) =
   let (namespace, name) = namespace_and_path info.cmi_name in
   module_of_signatures features lwt_alias namespace name info.cmi_sign
-  |> of_module_entry Translation.types_table
+  |> of_module_entry translations
   |> snd

@@ -9,7 +9,7 @@ let process coqns models lwt_alias config features input ochannel (wchannel : fo
   let flush fmt pp = fprintf fmt "%a@?" pp in
 
   read_cmi input
-  |> Mod.of_cmi_infos ~features ~lwt_alias
+  |> Mod.of_cmi_infos ~features ~translations:config.config_translations ~lwt_alias
   |> (Vernac.of_mod config.config_aliases features models @> flush ochannel Vernac.pp_vernac 
       || wchannel @? fun wc -> Witness.from_mod ~coqns @> flush wc Witness.pp)
   |> qed
@@ -26,6 +26,10 @@ let input_cmi_arg =
 let aliases_arg =
   let doc = "A configuration file containing aliases" in
   Arg.(value & opt (some string) None & info ["a"; "aliases"] ~docv:"ALIASES" ~doc)
+
+let include_arg =
+  let doc = "A witness file which contains a list of translation types" in
+  Arg.(value & opt_all string [] & info ["I"; "include-types"] ~docv:"WITNESS" ~doc)
 
 let lwt_alias_arg =
   let doc = "The alias to Lwt.t used in the OCaml module" in
@@ -187,11 +191,10 @@ let coqffi_info =
   ] in
   Term.(info "coqffi" ~exits:default_exits ~doc ~man ~version:"coqffi.dev")
 
-let run_coqffi (input : string) (aliases : string option) (lwt_alias : string option)
-    (output : string option) (directory : string option) (features : Feature.features)
-    (models : string list) =
-
-  let config = Config.empty in
+let run_coqffi (input : string) (aliases : string option) (includes : string list)
+      (lwt_alias : string option)
+      (output : string option) (directory : string option) (features : Feature.features)
+      (models : string list) =
 
   let path directory output ext = match directory, output with
     | Some directory, Some output -> Some (directory ^ "/" ^ output ^ "." ^ ext)
@@ -217,12 +220,7 @@ let run_coqffi (input : string) (aliases : string option) (lwt_alias : string op
                   (* -fwitness is set, we need to be able to decide a path for the witness *)
       else None in
 
-    let aliases =
-      Option.value ~default:Config.empty_lang
-        (Option.map Config.from_path aliases)
-    in
-
-    let config = Config.feed_aliases aliases config in
+    let config = Config.config_from_path aliases includes in
 
     let (lwt_alias, features) =
       Feature.check_features_consistency lwt_alias features ~wduplicate:true in
@@ -263,6 +261,7 @@ let coqffi_t =
   Term.(const run_coqffi
         $ input_cmi_arg
         $ aliases_arg
+        $ include_arg
         $ lwt_alias_arg
         $ output_arg
         $ directory_arg

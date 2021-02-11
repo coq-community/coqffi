@@ -15,7 +15,9 @@ This will be the initial release of `coqffi`.
 - **Feature:** Add a new feature to support asynchronous functions
   (powered by the `Lwt` framework) (`-flwt`)
 - **Feature:** `coqffi` can now generate a “witness file” which
-  summarizes the types introduced by the Coq module (`-fwitness`)
+  summarizes the types introduced by the Coq module (`-fwitness`),
+  and consumes these witness files using a dedicated options (`-I`)
+  to populate its translation tables
 - **Fix:** Support polymorphic constructor such as `type box = Box :
   'a -> box`
 - **Fix:** Complete the list of reserved Gallina keywords using [the
