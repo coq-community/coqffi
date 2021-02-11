@@ -11,7 +11,7 @@ let process coqns models lwt_alias config features input ochannel (wchannel : fo
   read_cmi input
   |> Mod.of_cmi_infos ~features ~translations:config.config_translations ~lwt_alias
   |> (Vernac.of_mod config.config_aliases features models @> flush ochannel Vernac.pp_vernac 
-      || wchannel @? fun wc -> Witness.from_mod ~coqns @> flush wc Witness.pp)
+      || wchannel @? fun wc -> Witness.from_mod ~coqns config.config_aliases @> flush wc Witness.pp)
   |> qed
 
 exception TooManyArguments

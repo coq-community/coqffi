@@ -23,19 +23,19 @@ let ns_to_string ~qualid =
   | base :: rst -> base ^ sep ^ String.concat "." rst
   | _ -> assert false
 
-let rec intro_to_sexp ocamlns coqns = function
+let rec intro_to_sexp ocamlns coqns aliases = function
   | Right mt -> mutually_recursive_type_to_sexp ocamlns coqns mt
   | Left m ->
-     let coqns = ns_expend coqns m.mod_name in
-     from_mod ~coqns m
+     let coqns = ns_expend coqns (Alias.coq_name aliases m.mod_name) in
+     from_mod ~coqns aliases m
 
-and from_mod ~coqns (m : Mod.t) =
+and from_mod ~coqns aliases (m : Mod.t) =
   let ocamlns = ns_to_string ~qualid:true m.mod_namespace in
   let ocamlns' = ns_to_string ~qualid:false m.mod_namespace in
 
   List.concat [
-      Compat.concat_map (intro_to_sexp ocamlns coqns) m.mod_intro;
-      Compat.concat_map (intro_to_sexp ocamlns' coqns) m.mod_intro;
+      Compat.concat_map (intro_to_sexp ocamlns coqns aliases) m.mod_intro;
+      Compat.concat_map (intro_to_sexp ocamlns' coqns aliases) m.mod_intro;
     ]
 
 let pp fmt witness =

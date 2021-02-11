@@ -66,6 +66,18 @@ let default =
   |> add_keyword ~coq:"using"
   |> add_keyword ~coq:"where"
   |> add_keyword ~coq:"with"
+  |> add_keyword ~coq:"Definition"
+  |> add_keyword ~coq:"Definitions"
+  |> add_keyword ~coq:"Variable"
+  |> add_keyword ~coq:"Variables"
+  |> add_keyword ~coq:"Parameter"
+  |> add_keyword ~coq:"Parameters"
+  |> add_keyword ~coq:"Fixpoint"
+  |> add_keyword ~coq:"CoFixpoint"
+  |> add_keyword ~coq:"Inductive"
+  |> add_keyword ~coq:"CoInductive"
+  |> add_keyword ~coq:"Lemma"
+  |> add_keyword ~coq:"Theorem"
 
 let ocaml_name t orig =
   match Table.find_opt orig t with

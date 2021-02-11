@@ -72,6 +72,10 @@
   (deps M1.coqffi)
   (action (run coqffi -rM1 -IM1.coqffi %{cmi:m2} -o M2)))
 
+(rule
+  (target Kw.v)
+  (action (run coqffi %{cmi:keywords} -o Kw)))
+
 (coq.theory
   (name Examples)
   (theories CoqFFI))

@@ -827,8 +827,9 @@ and intros_vernac aliases features models m vernacs =
     | [] -> [] in
 
   let module_to_vernac (m : Mod.t) =
+    let coqmod_name = Alias.coq_name aliases m.mod_name in
     [CoqModule {
-       coqmod_name = m.mod_name;
+       coqmod_name;
        coqmod_content =
          Block (module_vernac aliases features models m Lazylist.empty)
     }] in
