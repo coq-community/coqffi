@@ -43,6 +43,8 @@ This will be the initial release of `coqffi`.
   it is still unclear how the object system of OCaml shall be treated
 - **Fix:** Enforce that the name of the constructors of an interface
   does not conflict with registered Coq keywords (`-finterface`)
+- **Fix:** Improve the support for shadowing existing types
+  (`-ftransparent-types`)
 
   [coq-refman]: https://coq.github.io/doc/v8.9/refman/language/gallina-specification-language.html
 

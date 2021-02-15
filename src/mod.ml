@@ -20,21 +20,34 @@ and intro =
 let translate_mutually_recursive_types ~rev_namespace
       (tbl : Translation.t) (mt : mutually_recursive_types_entry)
     : Translation.t * intro list =
-  let update_table tbl t = Translation.preserve ~rev_namespace t.type_name tbl in
-  let tbl' = List.fold_left update_table tbl mt in
+  let update_table rev_namespace tbl t = Translation.preserve ~rev_namespace t.type_name tbl in
+
+  (* To perform the translation, we do not use the namespace. This is
+     because we want coqffi to find an issue with the following entry:
+
+         module Z : sig
+           type t = Z.t
+         end
+
+     In OCaml, this is a shadowing of Z.t.  But, from coqffi
+     perspective, if we were using [tbl_future], then to translate
+     [t], coqffi would first try [t], then [Z.t], something we do not
+     want.  So we use two different tables. *)
+  let tbl_translate = List.fold_left (update_table []) tbl mt in
+  let tbl_future = List.fold_left (update_table rev_namespace) tbl mt in
 
   let res = try
-      [Right (List.map (translate_type ~rev_namespace tbl') mt)]
+      [Right (List.map (translate_type ~rev_namespace tbl_translate) mt)]
     with _ ->
       (* Something went wrong when coqffi tried to translate the types
          within a variant.  As a consequence, we treat each type of [mt]
          as if it were opaque. *)
       List.map
-        (fun t -> Right [translate_type ~rev_namespace tbl' { t with type_value = Opaque }])
+        (fun t -> Right [translate_type ~rev_namespace tbl_translate { t with type_value = Opaque }])
         mt
   in
 
-  (tbl', res)
+  (tbl_future, res)
 
 let dispatch f g = function
   | Right mt -> f mt

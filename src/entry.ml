@@ -579,9 +579,10 @@ let translate_type_value ~rev_namespace tbl = function
   | Opaque -> Opaque
 
 let translate_type ~rev_namespace tbl typ =
-  let tbl' = List.fold_left (fun tbl t -> Translation.preserve ~rev_namespace t tbl)
-             tbl
-             typ.type_params in {
-    typ with
+  let tbl' =
+    List.fold_left (fun tbl t -> Translation.preserve ~rev_namespace t tbl)
+      tbl
+      typ.type_params in
+  { typ with
     type_value = translate_type_value ~rev_namespace tbl' typ.type_value
   }
