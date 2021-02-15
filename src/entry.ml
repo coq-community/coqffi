@@ -406,7 +406,10 @@ let rec entry_of_signature namespace lf lwt_alias (s : Types.signature_item) : e
   | Sig_value (ident, desc, Exported) ->
     entry_of_value lf lwt_alias ident desc loc
   | Sig_type (ident, decl, _, Exported) ->
-    entry_of_type lf ident decl loc
+    (* FIXME: provide a stronger support for OCaml object system. *)
+    if String.get (Ident.name ident) 0 = '#'
+    then raise_error (UnsupportedOCamlSignature s)
+    else entry_of_type lf ident decl loc
   | Sig_typext (ident, cst, Text_exception, Exported) ->
     entry_of_exn ident cst loc
   | Sig_module (name, _, decl, _, Exported) ->
