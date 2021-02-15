@@ -38,7 +38,9 @@ This will be the initial release of `coqffi`.
   defined inside a module
 - **Fix:** Prevent naming conflicts between types and values
 - **Fix:** `coqffi` now filters types whose name starts with #, since
-  it is still unclear how the object system of OCaml shall be treated.
+  it is still unclear how the object system of OCaml shall be treated
+- **Fix:** Enforce that the name of the constructors of an interface
+  does not conflict with registered Coq keywords (`-finterface`)
 
   [coq-refman]: https://coq.github.io/doc/v8.9/refman/language/gallina-specification-language.html
 

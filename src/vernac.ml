@@ -419,6 +419,9 @@ let io_primitives_vernac aliases m =
     instance_vernac;
   ]
 
+let constructor_name aliases name =
+  Alias.coq_name aliases @@ String.capitalize_ascii name
+
 let interface_vernac aliases mod_name prims vernacs =
   let prim_to_constructor prim =
     let prim_name = Alias.coq_name aliases prim.prim_name in
@@ -426,7 +429,7 @@ let interface_vernac aliases mod_name prims vernacs =
                       (String.uppercase_ascii mod_name)
                       (may_raise_t prim.prim_may_raise prim.prim_type) in
     {
-      constructor_name = String.capitalize_ascii prim_name;
+      constructor_name = constructor_name aliases prim_name;
       constructor_prototype = {
           prototype_type_args = [];
           prototype_args = [];
@@ -448,7 +451,7 @@ let interface_vernac aliases mod_name prims vernacs =
       def_prototype = proto;
       def_body = fun fmt _ ->
         fprintf fmt "inject (%s %a)"
-          (String.capitalize_ascii prim_name)
+          (constructor_name aliases prim_name)
           (pp_print_list ~pp_sep:pp_print_space pp_print_string) (call_vars proto)
     }
   in
@@ -592,7 +595,7 @@ let semantics_vernac aliases m vernacs =
                 let proto = type_repr_to_prototype_repr prim.prim_type in
                 let args = call_vars proto in
                 fprintf fmt "@[<hov 2>| @[<h>%s %a@]@ => @[<h>unsafe_%s %a@]@]"
-                  (String.capitalize_ascii prim_name)
+                  (constructor_name aliases prim_name)
                   (pp_print_list ~pp_sep:pp_print_space
                      pp_print_string) args
                   prim_name
