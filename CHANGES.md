@@ -45,6 +45,8 @@ This will be the initial release of `coqffi`.
   does not conflict with registered Coq keywords (`-finterface`)
 - **Fix:** Improve the support for shadowing existing types
   (`-ftransparent-types`)
+- **Fix:** Exclude the OCaml values which make use of named argument
+  (either optional or not)
 
   [coq-refman]: https://coq.github.io/doc/v8.9/refman/language/gallina-specification-language.html
 

@@ -99,7 +99,8 @@ let rec mono_type_repr_of_type_expr_with_params params (t : Types.type_expr)
     (params, TParam (p, []))
   | Tvar (Some x) ->
     (params, TParam (x, []))
-  | Tarrow (_ , t1, t2, _) ->
+    (* FIXME: Support labeled arguments *)
+  | Tarrow (Nolabel , t1, t2, _) ->
     let (params, i1) = mono_type_repr_of_type_expr_with_params params t1 in
     let (params, i2) = mono_type_repr_of_type_expr_with_params params t2 in
     (params, TLambda (i1, i2))
