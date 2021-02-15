@@ -790,7 +790,7 @@ let lwt_vernac aliases features m vernacs =
     ExtractConstant {
         constant_qualid = to_axiom_name lwt;
         constant_type_vars = [];
-        constant_target = lwt.lwt_name;
+        constant_target = qualified_name m lwt.lwt_name;
       } in
 
   let extracts = List.map to_extract m.mod_lwt in
