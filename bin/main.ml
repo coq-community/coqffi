@@ -18,6 +18,48 @@ exception TooManyArguments
 exception MissingInputArgument
 exception WitnessMissingOutputArgument
 
+let rec print_error fmt = function
+  | Feature.FreeSpecRequiresInterface ->
+    Format.fprintf fmt
+      "Error: The feature `freespec' requires the feature `interface' to be enabled"
+  | Feature.LwtExplicitelyDisableButLwtAliasSet ->
+    Format.fprintf fmt
+      "Error: The feature `lwt' was explicitely disabled, yet an alias for the `Lwt.t' has been specified"
+  | Config.SectionShouldBeList (secname, sexp) ->
+    Format.fprintf fmt
+      "Error: Error in the configuration file; `%s' should be a list, but is `%a'"
+      secname
+      Sexplib.Sexp.pp sexp
+  | Config.FieldShouldBeString (fieldname, sexp) ->
+    Format.fprintf fmt
+      "Error: Error in the configuration file; `%s' should be a string in `%a'"
+      fieldname
+      Sexplib.Sexp.pp sexp
+  | Config.MissingField (fieldname, sexp) ->
+    Format.fprintf fmt
+      "Error: Error in the configuration file; expecting field `%s' in `%a'"
+      fieldname
+      Sexplib.Sexp.pp sexp
+  | Config.IllFormedAliasesEntry sexp ->
+    Format.fprintf fmt
+      "Error: Error in the configuration file; `%a' in not a correct alias entry"
+      Sexplib.Sexp.pp sexp
+  | WitnessMissingOutputArgument ->
+    Format.fprintf fmt
+      "Error: The `witness' feature is enabled, but no OUTPUT is given"
+  | Flow.BothSideFailed (e, e') ->
+    print_error fmt e;
+    pp_print_space fmt ();
+    print_error fmt e'
+  | Flow.LeftSideFailed e | Flow.RightSideFailed e ->
+    print_error fmt e
+  | Failure msg ->
+    Format.fprintf fmt
+      "Error: %s" msg
+  | _ ->
+    Format.fprintf fmt
+      "Error: Something went wrong, and we are not sure what exactly"
+
 let input_cmi_arg =
   let doc =
     "The compiled interface ($(b,.cmi)) of the OCaml module to be used in Coq" in
@@ -227,35 +269,7 @@ let run_coqffi (input : string) (aliases : string option) (includes : string lis
 
     process coqns models lwt_alias config features input ochannel wchannel
   end
-  with
-  | Feature.FreeSpecRequiresInterface ->
-    Format.fprintf Format.err_formatter
-      "Error: The feature `freespec' requires the feature `interface' to be enabled"
-  | Feature.LwtExplicitelyDisableButLwtAliasSet ->
-    Format.fprintf Format.err_formatter
-      "Error: The feature `lwt' was explicitely disabled, yet an alias for the `Lwt.t' has been specified"
-  | Config.SectionShouldBeList (secname, sexp) ->
-    Format.fprintf Format.err_formatter
-      "Error: Error in the configuration file; `%s' should be a list, but is `%a'"
-      secname
-      Sexplib.Sexp.pp sexp
-  | Config.FieldShouldBeString (fieldname, sexp) ->
-    Format.fprintf Format.err_formatter
-      "Error: Error in the configuration file; `%s' should be a string in `%a'"
-      fieldname
-      Sexplib.Sexp.pp sexp
-  | Config.MissingField (fieldname, sexp) ->
-    Format.fprintf Format.err_formatter
-      "Error: Error in the configuration file; expecting field `%s' in `%a'"
-      fieldname
-      Sexplib.Sexp.pp sexp
-  | Config.IllFormedAliasesEntry sexp ->
-    Format.fprintf Format.err_formatter
-      "Error: Error in the configuration file; `%a' in not a correct alias entry"
-      Sexplib.Sexp.pp sexp
-  | WitnessMissingOutputArgument ->
-    Format.fprintf Format.err_formatter
-      "Error: The `witness' feature is enabled, but no OUTPUT is given"
+  with e -> print_error Format.err_formatter e
 
 let coqffi_t =
   Term.(const run_coqffi

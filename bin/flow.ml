@@ -1,3 +1,7 @@
+exception LeftSideFailed of exn
+exception RightSideFailed of exn
+exception BothSideFailed of exn * exn
+
 let (||) f g x =
   let try_or f res x = try
       res := Some (Ok (f x))
@@ -13,7 +17,10 @@ let (||) f g x =
   Thread.join pid_g;
 
   match !res_f, !res_g with
-  | Some x, Some y -> (x, y)
+  | Some (Ok x), Some (Ok y) -> (x, y)
+  | Some (Error err), Some (Error err') -> raise (BothSideFailed (err, err'))
+  | Some (Error err), _ -> raise (LeftSideFailed err)
+  | _, Some (Error err) -> raise (RightSideFailed err)
   | _, _ -> assert false
 
 let qed _ = ()
