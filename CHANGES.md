@@ -9,6 +9,10 @@ This will be the initial release of `coqffi`.
   module to generate (without `.v` extension). To output a file within
   another directory than the current one, the `DIRECTORY` option
   (`-d`) can be used
+- **Breaking Change:** When the `lwt` feature is enabled, `coqffi` now
+  treats asynchronous functions differently *even if* the
+  `pure-module` feature is enabled, whereas they were translated as
+  pure functions before (`-flwt`, `-fpure-module`)
 - **Feature:** Support OCaml GADT (`-ftransparent-types`)
 - **Feature:** Users can defined their own aliases using a
   configuration file (`-a ALIASES`)

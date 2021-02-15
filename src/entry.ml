@@ -177,7 +177,7 @@ let prototype_of_constructor params_type args ret =
 
 let entry_of_value lf lwt_alias ident desc loc =
   let is_pure attrs model t =
-    is_enabled lf PureModule
+    (is_enabled lf PureModule  && not (asynchronous ~lwt_alias t))
     || Repr.supposedly_pure t
     || Option.is_some model
     || has_attr "pure" attrs
