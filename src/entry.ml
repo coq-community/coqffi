@@ -32,6 +32,7 @@ type variant_entry = {
 
 type type_value =
   | Variant of variant_entry list
+  | Alias of mono_type_repr
   | Opaque
 
 type type_entry = {
@@ -295,11 +296,17 @@ let entry_of_type lf ident decl loc =
   let type_value_with_unification decl =
     if is_enabled lf TransparentTypes
     then try
-        match decl.type_kind with
-        | Type_variant v -> let l = List.map (to_variant_entry params) v in
-                            if List.for_all unify l
-                            then Some (Variant l)
-                            else None
+        match decl.type_manifest, decl.type_kind with
+        (* If there is a type_manifest value, actually there is little
+           work to be done, since we are in the presence of an entry
+           of the form [type t = u]. *)
+        | Some expr, _ -> Some (Alias (mono_type_repr_of_type_expr expr))
+        (* For variant types, we need to have a look at variants *)
+        | None, Type_variant v ->
+          let l = List.map (to_variant_entry params) v in
+          if List.for_all unify l
+          then Some (Variant l)
+          else None
         | _ -> Some Opaque
       with
         _ -> Some Opaque
@@ -472,6 +479,7 @@ let dependencies t =
            let typs =
              e.variant_prototype.prototype_ret_type :: e.variant_prototype.prototype_args in
            Compat.concat_map dependencies typs) l)
+  | Alias mono -> mono_dependencies mono
   | Opaque -> []
 
 let find_mutually_recursive_types tl =
@@ -567,6 +575,7 @@ let translate_variant ~rev_namespace tbl v = {
 
 let translate_type_value ~rev_namespace tbl = function
   | Variant l -> Variant (List.map (translate_variant ~rev_namespace tbl) l)
+  | Alias mono -> Alias (translate_mono_type_repr ~rev_namespace tbl mono)
   | Opaque -> Opaque
 
 let translate_type ~rev_namespace tbl typ =

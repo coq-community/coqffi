@@ -76,6 +76,10 @@
   (target Kw.v)
   (action (run coqffi %{cmi:keywords} -o Kw)))
 
+(rule
+  (target Ta.v)
+  (action (run coqffi -ftransparent-types %{cmi:type_aliases} -o Ta)))
+
 (coq.theory
   (name Examples)
   (theories CoqFFI))

@@ -345,6 +345,7 @@ let rec ind_type arity =
 
 let type_entry_to_vernac features (t : type_entry) : t =
   let transparent = is_enabled features TransparentTypes in
+
   match (t.type_value, t.type_model, transparent) with
   | (Variant l, None, true) -> Inductive [{
       inductive_name = t.type_name;
@@ -352,16 +353,26 @@ let type_entry_to_vernac features (t : type_entry) : t =
       inductive_constructors = List.map variant_entry_to_constructor l;
       inductive_type = TMono (ind_type t.type_arity);
     }]
+  | (Alias mono, None, true) -> Definition {
+        def_name = t.type_name;
+        def_typeclass_args = [];
+        def_prototype = {
+            prototype_type_args = t.type_params;
+            prototype_args = [];
+            prototype_ret_type = of_mono_type_repr [] (ind_type t.type_arity);
+          };
+        def_body = (fun fmt _ -> pp_mono_type_repr fmt mono);
+      }
   | (_, Some m, _) -> Definition {
-      def_name = t.type_name;
-      def_typeclass_args = [];
-      def_prototype = {
-        prototype_type_args = [];
-        prototype_args = [];
-        prototype_ret_type = of_mono_type_repr t.type_params (ind_type t.type_arity);
-      };
-      def_body = fun fmt _ -> pp_print_string fmt m;
-    }
+        def_name = t.type_name;
+        def_typeclass_args = [];
+        def_prototype = {
+            prototype_type_args = [];
+            prototype_args = [];
+            prototype_ret_type = of_mono_type_repr t.type_params (ind_type t.type_arity);
+          };
+        def_body = (fun fmt _ -> pp_print_string fmt m);
+      }
   | _ -> Axiom {
       axiom_name = t.type_name;
       axiom_type = of_mono_type_repr t.type_params (ind_type t.type_arity)

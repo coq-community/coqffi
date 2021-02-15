@@ -22,6 +22,8 @@ This will be the initial release of `coqffi`.
   summarizes the types introduced by the Coq module (`-fwitness`),
   and consumes these witness files using a dedicated options (`-I`)
   to populate its translation tables
+- **Feature:** Support type aliases (*i.e.*, entries of the form `type
+  t = u`)
 - **Fix:** Support polymorphic constructor such as `type box = Box :
   'a -> box`
 - **Fix:** Complete the list of reserved Gallina keywords using [the

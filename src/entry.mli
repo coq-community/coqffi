@@ -29,6 +29,7 @@ type variant_entry = {
 
 type type_value =
   | Variant of variant_entry list
+  | Alias of mono_type_repr
   | Opaque
 
 type type_entry = {
