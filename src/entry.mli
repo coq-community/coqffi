@@ -1,5 +1,6 @@
 open Repr
 open Feature
+open Types
 
 type primitive_entry = {
   prim_name : string;
@@ -39,6 +40,7 @@ type type_entry = {
   type_model : string option;
   type_value : type_value;
   type_loc : Location.t;
+  type_rec : rec_status;
 }
 
 type mutually_recursive_types_entry = type_entry list

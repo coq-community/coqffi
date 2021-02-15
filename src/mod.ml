@@ -1,6 +1,7 @@
 open Cmi_format
 open Entry
 open Error
+open Types
 
 type t = {
     mod_namespace : string list;
@@ -140,22 +141,39 @@ and segment_module_intro ~rev_namespace tbl : intro_entry list -> Translation.t 
   | l -> segment_module_intro_aux ~rev_namespace tbl [] l
 
 and segment_module_intro_aux ~rev_namespace tbl acc = function
-  | IntroType t :: rst -> segment_module_intro_aux ~rev_namespace tbl (t :: acc) rst
-  | l -> match acc with
-         | [] -> segment_module_intro ~rev_namespace tbl l
-         | typs ->
-            (* We have constructed the list backward, so we need to
-               reverse it before searching for mutually recursive
-               type, so that we do not need to perform a complex
-               analysis on types’ dependencies to decide their order
-               of declaration. *)
-            let typs = List.rev typs in
-            let (tbl, typs) = Compat.fold_left_map
-                         (translate_mutually_recursive_types ~rev_namespace)
-                         tbl
-                         (find_mutually_recursive_types typs) in
-            let (tbl, rst) = segment_module_intro ~rev_namespace tbl l in
-            (tbl, List.concat typs @ rst)
+  | IntroType t :: rst ->
+    segment_module_intro_aux ~rev_namespace tbl (t :: acc) rst
+  | l ->
+    match acc with
+    | [] -> segment_module_intro ~rev_namespace tbl l
+    | typs ->
+      let segment_list fstart =
+        let aux acc entry =
+            match acc with
+            | x :: rst ->
+              if fstart entry
+              then [entry] :: List.rev x :: rst
+              else (entry :: x) :: rst
+            | [] -> [[entry]] in
+        List.fold_left aux [] in
+      let find_recursive_types typs =
+        let candidates =
+          List.rev (segment_list
+                      (fun t -> t.type_rec = Trec_first || t.type_rec = Trec_not)
+                      typs) in
+        Compat.concat_map find_mutually_recursive_types candidates in
+        (* We have constructed the list backward, so we need to
+         reverse it before searching for mutually recursive
+         type, so that we do not need to perform a complex
+         analysis on types’ dependencies to decide their order
+         of declaration. *)
+      let typs = List.rev typs in
+      let (tbl, typs) = Compat.fold_left_map
+          (translate_mutually_recursive_types ~rev_namespace)
+          tbl
+          (find_recursive_types typs) in
+      let (tbl, rst) = segment_module_intro ~rev_namespace tbl l in
+      (tbl, List.concat typs @ rst)
 
 let of_cmi_infos ~translations ~features ~lwt_alias (info : cmi_infos) =
   let (namespace, name) = namespace_and_path info.cmi_name in

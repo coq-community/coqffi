@@ -42,6 +42,7 @@ type type_entry = {
   type_model : string option;
   type_value : type_value;
   type_loc : Location.t;
+  type_rec : rec_status;
 }
 
 type mutually_recursive_types_entry = type_entry list
@@ -214,7 +215,7 @@ let entry_of_value lf lwt_alias ident desc loc =
           prim_loc = loc;
         }
 
-let entry_of_type lf ident decl loc =
+let entry_of_type lf ident decl rec_status loc =
   let type_name = Ident.name ident in
 
   (* Our goal is to compute a [type_entry] value for a given type
@@ -342,6 +343,7 @@ let entry_of_type lf ident decl loc =
     type_value;
     type_loc = loc;
     type_arity;
+    type_rec = rec_status;
   }
 
 let entry_of_exn ident cst loc =
@@ -412,11 +414,11 @@ let rec entry_of_signature namespace lf lwt_alias (s : Types.signature_item) : e
   match s with
   | Sig_value (ident, desc, Exported) ->
     entry_of_value lf lwt_alias ident desc loc
-  | Sig_type (ident, decl, _, Exported) ->
+  | Sig_type (ident, decl, rstatus, Exported) ->
     (* FIXME: provide a stronger support for OCaml object system. *)
     if String.get (Ident.name ident) 0 = '#'
     then raise_error (UnsupportedOCamlSignature s)
-    else entry_of_type lf ident decl loc
+    else entry_of_type lf ident decl rstatus loc
   | Sig_typext (ident, cst, Text_exception, Exported) ->
     entry_of_exn ident cst loc
   | Sig_module (name, _, decl, _, Exported) ->

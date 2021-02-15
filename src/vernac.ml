@@ -827,7 +827,7 @@ and intros_vernac aliases features models m vernacs =
         inductive_constructors = List.map variant_entry_to_constructor l;
         inductive_type = TMono (ind_type t.type_arity);
       }
-    | _ -> failwith "something went wrong" in
+    | _ -> assert false in
 
   let mut_type_entries_to_ind t = [
     Inductive (List.map type_entry_to_inductive t)
