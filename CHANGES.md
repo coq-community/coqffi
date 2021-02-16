@@ -4,11 +4,6 @@ This will be the initial release of `coqffi`.
 
 ## Unreleased
 
-- **Breaking Change:** The semantics of the `OUTPUT` option (`-o`) of
-  `coqffi` has changed. It is now used to set the name of the Coq
-  module to generate (without `.v` extension). To output a file within
-  another directory than the current one, the `DIRECTORY` option
-  (`-d`) can be used
 - **Breaking Change:** When the `lwt` feature is enabled, `coqffi` now
   treats asynchronous functions differently *even if* the
   `pure-module` feature is enabled, whereas they were translated as

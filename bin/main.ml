@@ -78,12 +78,8 @@ let lwt_alias_arg =
   Arg.(value & opt (some string) None & info ["lwt-alias"] ~docv:"LWT ALIAS" ~doc)
 
 let output_arg =
-  let doc = "The name of the Coq module to generate" in
+  let doc = "The path of the Coq module to generate" in
   Arg.(value & opt (some string) None & info ["o"; "output"] ~docv:"OUTPUT" ~doc)
-
-let directory_arg =
-  let doc = "The directory wherein to store the generated Coq module" in
-  Arg.(value & opt (some string) None & info ["d"; "directory"] ~docv:"DIRECTORY" ~doc)
 
 let models_opt =
   let doc =
@@ -234,20 +230,16 @@ let coqffi_info =
   Term.(info "coqffi" ~exits:default_exits ~doc ~man ~version:"coqffi.dev")
 
 let run_coqffi (input : string) (aliases : string option) (includes : string list)
-      (lwt_alias : string option)
-      (output : string option) (directory : string option) (features : Feature.features)
-      (models : string list) =
+      (lwt_alias : string option) (output_path : string option)
+      (features : Feature.features) (models : string list) =
 
-  let path directory output ext = match directory, output with
-    | Some directory, Some output -> Some (directory ^ "/" ^ output ^ "." ^ ext)
-    | None, Some output -> Some (output ^ "." ^ ext)
-    | _, _ -> None in
+  let witness_path = match output_path with
+    | Some output -> Some (Filename.remove_extension output ^ ".ffi")
+    | _ -> None in
 
-  let output_path = path directory output "v" in
-
-  let witness_path = path directory output "coqffi" in
-
-  let coqns = Option.value ~default:"" output in
+  let coqns = match output_path with
+    | Some output -> Filename.basename @@ Filename.remove_extension output
+    | _ -> "" in
 
   try begin
     let ochannel = match output_path with
@@ -278,7 +270,6 @@ let coqffi_t =
         $ include_arg
         $ lwt_alias_arg
         $ output_arg
-        $ directory_arg
         $ features_opt
         $ models_opt)
 
