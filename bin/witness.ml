@@ -18,9 +18,11 @@ let type_to_sexp ocamlns coqns typ =
 let mutually_recursive_type_to_sexp ocamlns coqns mt =
   List.map (type_to_sexp ocamlns coqns) mt
 
-let ns_to_string ~qualid =
-  let sep = if qualid then "." else "__" in function
-  | base :: rst -> base ^ sep ^ String.concat "." rst
+let ns_to_string = function
+  | [base] -> [base]
+  | base :: rst ->
+     let seps  = ["."; "__"] in
+     List.map (fun sep -> base ^ sep ^ String.concat "." rst) seps
   | _ -> assert false
 
 let rec intro_to_sexp ocamlns coqns aliases = function
@@ -30,13 +32,11 @@ let rec intro_to_sexp ocamlns coqns aliases = function
      from_mod ~coqns aliases m
 
 and from_mod ~coqns aliases (m : Mod.t) =
-  let ocamlns = ns_to_string ~qualid:true m.mod_namespace in
-  let ocamlns' = ns_to_string ~qualid:false m.mod_namespace in
+  let ocamlns = ns_to_string m.mod_namespace in
 
-  List.concat [
-      Compat.concat_map (intro_to_sexp ocamlns coqns aliases) m.mod_intro;
-      Compat.concat_map (intro_to_sexp ocamlns' coqns aliases) m.mod_intro;
-    ]
+  let aux ns = Compat.concat_map (intro_to_sexp ns coqns aliases) m.mod_intro in
+
+  List.concat_map aux ocamlns 
 
 let pp fmt witness =
   let open Format in
