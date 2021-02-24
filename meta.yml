@@ -23,7 +23,7 @@ maintainers:
 - name: Thomas Letan
   nickname: lthms
 
-opam-file-maintainer: thomas.letan@ssi.gouv.fr
+opam-file-maintainer: lthms@soap.coffee
 
 opam-file-version: dev
 

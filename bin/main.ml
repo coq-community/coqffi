@@ -225,7 +225,7 @@ let coqffi_info =
     inductive type $(b,FooExn), along with conversion functions from
     and to $(b,exn).";
     `S Manpage.s_bugs;
-    `P "Email bug reports to <thomas.letan at ssi.gouv.fr>.";
+    `P "Email bug reports to <lthms at soap.coffee>.";
   ] in
   Term.(info "coqffi" ~exits:default_exits ~doc ~man ~version:"coqffi.dev")
 
