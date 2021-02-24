@@ -379,12 +379,14 @@ let type_entry_to_vernac features (t : type_entry) : t =
     }
 
 let io_primitives_vernac aliases m =
+  let io_axiom_name name = sprintf "ffi_io_%s" name in
+
   let to_axiom prim =
     let axiom_type =
       type_lift "IO" (may_raise_t prim.prim_may_raise prim.prim_type) in
     let axiom_name = Alias.coq_name aliases prim.prim_name in
     Axiom {
-      axiom_name = sprintf "io_%s" axiom_name;
+      axiom_name = io_axiom_name axiom_name;
       axiom_type = axiom_type;
     } in
 
@@ -402,7 +404,7 @@ let io_primitives_vernac aliases m =
     in
 
     ExtractConstant {
-      constant_qualid = sprintf "io_%s" axiom_name;
+      constant_qualid = io_axiom_name axiom_name;
       constant_type_vars = [];
       constant_target =
         asprintf "@[<h>(fun%a k__ -> k__ %s)@]"
@@ -419,7 +421,7 @@ let io_primitives_vernac aliases m =
       instance_members =
         List.map (fun prim ->
             let axiom_name = Alias.coq_name aliases prim.prim_name in
-            (axiom_name, sprintf "io_%s" axiom_name))
+            (axiom_name, io_axiom_name axiom_name))
           m.mod_primitives
     } in
 
@@ -504,7 +506,7 @@ let interface_vernac aliases mod_name prims vernacs =
 let lwt_primitives_vernac aliases m vernacs =
   let to_lwt t = TParam ("Lwt.t", [t]) in
 
-  let axiom_name prim = sprintf "lwt_%s" (Alias.coq_name aliases prim.prim_name) in
+  let axiom_name prim = sprintf "ffi_lwt_%s" (Alias.coq_name aliases prim.prim_name) in
 
   let to_axiom prim =
     Axiom {
@@ -550,6 +552,7 @@ let lwt_primitives_vernac aliases m vernacs =
     ]
 
 let semantics_vernac aliases m vernacs =
+  let axiom_name name = sprintf "ffi_unsafe_%s" name in
   let mod_name = String.uppercase_ascii m.mod_name in
   let mod_type =
     TParam (mod_name, []) in
@@ -573,7 +576,7 @@ let semantics_vernac aliases m vernacs =
       List.map (fun prim ->
           let prim_name = Alias.coq_name aliases prim.prim_name in
           Axiom {
-              axiom_name = sprintf "unsafe_%s" prim_name;
+              axiom_name = axiom_name prim_name;
               axiom_type = may_raise_t prim.prim_may_raise prim.prim_type;
         }) m.mod_primitives;
 
@@ -581,7 +584,7 @@ let semantics_vernac aliases m vernacs =
       List.map (fun prim ->
           let prim_name = Alias.coq_name aliases prim.prim_name in
           ExtractConstant {
-              constant_qualid = sprintf "unsafe_%s" prim_name;
+              constant_qualid = axiom_name prim_name;
               constant_type_vars = [];
               constant_target = prim_target prim;
         }) m.mod_primitives;
@@ -605,11 +608,11 @@ let semantics_vernac aliases m vernacs =
                let prim_name = Alias.coq_name aliases prim.prim_name in
                 let proto = type_repr_to_prototype_repr prim.prim_type in
                 let args = call_vars proto in
-                fprintf fmt "@[<hov 2>| @[<h>%s %a@]@ => @[<h>unsafe_%s %a@]@]"
+                fprintf fmt "@[<hov 2>| @[<h>%s %a@]@ => @[<h>%s %a@]@]"
                   (constructor_name aliases prim_name)
                   (pp_print_list ~pp_sep:pp_print_space
                      pp_print_string) args
-                  prim_name
+                  (axiom_name prim_name)
                   (pp_print_list ~pp_sep:pp_print_space
                      pp_print_string) args)) m.mod_primitives
     }
@@ -762,7 +765,7 @@ let lwt_vernac aliases features m vernacs =
 
   let prims = List.map to_prim m.mod_lwt in
 
-  let to_axiom_name lwt = sprintf "lwt_%s" (Alias.coq_name aliases lwt.lwt_name) in
+  let to_axiom_name lwt = sprintf "ffi_lwt_%s" (Alias.coq_name aliases lwt.lwt_name) in
 
   let lwt_mono_t arg = TParam ("Lwt.t", arg) in
 
