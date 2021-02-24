@@ -2,7 +2,7 @@
 
 This will be the initial release of `coqffi`.
 
-## Unreleased
+## `coqffi.1.0.0~beta4`
 
 - **Breaking Change:** When the `lwt` feature is enabled, `coqffi` now
   treats asynchronous functions differently *even if* the
