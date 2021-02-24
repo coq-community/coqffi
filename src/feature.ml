@@ -5,7 +5,6 @@ type t =
   | SimpleIO
   | FreeSpec
   | Lwt
-  | Witness
 
 type feature = t
 
@@ -20,7 +19,6 @@ let name = function
   | SimpleIO -> "simple-io"
   | FreeSpec -> "freespec"
   | Lwt -> "lwt"
-  | Witness -> "witness"
 
 let find_duplicates : features -> feature list =
   let rec find_dup dups = function

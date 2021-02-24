@@ -46,7 +46,7 @@ let rec print_error fmt = function
       Sexplib.Sexp.pp sexp
   | WitnessMissingOutputArgument ->
     Format.fprintf fmt
-      "Error: The `witness' feature is enabled, but no OUTPUT is given"
+      "Error: The `witness' option is enabled, but no OUTPUT is given"
   | Flow.BothSideFailed (e, e') ->
     print_error fmt e;
     pp_print_space fmt ();
@@ -90,6 +90,17 @@ let models_opt =
 
   Arg.(value & opt_all string [] & info ["r"; "require"] ~doc ~docv:"MODULE")
 
+let witness_flag =
+  let doc =
+    "When this flag is set, $(b,coqffi) generates an auxiliary file in
+     addition to the Coq module.  This file contains a summary of the
+     type introduced by the generated module, and is a suitable input
+     file for the $(b,-I) option. The name of the auxiliary file is
+     derived from the $(b,output) options (the $(i,.ffi) extension is
+     used in place of $(i,.v))." in
+
+  Arg.(value & flag & info ["w"; "witness"] ~doc ~docv:"MODULE")
+
 let features_opt =
   let doc =
     "Enable (using $(b,-f)$(i,feature-name)) or disable (using
@@ -113,7 +124,6 @@ let features_opt =
         feature_enum SimpleIO;
         feature_enum FreeSpec;
         feature_enum Lwt;
-        feature_enum Witness;
       ]) in
 
   Arg.(value & opt_all features_enum [] & info ["f"] ~doc ~docv:"FEATURE")
@@ -193,17 +203,6 @@ let coqffi_info =
       generated Coq module. It is disabled by default."
     );
 
-    `P "$(b,witness)"; `Noblank;
-    `I (
-      "$(b,no-lwt)", "When the $(b,witness) feature is enabled,
-      $(b,coqffi) generates an auxiliary file in addition to the Coq
-      module.  This file contains a summary of the type introduced by
-      the generated module, and is a suitable input file for the
-      $(b,-t) option. The name of the auxiliary file is derived from
-      the $(b,directory) and $(b,output) options (the $(i,.coqffi)
-      extension is used). It is disabled by default."
-    );
-
     `S "SUPPORTED TYPES";
 
     `P "In addition to tuples and types introduced in the input module,
@@ -231,7 +230,7 @@ let coqffi_info =
 
 let run_coqffi (input : string) (aliases : string option) (includes : string list)
       (lwt_alias : string option) (output_path : string option)
-      (features : Feature.features) (models : string list) =
+      (features : Feature.features) (models : string list) (witness : bool) =
 
   let witness_path = match output_path with
     | Some output -> Some (Filename.remove_extension output ^ ".ffi")
@@ -247,11 +246,13 @@ let run_coqffi (input : string) (aliases : string option) (includes : string lis
       | _ -> Format.std_formatter in
 
     let wchannel =
-      if Feature.is_enabled features Witness
+      if witness
       then match witness_path with
            | Some path -> Some (open_out path |> Format.formatter_of_out_channel)
-           | _ -> raise WitnessMissingOutputArgument
-                  (* -fwitness is set, we need to be able to decide a path for the witness *)
+           | _ ->
+             (* with --witness, we need to be able to decide a path
+                for the witness file *)
+             raise WitnessMissingOutputArgument
       else None in
 
     let config = Config.config_from_path aliases includes in
@@ -271,7 +272,8 @@ let coqffi_t =
         $ lwt_alias_arg
         $ output_arg
         $ features_opt
-        $ models_opt)
+        $ models_opt
+        $ witness_flag)
 
 let _ =
   Term.(exit @@ eval (coqffi_t, coqffi_info))

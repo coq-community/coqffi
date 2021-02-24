@@ -65,7 +65,7 @@
 
 (rule
   (targets M1.v M1.ffi)
-  (action (run coqffi -fwitness %{cmi:m1} -o M1.v)))
+  (action (run coqffi --witness %{cmi:m1} -o M1.v)))
 
 (rule
   (target M2.v)

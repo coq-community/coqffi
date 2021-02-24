@@ -5,7 +5,6 @@ type t =
   | SimpleIO
   | FreeSpec
   | Lwt
-  | Witness
 
 type feature = t
 

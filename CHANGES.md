@@ -14,7 +14,7 @@ This will be the initial release of `coqffi`.
 - **Feature:** Add a new feature to support asynchronous functions
   (powered by the `Lwt` framework) (`-flwt`)
 - **Feature:** `coqffi` can now generate a “witness file” which
-  summarizes the types introduced by the Coq module (`-fwitness`),
+  summarizes the types introduced by the Coq module (`--witness`),
   and consumes these witness files using a dedicated options (`-I`)
   to populate its translation tables
 - **Feature:** Support type aliases (*i.e.*, entries of the form `type
