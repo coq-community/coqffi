@@ -53,6 +53,10 @@ Infix "-" := i63sub : i63_scope.
 Infix "*" := i63mul : i63_scope.
 Infix "/" := i63div : i63_scope.
 
+Definition i63ops (x : i63) : i63 := -1 * x.
+
+Notation "'-' x" := (i63ops x) : i63_scope.
+
 Definition i63eqb (x y : i63) : bool :=
   eqb (un_i63 x) (un_i63 y).
 
