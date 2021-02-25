@@ -81,7 +81,7 @@ let default =
 
 let ocaml_name t orig =
   match Table.find_opt orig t with
-  | Some { alias_coq = _; alias_operator = true } -> Format.sprintf "(%s)" orig
+  | Some { alias_coq = _; alias_operator = true } -> Format.sprintf "( %s )" orig
   | _ -> orig
 
 let coq_name t orig =

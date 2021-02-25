@@ -2,6 +2,11 @@
 
 This will be the initial release of `coqffi`.
 
+## Unreleased
+
+- **Fixed:** For an operator `o`, coqffi` now uses the syntax `( o )`
+  in place of `(o)`, so that `(*)` is never outputted
+
 ## `coqffi.1.0.0~beta4`
 
 - **Breaking Change:** When the `lwt` feature is enabled, `coqffi` now
