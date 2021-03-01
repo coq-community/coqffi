@@ -2,7 +2,7 @@
 
 This will be the initial release of `coqffi`.
 
-## Unreleased
+## `coqffi.1.0.0~beta5`
 
 - **Dependencies** Support Coq 8.13 in addition to Coq 8.12
 - **Fixed:** For an operator `o`, `coqffi` now uses the syntax `( o )`
