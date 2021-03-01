@@ -37,7 +37,7 @@ Definition to_Z (x : i63) : Z :=
   then x
   else x - max_uint 63.
 
-Numeral Notation i63 of_Z to_Z : i63_scope.
+Number Notation i63 of_Z to_Z : i63_scope.
 
 Definition ibinop (op : int -> int -> int) (x y : i63) : i63 :=
   mk_i63 (op (un_i63 x) (un_i63 y)).
@@ -88,10 +88,10 @@ Definition i63ltb (x y : i63) : bool :=
   let max_int := un_i63 max_i63 in
   let x := un_i63 x in
   let y := un_i63 y in
-  if ((x < max_int)%int63 && (y < max_int)%int63)
-     || ((max_int < x)%int63 && (max_int < y)%int63)
-  then (x < y)%int63
-  else if (max_int < x)%int63
+  if ((ltb x max_int) && (ltb y max_int))
+     || ((ltb max_int x)%int63 && (ltb max_int y))
+  then (ltb x y)%int63
+  else if (ltb max_int x)%int63
   then true
   else false.
 
@@ -103,7 +103,7 @@ Definition i63leb (x y : i63) : bool :=
 Infix "<=?" := i63leb : i63_scope.
 
 Definition i63_mod (x y : i63) : i63 :=
-  mk_i63 ((un_i63 x) \% (un_i63 y))%int63.
+  mk_i63 (Int63.mod (un_i63 x) (un_i63 y))%int63.
 
 Infix "mod" := i63_mod : i63_scope.
 

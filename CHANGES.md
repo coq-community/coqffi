@@ -4,6 +4,7 @@ This will be the initial release of `coqffi`.
 
 ## Unreleased
 
+- **Dependencies** Support Coq 8.13 in addition to Coq 8.12
 - **Fixed:** For an operator `o`, `coqffi` now uses the syntax `( o )`
   in place of `(o)`, so that `(*)` is never outputted
 

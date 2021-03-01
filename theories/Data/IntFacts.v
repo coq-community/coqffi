@@ -8,12 +8,12 @@ Open Scope i63_scope.
 
 Axioms
   (* FIXME: https://github.com/coq/coq/pull/13262 *)
-  (int_max_int : forall (x : int), (x <= Int63.max_int = true)%int63)
+  (int_max_int : forall (x : int), (Int63.leb x (Int63.max_int) = true))
   (i63le_max_int : forall (x : i63), x <= max_i63)
   (i63le_min_int : forall (x : i63), min_i63 <= x).
 
-Hint Resolve i63le_max_int : i63.
-Hint Resolve i63le_min_int : i63.
+#[global] Hint Resolve i63le_max_int : i63.
+#[global] Hint Resolve i63le_min_int : i63.
 
 #[program]
 Instance i63_le_Transitive : Transitive i63le.

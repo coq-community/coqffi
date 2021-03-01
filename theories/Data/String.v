@@ -273,7 +273,7 @@ Fixpoint string_of_list_byte_fmt (i : list byte) : option string :=
   | x5c :: x78 :: x66 :: x64 :: rst => String (ascii_of_byte xfd) <$> string_of_list_byte_fmt rst
   | x5c :: x78 :: x66 :: x65 :: rst => String (ascii_of_byte xfe) <$> string_of_list_byte_fmt rst
   | x5c :: x78 :: x66 :: x66 :: rst => String (ascii_of_byte xff) <$> string_of_list_byte_fmt rst
-  | x5c :: _     :: rst => None
+  | x5c :: _     :: _ => None
   | x     :: rst          => String (ascii_of_byte x) <$> string_of_list_byte_fmt rst
   | [] => Some EmptyString
   end.

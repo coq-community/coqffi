@@ -1,0 +1,13 @@
+diff --git a/theories/Data/Int.v b/theories/Data/Int.v
+index 2118513..1ce3fdf 100644
+--- a/theories/Data/Int.v
++++ b/theories/Data/Int.v
+@@ -37,7 +37,7 @@ Definition to_Z (x : i63) : Z :=
+   then x
+   else x - max_uint 63.
+ 
+-Number Notation i63 of_Z to_Z : i63_scope.
++Numeral Notation i63 of_Z to_Z : i63_scope.
+ 
+ Definition ibinop (op : int -> int -> int) (x y : i63) : i63 :=
+   mk_i63 (op (un_i63 x) (un_i63 y)).
