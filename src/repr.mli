@@ -7,21 +7,18 @@
 (** [coqffi]’s representation of types are based on two types: [mono_type_repr]
     and [type_repr]. *)
 
-type constant_repr =
-  | CPlaceholder of int
-  | CName of string
+type constant_repr = CPlaceholder of int | CName of string
 
 type mono_type_repr =
   | TLambda of (mono_type_repr * mono_type_repr)
-  (** [TLambda (u, v)] ≡ [u -> v] *)
-  | TProd of (mono_type_repr list)
-  (** [TProd [t0; ..; tn]] ≡ [(t0, .., tn)] *)
+      (** [TLambda (u, v)] ≡ [u -> v] *)
+  | TProd of mono_type_repr list  (** [TProd [t0; ..; tn]] ≡ [(t0, .., tn)] *)
   | TParam of (constant_repr * mono_type_repr list)
-   (** [TParam ("t", [t0; ..; tn])] ≡ [(t0, .., tn) t] *)
+      (** [TParam ("t", [t0; ..; tn])] ≡ [(t0, .., tn) t] *)
 
 type type_repr =
-  | TMono of mono_type_repr (** A monomorphic type *)
-  | TPoly of (string list * mono_type_repr) (** A polymorphic type *)
+  | TMono of mono_type_repr  (** A monomorphic type *)
+  | TPoly of (string list * mono_type_repr)  (** A polymorphic type *)
 
 (** Thus, [TPoly (["a"], TLambda (TParam ("a", []), TParam ("a", [])))] encodes
     the type of polymorphic functions ['a -> 'a], or [forall (a : Type), a -> a]
@@ -39,16 +36,20 @@ type type_repr =
     defined [type_repr] values. *)
 
 val to_mono_type_repr : type_repr -> mono_type_repr
+
 val of_mono_type_repr : string list -> mono_type_repr -> type_repr
 
 val fresh_placeholder : type_repr -> int
+
 val place_placeholder : string -> type_repr -> int * type_repr
+
 val fill_placeholder : int -> string -> type_repr -> type_repr
 
 val higher_order_monadic : constant_repr -> type_repr -> bool
 
 val supposedly_pure : type_repr -> bool
-val asynchronous : lwt_module:(string option) -> type_repr -> bool
+
+val asynchronous : lwt_module:string option -> type_repr -> bool
 
 (** {1 Converting [Cmi_format]'s [type_expr] to [coqffi]’s [type_repr]} *)
 
@@ -60,26 +61,26 @@ val type_repr_of_type_expr : Types.type_expr -> type_repr
 
 val mono_type_repr_of_type_expr : Types.type_expr -> mono_type_repr
 
+val tlambda : mono_type_repr list -> mono_type_repr -> mono_type_repr
 (** Create a function type, {e i.e.}, [tlambda [a; b; c] d ≡ a -> b ->
     c -> d] *)
-val tlambda : mono_type_repr list -> mono_type_repr -> mono_type_repr
 
+val map_codomain : (mono_type_repr -> mono_type_repr) -> type_repr -> type_repr
 (** Apply a function to the codomain of a function,, {e i.e.},
     [map_codomain f (a -> .. -> r) ≡ a -> .. -> f r] *)
-val map_codomain : (mono_type_repr -> mono_type_repr) -> type_repr -> type_repr
 
+val type_lift : string -> ?args:mono_type_repr list -> type_repr -> type_repr
 (** Project the codomain of a function into a parameterized type, {e
     i.e.}, [type_lift T ~args:[x r] (a -> .. -> r) ≡ a -> .. -> T x y r] *)
-val type_lift : string -> ?args:(mono_type_repr list) -> type_repr -> type_repr
 
+val mono_dependencies : mono_type_repr -> string list
 (** [mono_dependencies t] is the list of types which appear in [t] definition.
     For instance, [mono_dependencies (int * bool) ≡ ["int"; "bool"]] *)
-val mono_dependencies : mono_type_repr -> string list
 
+val dependencies : type_repr -> string list
 (** [dependencies t] is the list of types which appear in [t] definition. If [t]
     is a polymorphich type, then the type variables do not appear in the
     list. For instance, [dependencies ('a -> bool) ≡ ["bool"]] *)
-val dependencies : type_repr -> string list
 
 (** {2 Types’ Translation} *)
 
@@ -99,17 +100,20 @@ val dependencies : type_repr -> string list
     See the {!module:Translation} module for more information on how to get a
     translation table. *)
 
-val translate_mono_type_repr : rev_namespace:string list -> Translation.t -> mono_type_repr -> mono_type_repr
+val translate_mono_type_repr :
+  rev_namespace:string list -> Translation.t -> mono_type_repr -> mono_type_repr
 
-val translate_type_repr : rev_namespace:string list -> Translation.t -> type_repr -> type_repr
+val translate_type_repr :
+  rev_namespace:string list -> Translation.t -> type_repr -> type_repr
 
 val type_sort_mono : mono_type_repr
+
 val type_sort : type_repr
 
 type prototype_repr = {
   prototype_type_args : string list;
   prototype_args : type_repr list;
-  prototype_ret_type : type_repr
+  prototype_ret_type : type_repr;
 }
 
 val type_repr_to_prototype_repr : type_repr -> prototype_repr
@@ -117,14 +121,16 @@ val type_repr_to_prototype_repr : type_repr -> prototype_repr
 type params_pool
 
 val make_params_pool : string list -> params_pool
+
 val pick_param : params_pool -> string * params_pool
+
 val pick_params : int -> params_pool -> string list * params_pool
 
 (** {2 Pretty-printing Coq Terms} *)
 
-(** Output [TLambda] values as [t0 -> .. -> tn] *)
 val pp_mono_type_repr : Format.formatter -> mono_type_repr -> unit
+(** Output [TLambda] values as [t0 -> .. -> tn] *)
 
+val pp_type_repr : Format.formatter -> type_repr -> unit
 (** Output [TLambda] values as [forall (a1 : Type) .. (an : Type), t0 -> .. ->
     tn] *)
-val pp_type_repr : Format.formatter -> type_repr -> unit

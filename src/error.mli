@@ -14,10 +14,10 @@ val error_kind_of_exn : exn -> error_kind
 val pp_error_kind : Format.formatter -> error_kind -> unit
 
 type t = {
-    error_loc : Location.t;
-    error_entry : string;
-    error_exn : error_kind;
-  }
+  error_loc : Location.t;
+  error_entry : string;
+  error_exn : error_kind;
+}
 
 type error = t
 

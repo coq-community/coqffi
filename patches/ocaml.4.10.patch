@@ -1,10 +1,11 @@
 diff --git a/src/compat.ml b/src/compat.ml
-index acd26ec..0185959 100644
+index 69d5a72..4c36938 100644
 --- a/src/compat.ml
 +++ b/src/compat.ml
-@@ -1,3 +1,9 @@
- let concat_map = List.concat_map
+@@ -2,7 +2,13 @@ let concat_map = List.concat_map
+ 
  let find_map = List.find_map
+ 
 -let fold_left_map = List.fold_left_map
 +let fold_left_map f acc l =
 +  let rec aux acc lacc = function
@@ -13,19 +14,22 @@ index acd26ec..0185959 100644
 +       let acc, x = f acc x in
 +       aux acc (x :: lacc) l in
 +  aux acc [] l
+ 
+ let rec sorted_intersect cmp l1 l2 =
+   match (l1, l2) with
 diff --git a/src/entry.ml b/src/entry.ml
-index 7e8e74e..89b3117 100644
+index 36c5cbc..7d21e94 100644
 --- a/src/entry.ml
 +++ b/src/entry.ml
-@@ -95,7 +95,7 @@ let has_attr name : attributes -> bool =
+@@ -108,7 +108,7 @@ let has_attr name : attributes -> bool =
  
  let get_attr_string name : attributes -> string option =
    let expr_to_string = function
 -    | Pexp_constant (Pconst_string (str, _, _)) -> Some str
 +    | Pexp_constant (Pconst_string (str, _)) -> Some str
-     | _ -> None in
+     | _ -> None
+   in
  
-   let struct_to_string = function
 diff --git a/theories/Data/Seq.v b/theories/Data/Seq.v
 index 8b58040..5a79184 100644
 --- a/theories/Data/Seq.v

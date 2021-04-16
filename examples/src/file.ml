@@ -2,9 +2,9 @@ type fd = Unix.file_descr
 
 let std_out = Unix.stdout
 
-let fd_equal = (=)
+let fd_equal = ( = )
 
-let openfile path = Unix.openfile path [Unix.O_RDONLY] 0
+let openfile path = Unix.openfile path [ Unix.O_RDONLY ] 0
 
 let read_all fd =
   let stats = Unix.fstat fd in

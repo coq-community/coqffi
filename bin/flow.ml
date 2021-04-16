@@ -1,11 +1,13 @@
 exception LeftSideFailed of exn
+
 exception RightSideFailed of exn
+
 exception BothSideFailed of exn * exn
 
-let (||) f g x =
-  let try_or f res x = try
-      res := Some (Ok (f x))
-    with e -> res := Some (Error e) in
+let ( || ) f g x =
+  let try_or f res x =
+    try res := Some (Ok (f x)) with e -> res := Some (Error e)
+  in
 
   let res_f = ref None in
   let res_g = ref None in
@@ -16,7 +18,7 @@ let (||) f g x =
   Thread.join pid_f;
   Thread.join pid_g;
 
-  match !res_f, !res_g with
+  match (!res_f, !res_g) with
   | Some (Ok x), Some (Ok y) -> (x, y)
   | Some (Error err), Some (Error err') -> raise (BothSideFailed (err, err'))
   | Some (Error err), _ -> raise (LeftSideFailed err)
@@ -25,9 +27,6 @@ let (||) f g x =
 
 let qed _ = ()
 
-let (@?) x f =
-  match x with
-  | Some x -> fun y -> qed (f x y)
-  | _ -> qed
+let ( @? ) x f = match x with Some x -> fun y -> qed (f x y) | _ -> qed
 
-let (@>) f g x = g (f x)
+let ( @> ) f g x = g (f x)

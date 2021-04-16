@@ -16,8 +16,11 @@ type t
     module level. If not, we search for [t] in [M1.M2], then [M1],
     etc. *)
 
-val translate : ?rev_namespace:(string list) -> ocaml:string -> coq:string -> t -> t
-val preserve : ?rev_namespace:(string list) -> string -> t -> t
-val find : ?rev_namespace:(string list) -> ocaml:string -> t -> string option
+val translate :
+  ?rev_namespace:string list -> ocaml:string -> coq:string -> t -> t
+
+val preserve : ?rev_namespace:string list -> string -> t -> t
+
+val find : ?rev_namespace:string list -> ocaml:string -> t -> string option
 
 val types_table : t

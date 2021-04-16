@@ -1,5 +1,5 @@
 (executable
-  (name main)
-  (public_name coqffi)
-  (package coq-coqffi)
-  (libraries sexplib threads compiler-libs.common coqffi cmdliner))
+ (name main)
+ (public_name coqffi)
+ (package coq-coqffi)
+ (libraries sexplib threads compiler-libs.common coqffi cmdliner))

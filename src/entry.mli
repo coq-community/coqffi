@@ -63,9 +63,7 @@ type module_entry = {
   module_loc : Location.t;
 }
 
-and intro_entry =
-  | IntroType of type_entry
-  | IntroMod of module_entry
+and intro_entry = IntroType of type_entry | IntroMod of module_entry
 
 type entry =
   | EPrim of primitive_entry
@@ -75,17 +73,39 @@ type entry =
   | EExn of exception_entry
   | EMod of module_entry
 
-val module_of_signatures : ?loc:(Location.t option) -> features -> string option -> string list -> string -> Types.signature -> module_entry
+val module_of_signatures :
+  ?loc:Location.t option ->
+  features ->
+  string option ->
+  string list ->
+  string ->
+  Types.signature ->
+  module_entry
 
 val dependencies : type_entry -> string list
 
+val find_mutually_recursive_types :
+  type_entry list -> mutually_recursive_types_entry list
 (** For [find_mutually_recursive_types l] to produce a correct output wrt. to
     type entries ordering, [l] should be correct wrt. the same criteria. *)
-val find_mutually_recursive_types
-  : type_entry list -> mutually_recursive_types_entry list
 
-val translate_function : rev_namespace:(string list) -> Translation.t -> function_entry -> function_entry
-val translate_primitive : rev_namespace:(string list) -> Translation.t -> primitive_entry -> primitive_entry
-val translate_lwt : rev_namespace:(string list) -> Translation.t -> lwt_entry -> lwt_entry
-val translate_exception : rev_namespace:(string list) -> Translation.t -> exception_entry -> exception_entry
-val translate_type : rev_namespace:(string list) -> Translation.t -> type_entry -> type_entry
+val translate_function :
+  rev_namespace:string list -> Translation.t -> function_entry -> function_entry
+
+val translate_primitive :
+  rev_namespace:string list ->
+  Translation.t ->
+  primitive_entry ->
+  primitive_entry
+
+val translate_lwt :
+  rev_namespace:string list -> Translation.t -> lwt_entry -> lwt_entry
+
+val translate_exception :
+  rev_namespace:string list ->
+  Translation.t ->
+  exception_entry ->
+  exception_entry
+
+val translate_type :
+  rev_namespace:string list -> Translation.t -> type_entry -> type_entry

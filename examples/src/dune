@@ -1,85 +1,105 @@
 (library
-  (libraries lwt)
-  (name examples))
+ (libraries lwt)
+ (name examples))
 
 (rule
-  (target File.v)
-  (action (run coqffi -finterface %{cmi:file} -o %{target})))
+ (target File.v)
+ (action
+  (run coqffi -finterface %{cmi:file} -o %{target})))
 
 (rule
-  (target Sleep.v)
-  (action (run coqffi %{cmi:sleep} -o %{target})))
+ (target Sleep.v)
+ (action
+  (run coqffi %{cmi:sleep} -o %{target})))
 
 (rule
-  (target Rectypes.v)
-  (action (run coqffi -ftransparent-types %{cmi:rectypes} -o %{target})))
+ (target Rectypes.v)
+ (action
+  (run coqffi -ftransparent-types %{cmi:rectypes} -o %{target})))
 
 (rule
-  (target TransparentPolytype.v)
-  (action (run coqffi -ftransparent-types %{cmi:polytype} -o %{target})))
+ (target TransparentPolytype.v)
+ (action
+  (run coqffi -ftransparent-types %{cmi:polytype} -o %{target})))
 
 (rule
-  (target OpaquePolytype.v)
-  (action (run coqffi %{cmi:polytype} -o %{target})))
+ (target OpaquePolytype.v)
+ (action
+  (run coqffi %{cmi:polytype} -o %{target})))
 
 (rule
-  (target PolyPrim.v)
-  (action (run coqffi %{cmi:polyprim} -o %{target})))
+ (target PolyPrim.v)
+ (action
+  (run coqffi %{cmi:polyprim} -o %{target})))
 
 (rule
-  (target Poly.v)
-  (action (run coqffi -finterface %{cmi:poly} -o %{target})))
+ (target Poly.v)
+ (action
+  (run coqffi -finterface %{cmi:poly} -o %{target})))
 
 (rule
-  (target Str.v)
-  (action (run coqffi -r Examples.StrModels -finterface %{cmi:str} -o %{target})))
+ (target Str.v)
+ (action
+  (run coqffi -r Examples.StrModels -finterface %{cmi:str} -o %{target})))
 
 (rule
-  (target Exn.v)
-  (action (run coqffi -finterface %{cmi:exn} -o %{target})))
+ (target Exn.v)
+ (action
+  (run coqffi -finterface %{cmi:exn} -o %{target})))
 
 (rule
-  (target Raise.v)
-  (action (run coqffi -finterface %{cmi:raise} -ffreespec -o %{target})))
+ (target Raise.v)
+ (action
+  (run coqffi -finterface %{cmi:raise} -ffreespec -o %{target})))
 
 (rule
-  (target Modules.v)
-  (action (run coqffi -finterface %{cmi:modules} -ffreespec -o %{target})))
+ (target Modules.v)
+ (action
+  (run coqffi -finterface %{cmi:modules} -ffreespec -o %{target})))
 
 (rule
-  (target Aliases.v)
-  (action (run coqffi -finterface %{cmi:aliases} -ffreespec -o %{target})))
+ (target Aliases.v)
+ (action
+  (run coqffi -finterface %{cmi:aliases} -ffreespec -o %{target})))
 
 (rule
-  (target Unamed.v)
-  (action (run coqffi -finterface %{cmi:unamed} -ffreespec -o %{target})))
+ (target Unamed.v)
+ (action
+  (run coqffi -finterface %{cmi:unamed} -ffreespec -o %{target})))
 
 (rule
-  (target WithConfig.v)
-  (deps config.coqffi)
-  (action (run coqffi -a config.coqffi -finterface %{cmi:config} -ffreespec -o %{target})))
+ (target WithConfig.v)
+ (deps config.coqffi)
+ (action
+  (run coqffi -a config.coqffi -finterface %{cmi:config} -ffreespec -o
+    %{target})))
 
 (rule
-  (target Async.v)
-  (action (run coqffi -flwt -r Examples.Lwt %{cmi:async} -ffreespec -o %{target})))
+ (target Async.v)
+ (action
+  (run coqffi -flwt -r Examples.Lwt %{cmi:async} -ffreespec -o %{target})))
 
 (rule
-  (targets M1.v M1.ffi)
-  (action (run coqffi --witness %{cmi:m1} -o M1.v)))
+ (targets M1.v M1.ffi)
+ (action
+  (run coqffi --witness %{cmi:m1} -o M1.v)))
 
 (rule
-  (target M2.v)
-  (deps M1.ffi)
-  (action (run coqffi -rExamples.M1 -IM1.ffi %{cmi:m2} -o %{target})))
+ (target M2.v)
+ (deps M1.ffi)
+ (action
+  (run coqffi -rExamples.M1 -IM1.ffi %{cmi:m2} -o %{target})))
 
 (rule
-  (target Kw.v)
-  (action (run coqffi %{cmi:keywords} -o %{target})))
+ (target Kw.v)
+ (action
+  (run coqffi %{cmi:keywords} -o %{target})))
 
 (rule
-  (target Ta.v)
-  (action (run coqffi -ftransparent-types %{cmi:type_aliases} -o %{target})))
+ (target Ta.v)
+ (action
+  (run coqffi -ftransparent-types %{cmi:type_aliases} -o %{target})))
 
 (coq.theory
-  (name Examples)
-  (theories CoqFFI))
+ (name Examples)
+ (theories CoqFFI))

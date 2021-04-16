@@ -1,4 +1,5 @@
-val (@+) : int -> int -> int
+val ( @+ ) : int -> int -> int
 
 type t
+
 val t : t
