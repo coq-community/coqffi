@@ -7,13 +7,17 @@
 (** [coqffi]’s representation of types are based on two types: [mono_type_repr]
     and [type_repr]. *)
 
+type constant_repr =
+  | CPlaceholder of int
+  | CName of string
+
 type mono_type_repr =
-  | TLambda of (mono_type_repr * mono_type_repr) (** [TLambda (u, v)] ≡ [u ->
-                                                     v] *)
-  | TProd of (mono_type_repr list) (** [TProd [t0; ..; tn]] ≡ [(t0, ..,
-                                       tn)] *)
-  | TParam of (string * mono_type_repr list) (** [TParam ("t", [t0; ..; tn])] ≡
-                                                 [(t0, .., tn) t] *)
+  | TLambda of (mono_type_repr * mono_type_repr)
+  (** [TLambda (u, v)] ≡ [u -> v] *)
+  | TProd of (mono_type_repr list)
+  (** [TProd [t0; ..; tn]] ≡ [(t0, .., tn)] *)
+  | TParam of (constant_repr * mono_type_repr list)
+   (** [TParam ("t", [t0; ..; tn])] ≡ [(t0, .., tn) t] *)
 
 type type_repr =
   | TMono of mono_type_repr (** A monomorphic type *)
@@ -37,8 +41,14 @@ type type_repr =
 val to_mono_type_repr : type_repr -> mono_type_repr
 val of_mono_type_repr : string list -> mono_type_repr -> type_repr
 
+val fresh_placeholder : type_repr -> int
+val place_placeholder : string -> type_repr -> int * type_repr
+val fill_placeholder : int -> string -> type_repr -> type_repr
+
+val higher_order_monadic : constant_repr -> type_repr -> bool
+
 val supposedly_pure : type_repr -> bool
-val asynchronous : lwt_alias:(string option) -> type_repr -> bool
+val asynchronous : lwt_module:(string option) -> type_repr -> bool
 
 (** {1 Converting [Cmi_format]'s [type_expr] to [coqffi]’s [type_repr]} *)
 
@@ -59,7 +69,7 @@ val tlambda : mono_type_repr list -> mono_type_repr -> mono_type_repr
 val map_codomain : (mono_type_repr -> mono_type_repr) -> type_repr -> type_repr
 
 (** Project the codomain of a function into a parameterized type, {e
-    i.e.}, [type_lift T [x r] (a -> .. -> r) ≡ a -> .. -> T x y r] *)
+    i.e.}, [type_lift T ~args:[x r] (a -> .. -> r) ≡ a -> .. -> T x y r] *)
 val type_lift : string -> ?args:(mono_type_repr list) -> type_repr -> type_repr
 
 (** [mono_dependencies t] is the list of types which appear in [t] definition.

@@ -62,5 +62,5 @@ let check_features_consistency lwt_alias lf ~wduplicate =
   | Some lwt_alias, Some true -> (Some lwt_alias, lf)
   | Some _, Some false -> raise LwtExplicitelyDisableButLwtAliasSet
   | Some lwt_alias, None -> (Some lwt_alias, (Lwt, true) :: lf)
-  | None, Some true -> (Some "Lwt.t", lf)
+  | None, Some true -> (Some "Lwt", lf)
   | _, _ -> (None, lf)

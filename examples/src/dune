@@ -61,7 +61,7 @@
 
 (rule
   (target Async.v)
-  (action (run coqffi -flwt -r Examples.Lwt -finterface %{cmi:async} -ffreespec -o %{target})))
+  (action (run coqffi -flwt -r Examples.Lwt %{cmi:async} -ffreespec -o %{target})))
 
 (rule
   (targets M1.v M1.ffi)

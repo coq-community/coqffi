@@ -12,6 +12,7 @@ type primitive_entry = {
 }
 
 type lwt_entry = {
+  lwt_placeholder : int;
   lwt_name : string;
   lwt_type : type_repr;
   lwt_loc : Location.t;
@@ -177,22 +178,19 @@ let prototype_of_constructor params_type args ret =
     }
   | _ -> assert false
 
-let entry_of_value lf lwt_alias ident desc loc =
+let entry_of_value lf lwt_module ident desc loc =
   let is_pure attrs model t =
-    (is_enabled lf PureModule  && not (asynchronous ~lwt_alias t))
-    || Repr.supposedly_pure t
-    || Option.is_some model
-    || has_attr "pure" attrs
+    not (asynchronous ~lwt_module t)
+    && (is_enabled lf PureModule
+        || Repr.supposedly_pure t
+        || Option.is_some model
+        || has_attr "pure" attrs)
   in
 
   let name = Ident.name ident in
   let repr = type_repr_of_type_expr desc.val_type in
   let model = has_coq_model desc.val_attributes in
   let may_raise = has_attr "may_raise" desc.val_attributes in
-
-  let unwrap_lwt = function
-    | TParam (type_name, [param]) when lwt_alias = Some type_name -> param
-    | t -> t in
 
   if is_pure desc.val_attributes model repr
   then EFunc {
@@ -202,11 +200,15 @@ let entry_of_value lf lwt_alias ident desc loc =
          func_may_raise = may_raise;
          func_loc = loc;
        }
-  else if asynchronous ~lwt_alias repr
-  then ELwt {
-         lwt_name = name;
-         lwt_type = map_codomain unwrap_lwt repr;
-         lwt_loc = loc;
+  else if asynchronous ~lwt_module repr
+  then
+    let lwt = Option.value ~default:"Lwt" lwt_module ^ ".t" in
+    let lwt_placeholder, lwt_type = Repr.place_placeholder lwt repr in
+    ELwt {
+        lwt_placeholder;
+        lwt_name = name;
+        lwt_type;
+        lwt_loc = loc;
        }
   else EPrim {
           prim_name = name;
@@ -262,7 +264,7 @@ let entry_of_type lf ident decl rec_status loc =
      [prototype_repr] value associated to each constructor. *)
 
   let poly_default_type_ret =
-    of_mono_type_repr params (TParam (type_name, List.map (fun x -> TParam (x, [])) params)) in
+    of_mono_type_repr params (TParam (CName type_name, List.map (fun x -> TParam (CName x, [])) params)) in
 
   let to_variant_entry params v =
     let ret = Option.value ~default:poly_default_type_ret
@@ -282,7 +284,7 @@ let entry_of_type lf ident decl rec_status loc =
      the type declaration), we use the monomorphic version. *)
 
   let mono_default_type_ret =
-    TMono (TParam (type_name, List.map (fun x -> TParam (x, [])) params)) in
+    TMono (TParam (CName type_name, List.map (fun x -> TParam (CName x, [])) params)) in
 
   let unify v = v.variant_prototype.prototype_ret_type = mono_default_type_ret in
 
@@ -350,7 +352,7 @@ let entry_of_exn ident cst loc =
   let name = Ident.name ident in
   EExn {
     exception_name = name;
-    exception_prototype = prototype_of_constructor [] cst.ext_args (TMono (TParam ("exn", [])));
+    exception_prototype = prototype_of_constructor [] cst.ext_args (TMono (TParam (CName "exn", [])));
     exception_loc = loc;
   }
 
@@ -409,11 +411,11 @@ let empty_module loc namespace name = {
     module_loc = loc;
   }
 
-let rec entry_of_signature namespace lf lwt_alias (s : Types.signature_item) : entry =
+let rec entry_of_signature namespace lf lwt_module (s : Types.signature_item) : entry =
   let loc = signature_loc s in
   match s with
   | Sig_value (ident, desc, Exported) ->
-    entry_of_value lf lwt_alias ident desc loc
+    entry_of_value lf lwt_module ident desc loc
   | Sig_type (ident, decl, rstatus, Exported) ->
     (* FIXME: provide a stronger support for OCaml object system. *)
     if String.get (Ident.name ident) 0 = '#'
@@ -422,22 +424,22 @@ let rec entry_of_signature namespace lf lwt_alias (s : Types.signature_item) : e
   | Sig_typext (ident, cst, Text_exception, Exported) ->
     entry_of_exn ident cst loc
   | Sig_module (name, _, decl, _, Exported) ->
-    (match entry_of_module lf lwt_alias namespace name decl with
+    (match entry_of_module lf lwt_module namespace name decl with
      | Some x -> x
      | _ -> raise_error (UnsupportedOCamlSignature s))
   | _ -> (* FIXME: this looks like it is a bit too strong *)
     raise_error (UnsupportedOCamlSignature s)
 
-and entry_of_module lf lwt_alias namespace name decl =
+and entry_of_module lf lwt_module namespace name decl =
   match decl.md_type with
   | Mty_signature sigs ->
-    Some (EMod (module_of_signatures ~loc:(Some decl.md_loc) lf lwt_alias namespace (Ident.name name) sigs))
+    Some (EMod (module_of_signatures ~loc:(Some decl.md_loc) lf lwt_module namespace (Ident.name name) sigs))
   | _ -> None
 
-and module_of_signatures ?(loc=None) lf lwt_alias namespace name sigs =
+and module_of_signatures ?(loc=None) lf lwt_module namespace name sigs =
   let namespace = namespace @ [name] in
   let foldf m s =
-    try entry_of_signature namespace lf lwt_alias s |> add_entry m
+    try entry_of_signature namespace lf lwt_module s |> add_entry m
     with e ->
       pp_error Format.err_formatter (error_of_signature s e);
       m

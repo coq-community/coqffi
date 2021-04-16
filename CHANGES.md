@@ -2,6 +2,13 @@
 
 This will be the initial release of `coqffi`.
 
+## Unreleased
+
+- **Breaking Change:** `coqffi` support of `Lwt` has been improved. It
+  now handles “higher-order primitives” —that is, primitives where the
+  `Lwt.t` not only appaers in the head position of the return type,
+  but also in their arguments for instance— more smoothly.
+
 ## `coqffi.1.0.0~beta5`
 
 - **Dependencies** Support Coq 8.13 in addition to Coq 8.12

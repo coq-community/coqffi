@@ -4,13 +4,13 @@ open Cmdliner
 open Config
 open Format
 
-let process coqns models lwt_alias config features input ochannel (wchannel : formatter option) =
+let process coqns models lwt_module config features input ochannel (wchannel : formatter option) =
   let open Flow in
   let flush fmt pp = fprintf fmt "%a@?" pp in
 
   read_cmi input
-  |> Mod.of_cmi_infos ~features ~translations:config.config_translations ~lwt_alias
-  |> (Vernac.of_mod config.config_aliases features models @> flush ochannel Vernac.pp_vernac 
+  |> Mod.of_cmi_infos ~features ~translations:config.config_translations ~lwt_module
+  |> (Vernac.of_mod lwt_module config.config_aliases features models @> flush ochannel Vernac.pp_vernac
       || wchannel @? fun wc -> Witness.from_mod ~coqns config.config_aliases @> flush wc Witness.pp)
   |> qed
 
@@ -73,7 +73,7 @@ let include_arg =
   let doc = "A witness file which contains a list of translation types" in
   Arg.(value & opt_all string [] & info ["I"; "include-types"] ~docv:"WITNESS" ~doc)
 
-let lwt_alias_arg =
+let lwt_module_arg =
   let doc = "The alias to Lwt.t used in the OCaml module" in
   Arg.(value & opt (some string) None & info ["lwt-alias"] ~docv:"LWT ALIAS" ~doc)
 
@@ -229,7 +229,7 @@ let coqffi_info =
   Term.(info "coqffi" ~exits:default_exits ~doc ~man ~version:"coqffi.dev")
 
 let run_coqffi (input : string) (aliases : string option) (includes : string list)
-      (lwt_alias : string option) (output_path : string option)
+      (lwt_module : string option) (output_path : string option)
       (features : Feature.features) (models : string list) (witness : bool) =
 
   let witness_path = match output_path with
@@ -257,10 +257,10 @@ let run_coqffi (input : string) (aliases : string option) (includes : string lis
 
     let config = Config.config_from_path aliases includes in
 
-    let (lwt_alias, features) =
-      Feature.check_features_consistency lwt_alias features ~wduplicate:true in
+    let (lwt_module, features) =
+      Feature.check_features_consistency lwt_module features ~wduplicate:true in
 
-    process coqns models lwt_alias config features input ochannel wchannel
+    process coqns models lwt_module config features input ochannel wchannel
   end
   with e -> print_error Format.err_formatter e
 
@@ -269,7 +269,7 @@ let coqffi_t =
         $ input_cmi_arg
         $ aliases_arg
         $ include_arg
-        $ lwt_alias_arg
+        $ lwt_module_arg
         $ output_arg
         $ features_opt
         $ models_opt

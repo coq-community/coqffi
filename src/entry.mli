@@ -10,6 +10,7 @@ type primitive_entry = {
 }
 
 type lwt_entry = {
+  lwt_placeholder : int;
   lwt_name : string;
   lwt_type : type_repr;
   lwt_loc : Location.t;

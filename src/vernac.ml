@@ -6,6 +6,14 @@ open Repr
 open Lazylist
 open Pp
 
+let pp_lwt_t fmt = function
+  | Some lwt_module -> fprintf fmt "%s.t" lwt_module
+  | _ -> assert false
+
+let pp_lwt_return fmt = function
+  | Some lwt_module -> fprintf fmt "%s.return" lwt_module
+  | _ -> assert false
+
 type from_require_import = {
   import_from : string;
   import_module : string;
@@ -130,12 +138,18 @@ let pp_instance fmt inst =
 
 type axiom = {
   axiom_name : string;
+  axiom_typeclass_args : string list;
   axiom_type : Repr.type_repr;
 }
 
 let pp_axiom fmt ax =
-  fprintf fmt "@[<hov 2>Axiom %s@ : %a.@]"
+  fprintf fmt "@[<hov 2>Axiom %s@ : %a%a.@]"
     ax.axiom_name
+    (pp_list
+       ~pp_prefix:(fun fmt _ -> pp_print_text fmt "forall `{")
+       ~pp_suffix:(fun fmt _ -> pp_print_text fmt "}, ")
+       ~pp_sep:(fun fmt _ -> pp_print_text fmt ",@ ")
+       pp_print_text) ax.axiom_typeclass_args
     pp_type_repr ax.axiom_type
 
 type extract_constant = {
@@ -200,10 +214,21 @@ and t =
   | ExtractConstant of extract_constant
   | ExtractInductive of extract_inductive
 
-let exn_t = TParam ("exn", [])
+let exn_t = TParam (CName "exn", [])
+
+(** [monadic_may_raise_t {m t}] returns {m (sum t exn)}. It fails if
+    its argument is in a different form. *)
+let monadic_may_raise_t may_raise t =
+  if may_raise
+  then map_codomain (function
+           | TParam (m, [t]) -> TParam (m, [TParam (CName "sum", [t; exn_t])])
+           | _ -> assert false) t
+  else t
+
+(** [monadic_may_raise_t {t}] returns {sum t exn} *)
 let may_raise_t may_raise t =
   if may_raise
-  then map_codomain (fun t -> TParam ("sum", [t; exn_t])) t
+  then map_codomain (fun t -> TParam (CName "sum", [t; exn_t])) t
   else t
 
 let rec pp_vernac fmt = function
@@ -302,7 +327,7 @@ let functions_vernac aliases m =
         };
         def_body = (fun fmt _ -> pp_print_string fmt model)
       }
-    | _ -> Axiom { axiom_name = func_name; axiom_type = func_type }
+    | _ -> Axiom { axiom_name = func_name; axiom_typeclass_args = []; axiom_type = func_type }
   in
 
   let to_extr f =
@@ -374,6 +399,7 @@ let type_entry_to_vernac features (t : type_entry) : t =
         def_body = (fun fmt _ -> pp_print_string fmt m);
       }
   | _ -> Axiom {
+      axiom_typeclass_args = [];
       axiom_name = t.type_name;
       axiom_type = of_mono_type_repr t.type_params (ind_type t.type_arity)
     }
@@ -386,6 +412,7 @@ let io_primitives_vernac aliases m =
       type_lift "IO" (may_raise_t prim.prim_may_raise prim.prim_type) in
     let axiom_name = Alias.coq_name aliases prim.prim_name in
     Axiom {
+      axiom_typeclass_args = [];
       axiom_name = io_axiom_name axiom_name;
       axiom_type = axiom_type;
     } in
@@ -417,7 +444,7 @@ let io_primitives_vernac aliases m =
       instance_name = sprintf "IO_Monad%s" m.mod_name;
       instance_typeclass_args = [];
       instance_type =
-        TMono (TParam (sprintf "Monad%s" m.mod_name, [TParam ("IO", [])]));
+        TMono (TParam (CName (sprintf "Monad%s" m.mod_name), [TParam (CName "IO", [])]));
       instance_members =
         List.map (fun prim ->
             let axiom_name = Alias.coq_name aliases prim.prim_name in
@@ -435,12 +462,17 @@ let io_primitives_vernac aliases m =
 let constructor_name aliases name =
   Alias.coq_name aliases @@ String.capitalize_ascii name
 
-let interface_vernac aliases mod_name prims vernacs =
-  let prim_to_constructor prim =
+let interface_vernac aliases mod_name all_prims vernacs =
+  let hof (i, p) = Repr.higher_order_monadic (CPlaceholder i) p.prim_type in
+
+  let (hoprims, prims) = List.partition hof all_prims in
+
+  let prim_to_constructor (i, prim) =
     let prim_name = Alias.coq_name aliases prim.prim_name in
-    let prim_type = type_lift
+    let prim_type = Repr.fill_placeholder
+                      i
                       (String.uppercase_ascii mod_name)
-                      (may_raise_t prim.prim_may_raise prim.prim_type) in
+                      (monadic_may_raise_t prim.prim_may_raise prim.prim_type) in
     {
       constructor_name = constructor_name aliases prim_name;
       constructor_prototype = {
@@ -450,10 +482,10 @@ let interface_vernac aliases mod_name prims vernacs =
         }
   } in
 
-  let prim_to_inj_helper prim =
+  let prim_to_inj_helper (i, prim) =
     let prim_name = Alias.coq_name aliases prim.prim_name in
-    let inj_type = may_raise_t prim.prim_may_raise prim.prim_type in
-    let proto = Repr.type_repr_to_prototype_repr (type_lift "m" inj_type) in
+    let inj_type = monadic_may_raise_t prim.prim_may_raise prim.prim_type in
+    let proto = Repr.type_repr_to_prototype_repr (Repr.fill_placeholder i "m" inj_type) in
     Definition {
       def_name = sprintf "inj_%s" prim_name;
       def_typeclass_args = [
@@ -469,6 +501,20 @@ let interface_vernac aliases mod_name prims vernacs =
     }
   in
 
+  let hof_prim_to_inj (i, prim) =
+    let prim_name = Alias.coq_name aliases prim.prim_name in
+    let inj_type = Repr.fill_placeholder i "m" @@ monadic_may_raise_t prim.prim_may_raise prim.prim_type in
+    Axiom {
+        axiom_name = sprintf "inj_%s" prim_name;
+        axiom_typeclass_args = [
+          sprintf
+            "Inject %s m"
+            (String.uppercase_ascii mod_name)
+          ];
+        axiom_type = inj_type;
+      }
+  in
+
   let inj_instance =
     let monad_name =
       sprintf "Monad%s" @@ String.capitalize_ascii mod_name in
@@ -478,12 +524,12 @@ let interface_vernac aliases mod_name prims vernacs =
       instance_typeclass_args = [
         sprintf "Inject %s m" mod_name
       ];
-      instance_type = TMono (TParam (monad_name, [TParam ("m", [])]));
+      instance_type = TMono (TParam (CName monad_name, [TParam (CName "m", [])]));
       instance_members =
-        List.map (fun x ->
+        List.map (fun (_, x) ->
             let n = Alias.coq_name aliases x.prim_name in
             (n, sprintf "inj_%s" n))
-          prims
+          all_prims
     } in
 
   let mod_inductive = Inductive [{
@@ -501,15 +547,18 @@ let interface_vernac aliases mod_name prims vernacs =
     mod_inductive
   ]
   |++ List.map prim_to_inj_helper prims
+  |++ List.map hof_prim_to_inj hoprims
   |+ inj_instance
 
-let lwt_primitives_vernac aliases m vernacs =
-  let to_lwt t = TParam ("Lwt.t", [t]) in
+let lwt_primitives_vernac lwt_module aliases m vernacs =
+  let lwt_t = asprintf "%a" pp_lwt_t lwt_module in
+  let to_lwt t = TParam (CName lwt_t, [t]) in
 
   let axiom_name prim = sprintf "ffi_lwt_%s" (Alias.coq_name aliases prim.prim_name) in
 
   let to_axiom prim =
     Axiom {
+        axiom_typeclass_args = [];
         axiom_name = axiom_name prim;
         axiom_type = map_codomain to_lwt prim.prim_type;
       } in
@@ -519,9 +568,10 @@ let lwt_primitives_vernac aliases m vernacs =
   let to_extract_target prim =
     let proto = type_repr_to_prototype_repr prim.prim_type in
     let vars = call_vars proto in
-    asprintf "(fun %a => Lwt.return %a)"
+    asprintf "(fun %a => %a %a)"
       (pp_list ~pp_sep:(fun fmt _ -> pp_print_string fmt " ")
          pp_print_string) vars
+      pp_lwt_return lwt_module
       (pp_fun_call (Alias.ocaml_name aliases prim.prim_name) vars) () in
 
   let to_extract prim =
@@ -539,7 +589,7 @@ let lwt_primitives_vernac aliases m vernacs =
     Instance {
         instance_name = sprintf "Monad%s_Lwt" m.mod_name;
         instance_typeclass_args = [];
-        instance_type = TMono (TParam (sprintf "Monad%s" m.mod_name, [TParam ("Lwt.t", [])]));
+        instance_type = TMono (TParam (CName (sprintf "Monad%s" m.mod_name), [TParam (CName lwt_t, [])]));
         instance_members = List.map to_member m.mod_primitives;
       } in
 
@@ -555,7 +605,7 @@ let semantics_vernac aliases m vernacs =
   let axiom_name name = sprintf "ffi_unsafe_%s" name in
   let mod_name = String.uppercase_ascii m.mod_name in
   let mod_type =
-    TParam (mod_name, []) in
+    TParam (CName mod_name, []) in
 
   let prim_target prim =
     let target_name = qualified_name m (Alias.ocaml_name aliases prim.prim_name) in
@@ -576,6 +626,7 @@ let semantics_vernac aliases m vernacs =
       List.map (fun prim ->
           let prim_name = Alias.coq_name aliases prim.prim_name in
           Axiom {
+              axiom_typeclass_args = [];
               axiom_name = axiom_name prim_name;
               axiom_type = may_raise_t prim.prim_may_raise prim.prim_type;
         }) m.mod_primitives;
@@ -597,7 +648,7 @@ let semantics_vernac aliases m vernacs =
         prototype_type_args = [];
         prototype_args = [];
         prototype_ret_type =
-          TMono (TParam ("semantics", [mod_type]));
+          TMono (TParam (CName "semantics", [mod_type]));
       };
       def_body = fun fmt _ ->
         fprintf fmt
@@ -621,10 +672,10 @@ let semantics_vernac aliases m vernacs =
 let exceptions_vernac _features m vernacs =
   let exception_vernac v e =
     let exn_name = e.exception_name in
-    let exn_type = TParam ("exn", []) in
+    let exn_type = TParam (CName "exn", []) in
     let proxy_name = sprintf "%sExn" e.exception_name in
     let proxy_constructor_name = sprintf "Make%sExn" e.exception_name in
-    let proxy_type = TParam (proxy_name, []) in
+    let proxy_type = TParam (CName proxy_name, []) in
 
     let proxy_proto = {
         e.exception_prototype with
@@ -651,13 +702,15 @@ let exceptions_vernac _features m vernacs =
 
     let to_exn_axiom =
       Axiom {
+          axiom_typeclass_args = [];
           axiom_name = to_exn;
           axiom_type = TMono (TLambda (proxy_type, exn_type));
         } in
     let of_exn_axiom =
       Axiom {
+          axiom_typeclass_args = [];
           axiom_name = of_exn;
-          axiom_type = TMono (TLambda (exn_type, TParam ("option", [proxy_type])));
+          axiom_type = TMono (TLambda (exn_type, TParam (CName "option", [proxy_type])));
         } in
 
     let vars = call_vars proxy_proto in
@@ -704,7 +757,7 @@ let exceptions_vernac _features m vernacs =
       Instance {
           instance_name = sprintf "%s_Exn" proxy_name;
           instance_typeclass_args = [];
-          instance_type = TMono (TParam ("Exn", [TParam (proxy_name, [])]));
+          instance_type = TMono (TParam (CName "Exn", [TParam (CName proxy_name, [])]));
           instance_members = [("to_exn", to_exn); ("of_exn", of_exn)];
         } in
 
@@ -741,7 +794,14 @@ let monad_vernac aliases mod_name prims =
     class_members = List.map (prim_to_members) prims;
   }
 
-let primitives_vernac aliases features m vernacs =
+let primitives_vernac lwt_module aliases features m vernacs =
+  let prims = List.map (fun p ->
+                  let t = p.prim_type in
+                  let i = Repr.fresh_placeholder t in
+                  let p = { p with prim_type = Repr.map_codomain (fun x -> TParam (CPlaceholder i, [x])) t} in
+                (i, p))
+                m.mod_primitives in
+
   vernacs
   |++ [
     Section "Impure Primitives";
@@ -749,30 +809,34 @@ let primitives_vernac aliases features m vernacs =
     monad_vernac aliases m.mod_name m.mod_primitives;
   ]
   |> is_enabled features SimpleIO @? io_primitives_vernac aliases m
-  |> is_enabled features Interface @? interface_vernac aliases m.mod_name m.mod_primitives
+  |> is_enabled features Interface @? interface_vernac aliases m.mod_name prims
   |> is_enabled features FreeSpec @? semantics_vernac aliases m
-  |> is_enabled features Lwt @? lwt_primitives_vernac aliases m
+  |> is_enabled features Lwt @? lwt_primitives_vernac lwt_module aliases m
 
-let lwt_vernac aliases features m vernacs =
+let lwt_vernac lwt_module aliases features m vernacs =
+  let lwt_t = asprintf "%a" pp_lwt_t lwt_module in
   let mod_name = sprintf "%s_Async" m.mod_name in
 
-  let to_prim lwt = {
-      prim_name = lwt.lwt_name;
-      prim_type = lwt.lwt_type;
-      prim_may_raise = false; (* [Lwt.t] encapsulates exceptions *)
-      prim_loc = lwt.lwt_loc;
-    } in
+  let to_prim lwt =
+    (lwt.lwt_placeholder, {
+       prim_name = lwt.lwt_name;
+       prim_type = lwt.lwt_type;
+       prim_may_raise = false; (* [Lwt.t] encapsulates exceptions *)
+       prim_loc = lwt.lwt_loc;
+    }) in
 
   let prims = List.map to_prim m.mod_lwt in
 
   let to_axiom_name lwt = sprintf "ffi_lwt_%s" (Alias.coq_name aliases lwt.lwt_name) in
 
-  let lwt_mono_t arg = TParam ("Lwt.t", arg) in
+  let lwt_mono_t arg = TParam (CName lwt_t, arg) in
 
   let to_axiom lwt =
     Axiom {
+        axiom_typeclass_args = [];
         axiom_name = to_axiom_name lwt;
-        axiom_type = Repr.map_codomain (fun x -> lwt_mono_t [x]) lwt.lwt_type;
+        axiom_type =
+          Repr.fill_placeholder lwt.lwt_placeholder lwt_t lwt.lwt_type
       } in
 
   let axioms = List.map to_axiom m.mod_lwt in
@@ -781,11 +845,24 @@ let lwt_vernac aliases features m vernacs =
 
   let monad_name = sprintf "Monad%s" mod_name in
 
+  let lwt_to_members lwt =
+    let mem_name = Alias.coq_name aliases lwt.lwt_name in
+    (mem_name, Repr.fill_placeholder lwt.lwt_placeholder "m" lwt.lwt_type) in
+
+  let tclass =
+    Typeclass {
+        class_name = monad_name;
+        class_typeclass_args = [];
+        class_args = ["m", TMono (tlambda [type_sort_mono] type_sort_mono)];
+        class_type = type_sort;
+        class_members = List.map (lwt_to_members) m.mod_lwt;
+    } in
+
   let instance =
     Instance {
         instance_name = sprintf "%s_Lwt" monad_name;
         instance_typeclass_args = [];
-        instance_type = TMono (TParam (monad_name, [lwt_mono_t []]));
+        instance_type = TMono (TParam (CName monad_name, [lwt_mono_t []]));
         instance_members = List.map to_member m.mod_lwt;
     } in
 
@@ -802,24 +879,23 @@ let lwt_vernac aliases features m vernacs =
   |++ [
     Section "Asynchronous Primitives";
     Subsection "Monad Definition";
-    monad_vernac aliases mod_name prims;
+    tclass;
     Subsection "[Lwt.t] Instance";
     compacted_block_of_list axioms;
     compacted_block_of_list extracts;
     instance;
   ]
-  |> is_enabled features Interface
-     @? interface_vernac aliases mod_name prims
+  |> is_enabled features Interface @? interface_vernac aliases mod_name prims
 
-let rec module_vernac aliases features models m vernac =
+let rec module_vernac lwt_module aliases features models m vernac =
   vernac
-  |> not (empty m.mod_intro) @? intros_vernac aliases features models m
+  |> not (empty m.mod_intro) @? intros_vernac lwt_module aliases features models m
   |> not (empty m.mod_exceptions) @? exceptions_vernac features m
   |> not (empty m.mod_functions) @? functions_vernac aliases m
-  |> not (empty m.mod_primitives) @? primitives_vernac aliases features m
-  |> not (empty m.mod_lwt) @? lwt_vernac aliases features m
+  |> not (empty m.mod_primitives) @? primitives_vernac lwt_module aliases features m
+  |> not (empty m.mod_lwt) @? lwt_vernac lwt_module aliases features m
 
-and intros_vernac aliases features models m vernacs =
+and intros_vernac lwt_module aliases features models m vernacs =
   let transparent = is_enabled features TransparentTypes in
 
   let type_entry_to_inductive t =
@@ -848,7 +924,7 @@ and intros_vernac aliases features models m vernacs =
     [CoqModule {
        coqmod_name;
        coqmod_content =
-         Block (module_vernac aliases features models m Lazylist.empty)
+         Block (module_vernac lwt_module aliases features models m Lazylist.empty)
     }] in
 
   let intro_list_to_vernac (l : intro list) =
@@ -897,7 +973,7 @@ let rec update_aliases_from_intro aliases = function
   | Left m -> update_aliases aliases m.mod_intro
 and update_aliases aliases = List.fold_left update_aliases_from_intro aliases
 
-let of_mod aliases features models m =
+let of_mod lwt_module aliases features models m =
   let aliases = update_aliases aliases m.mod_intro in
 
   Block
@@ -906,5 +982,5 @@ let of_mod aliases features models m =
         ConfigPrologue;
       ]
      |> requires_vernac features models
-     |> module_vernac aliases features models m
+     |> module_vernac lwt_module aliases features models m
      |+ Comment "The generated file ends here.")

@@ -48,6 +48,7 @@ type instance = {
 
 type axiom = {
   axiom_name : string;
+  axiom_typeclass_args : string list;
   axiom_type : Repr.type_repr;
 }
 
@@ -87,6 +88,6 @@ and t =
   | ExtractConstant of extract_constant
   | ExtractInductive of extract_inductive
 
-val of_mod : Alias.table -> Feature.features -> string list -> Mod.t -> t
+val of_mod : string option -> Alias.table -> Feature.features -> string list -> Mod.t -> t
 
 val pp_vernac : Format.formatter -> t -> unit

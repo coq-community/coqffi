@@ -1,10 +1,14 @@
 open Format
 open Error
 
+type constant_repr =
+  | CPlaceholder of int
+  | CName of string
+
 type mono_type_repr =
   | TLambda of (mono_type_repr * mono_type_repr)
   | TProd of (mono_type_repr list)
-  | TParam of (string * mono_type_repr list)
+  | TParam of (constant_repr * mono_type_repr list)
 
 type type_repr =
   | TMono of mono_type_repr
@@ -24,10 +28,12 @@ let supposedly_pure t =
   | TLambda (_, _) -> false
   | _ -> true
 
-let asynchronous ~lwt_alias typ =
+let asynchronous ~lwt_module typ =
+  let lwt = Option.map (fun x -> x ^ ".t") lwt_module in
+
   let rec mono_asynchronous = function
     | TLambda (_, r) -> mono_asynchronous r
-    | TParam (type_name, [_]) when lwt_alias = Some type_name -> true
+    | TParam (CName type_name, [_]) -> lwt = Some type_name
     | _ -> false in
 
   mono_asynchronous (to_mono_type_repr typ)
@@ -96,9 +102,9 @@ let rec mono_type_repr_of_type_expr_with_params params (t : Types.type_expr)
   match t.desc with
   | Tvar (Some "_") | Tvar None ->
     let (p, params) = pick_param params in
-    (params, TParam (p, []))
+    (params, TParam (CName p, []))
   | Tvar (Some x) ->
-    (params, TParam (x, []))
+    (params, TParam (CName x, []))
     (* FIXME: Support labeled arguments *)
   | Tarrow (Nolabel , t1, t2, _) ->
     let (params, i1) = mono_type_repr_of_type_expr_with_params params t1 in
@@ -109,9 +115,88 @@ let rec mono_type_repr_of_type_expr_with_params params (t : Types.type_expr)
     (params, TProd l)
   | Tconstr (name, types, _) ->
     let (params, t) = Compat.fold_left_map mono_type_repr_of_type_expr_with_params params types in
-    (params, TParam (Path.name name, t))
+    (params, TParam (CName (Path.name name), t))
   | _ ->
     raise_error (UnsupportedOCamlType t)
+
+let rec fill_placeholder_mono i name = function
+  | TParam (CPlaceholder i', params) when i = i' ->
+    TParam (CName name, List.map (fill_placeholder_mono i name) params)
+  | TParam (constant, params) ->
+    TParam (constant, List.map (fill_placeholder_mono i name) params)
+  | TProd typs ->
+    TProd (List.map (fill_placeholder_mono i name) typs)
+  | TLambda (t1, t2) ->
+    TLambda (fill_placeholder_mono i name t1, fill_placeholder_mono i name t2)
+
+(* [monadic {m} t] returns [true] when [t] features a subpart of the
+   form {m _}. For instance, [monadic {m} {m bool}] and [monadic {m}
+   {list (m bool)}] are true, while [monadic {m} {a}] is false. *)
+let rec monadic m = function
+  | TParam (m', _) when m = m' -> true
+  | TParam (_, typs) -> List.exists (monadic m) typs
+  | TProd typs -> List.exists (monadic m) typs
+  | TLambda (t1, t2) -> monadic m t1 || monadic m t2
+
+(* [higher_order_monadic {m} t] returns [true] when [t] features a
+   subpart of the form {m _}, more precisely
+
+     - at the right side of a lambda, for instance [{m t -> a}] is true
+     - in a tuple, for instance [{m t * a}] is true
+     - as a parameter of a type, for instance [{m a}] is false, but
+       [{list (m a)}] is true *)
+let rec higher_order_monadic_mono m = function
+  | TParam (_, typs) -> List.exists (monadic m) typs
+  | TLambda (t1, t2) -> monadic m t1 || higher_order_monadic_mono m t2
+  | t -> monadic m t
+
+let higher_order_monadic m = function
+  | TMono t | TPoly(_, t) -> higher_order_monadic_mono m t
+
+let fill_placeholder i name = function
+  | TMono mono -> TMono (fill_placeholder_mono i name mono)
+  | TPoly (params, t) -> TPoly (params, fill_placeholder_mono i name t)
+
+let next_placeholder = function
+  | CPlaceholder i -> i + 1
+  | CName _ -> 0
+
+let rec fresh_placeholder_mono = function
+  | TParam (constant, params) ->
+    List.fold_left
+      (fun i x -> max i (fresh_placeholder_mono x))
+      (next_placeholder constant)
+      params
+  | TLambda (t1, t2) ->
+    max (fresh_placeholder_mono t1) (fresh_placeholder_mono t2)
+  | TProd typs ->
+    List.fold_left
+      (fun i x -> max i (fresh_placeholder_mono x))
+      0
+      typs
+
+let fresh_placeholder = function
+  | TMono t | TPoly (_, t) -> fresh_placeholder_mono t
+
+let place_placeholder_constant i name = function
+  | CName name' when name = name' -> CPlaceholder i
+  | constant -> constant
+
+let rec place_placeholder_mono i name = function
+  | TParam (constant, params) ->
+    TParam (place_placeholder_constant i name constant, List.map (place_placeholder_mono i name) params)
+  | TProd typs ->
+    TProd (List.map (place_placeholder_mono i name) typs)
+  | TLambda (t1, t2) ->
+    TLambda (place_placeholder_mono i name t1, place_placeholder_mono i name t2)
+
+let place_placeholder name = function
+  | TMono t ->
+    let i = fresh_placeholder_mono t in
+    i, TMono (place_placeholder_mono i name t)
+  | TPoly (params, t) ->
+    let i = fresh_placeholder_mono t in
+    i, TPoly (params, place_placeholder_mono i name t)
 
 let mono_type_repr_of_type_expr (t : Types.type_expr) : mono_type_repr =
   let ext = named_poly_vars t in
@@ -160,12 +245,19 @@ let map_codomain (f : mono_type_repr -> mono_type_repr) (t : type_repr) : type_r
   | TMono mt -> TMono (aux mt)
 
 let type_lift t_name ?(args=[]) : type_repr -> type_repr =
-  map_codomain (fun t -> TParam (t_name, args @ [t]))
+  map_codomain (fun t -> TParam (CName t_name, args @ [t]))
 
 let rec tlambda lx r =
   match lx with
   | x :: rst -> TLambda (x, tlambda rst r)
   | [] -> r
+
+let translate_constant_repr ~rev_namespace tbl = function
+  | CName ocaml ->
+    (match Translation.find ~rev_namespace ~ocaml tbl with
+     | Some x -> CName x
+     | _ -> raise_error (UnknownOCamlType ocaml))
+  | x -> x
 
 let rec translate_mono_type_repr ~rev_namespace (tbl : Translation.t) = function
   | TLambda (t1, t2) ->
@@ -175,11 +267,9 @@ let rec translate_mono_type_repr ~rev_namespace (tbl : Translation.t) = function
   | TProd typ_list ->
     TProd (List.map (translate_mono_type_repr ~rev_namespace tbl) typ_list)
   | TParam (ocaml, typ_list) ->
-    (match Translation.find ~rev_namespace tbl ~ocaml with
-     | Some name' ->
-       let typ_list' = List.map (translate_mono_type_repr ~rev_namespace tbl) typ_list in
-       TParam (name', typ_list')
-     | None -> raise_error (UnknownOCamlType ocaml))
+    let name' = translate_constant_repr ~rev_namespace tbl ocaml in
+    let typ_list' = List.map (translate_mono_type_repr ~rev_namespace tbl) typ_list in
+    TParam (name', typ_list')
 
 let translate_type_repr ~rev_namespace (tbl : Translation.t) = function
   | TMono mono -> TMono (translate_mono_type_repr ~rev_namespace tbl mono)
@@ -199,7 +289,8 @@ let rec mono_dependencies (t : mono_type_repr) : string list =
   | TLambda (t1, t2) ->
     merge (mono_dependencies t1) (mono_dependencies t2)
   | TProd tl -> fold_mono_list tl
-  | TParam (t, params) -> merge [t] (fold_mono_list params)
+  | TParam (CName t, params) -> merge [t] (fold_mono_list params)
+  | TParam (_, params) -> fold_mono_list params
 
 let dependencies : type_repr -> string list = function
   | TMono t -> mono_dependencies t
@@ -219,6 +310,10 @@ type pos_constr =
   | CArrow
   | CProd
   | CParam
+
+let pp_constant_repr fmt = function
+  | CName x -> pp_print_text fmt x
+  | CPlaceholder i -> fprintf fmt "?%d" i
 
 let pp_mono_type_repr (fmt : formatter) mono =
 
@@ -248,11 +343,11 @@ let pp_mono_type_repr (fmt : formatter) mono =
            (pp_mono_type_repr_aux ~pos:PProd)) typ_list
         (close_paren pos CProd)
     | TParam (name, []) ->
-      pp_print_text fmt name
+      pp_constant_repr fmt name
     | TParam (name, args) ->
-      fprintf fmt "%s@[<hv 2>%s@ %a@]%s"
+      fprintf fmt "%s@[<hv 2>%a@ %a@]%s"
         (open_paren pos CParam)
-        name
+        pp_constant_repr name
         (pp_print_list ~pp_sep:pp_print_space
            (pp_mono_type_repr_aux ~pos:PParam)) args
         (close_paren pos CParam) in
@@ -268,7 +363,7 @@ let pp_type_repr (fmt : formatter) = function
       polys
       pp_mono_type_repr typ
 
-let type_sort_mono = TParam ("Type", [])
+let type_sort_mono = TParam (CName "Type", [])
 
 let type_sort = TMono type_sort_mono
 
