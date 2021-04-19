@@ -281,7 +281,7 @@ let call_vars proto =
 let instance_member_body proto name =
   let tvars = proto.prototype_type_args in
   let vars = call_vars proto in
-  if 0 < List.length vars + List.length tvars then
+  if 0 < List.length tvars then
     asprintf "@[<h 2>fun%a%a@ => %s%a@]"
       (pp_list
          ~pp_prefix:(fun fmt _ -> pp_print_text fmt " ")

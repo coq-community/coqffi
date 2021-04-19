@@ -11,8 +11,8 @@ This will be the initial release of `coqffi`.
 - **Fix:** `coqffi` now generates typeclass instances that Coq can
   better typecheck. The previous generation was mostly correct, but
   there were some erroneous cases that were hard to characterize. This
-  is why the new generation is systematically used, instead of only
-  when required.
+  is why the new generation is systematically used for polymorphic
+  primitives, instead of only when required.
 
 ## `coqffi.1.0.0~beta5`
 
