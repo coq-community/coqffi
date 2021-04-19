@@ -100,6 +100,11 @@
  (action
   (run coqffi -ftransparent-types %{cmi:type_aliases} -o %{target})))
 
+(rule
+ (target Infer.v)
+ (action
+  (run coqffi -flwt -r Examples.Lwt -ftransparent-types %{cmi:infer} -o %{target})))
+
 (coq.theory
  (name Examples)
  (theories CoqFFI))
