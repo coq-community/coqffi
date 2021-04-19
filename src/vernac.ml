@@ -6,10 +6,6 @@ open Repr
 open Lazylist
 open Pp
 
-let pp_lwt_t fmt = function
-  | Some lwt_module -> fprintf fmt "%s.t" lwt_module
-  | _ -> assert false
-
 let pp_lwt_return fmt = function
   | Some lwt_module -> fprintf fmt "%s.return" lwt_module
   | _ -> assert false
@@ -618,8 +614,7 @@ let interface_vernac aliases mod_name all_prims vernacs =
   |+ inj_instance
 
 let lwt_primitives_vernac lwt_module aliases m vernacs =
-  let lwt_t = asprintf "%a" pp_lwt_t lwt_module in
-  let to_lwt t = TParam (CName lwt_t, [ t ]) in
+  let to_lwt t = TParam (CName "Lwt.t", [ t ]) in
 
   let axiom_name prim =
     sprintf "ffi_lwt_%s" (Alias.coq_name aliases prim.prim_name)
@@ -672,7 +667,7 @@ let lwt_primitives_vernac lwt_module aliases m vernacs =
           TMono
             (TParam
                ( CName (sprintf "Monad%s" m.mod_name),
-                 [ TParam (CName lwt_t, []) ] ));
+                 [ TParam (CName "Lwt.t", []) ] ));
         instance_members = List.map to_member m.mod_primitives;
       }
   in
@@ -924,8 +919,8 @@ let primitives_vernac lwt_module aliases features m vernacs =
   |> is_enabled features FreeSpec @? semantics_vernac aliases m
   |> is_enabled features Lwt @? lwt_primitives_vernac lwt_module aliases m
 
-let lwt_vernac lwt_module aliases features m vernacs =
-  let lwt_t = asprintf "%a" pp_lwt_t lwt_module in
+let lwt_vernac aliases features m vernacs =
+  let lwt_t = "Lwt.t" in
   let mod_name = sprintf "%s_Async" m.mod_name in
 
   let to_prim lwt =
@@ -1028,7 +1023,7 @@ let rec module_vernac lwt_module aliases features models m vernac =
   |> (not (empty m.mod_functions)) @? functions_vernac aliases m
   |> (not (empty m.mod_primitives))
      @? primitives_vernac lwt_module aliases features m
-  |> (not (empty m.mod_lwt)) @? lwt_vernac lwt_module aliases features m
+  |> (not (empty m.mod_lwt)) @? lwt_vernac aliases features m
 
 and intros_vernac lwt_module aliases features models m vernacs =
   let transparent = is_enabled features TransparentTypes in
