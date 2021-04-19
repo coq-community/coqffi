@@ -7,17 +7,17 @@ This will be the initial release of `coqffi`.
 - **Breaking Change:** `coqffi` support of `Lwt` has been improved. It
   now handles “higher-order primitives” —that is, primitives where the
   `Lwt.t` not only appaers in the head position of the return type,
-  but also in their arguments for instance— more smoothly.
+  but also in their arguments for instance— more smoothly (`-flwt`)
 - **Fix:** `coqffi` now generates typeclass instances that Coq can
   better typecheck. The previous generation was mostly correct, but
   there were some erroneous cases that were hard to characterize. This
   is why the new generation is systematically used for polymorphic
-  primitives, instead of only when required.
+  primitives, instead of only when required
 
 ## `coqffi.1.0.0~beta5`
 
 - **Dependencies** Support Coq 8.13 in addition to Coq 8.12
-- **Fixed:** For an operator `o`, `coqffi` now uses the syntax `( o )`
+- **Fix:** For an operator `o`, `coqffi` now uses the syntax `( o )`
   in place of `(o)`, so that `(*)` is never outputted
 
 ## `coqffi.1.0.0~beta4`
