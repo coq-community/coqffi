@@ -1111,6 +1111,7 @@ and intros_vernac lwt_module aliases features models m vernacs =
                     };
                 ]
             | Record r, None, true ->
+                let ns = String.concat "." m.mod_namespace in
                 ExtractInductive
                   {
                     inductive_qualid = t.type_name;
@@ -1123,7 +1124,14 @@ and intros_vernac lwt_module aliases features models m vernacs =
                               (fun fmt f -> pp_print_text fmt f.field_name))
                            r
                        in
-                       [ asprintf "(fun (%s) -> { %s })" tuple tuple ]);
+                       let fields =
+                         asprintf "%a"
+                           (pp_list
+                              ~pp_sep:(fun fmt _ -> fprintf fmt "; ")
+                              (fun fmt f -> pp_print_text fmt f.field_name))
+                           r
+                       in
+                       [ sprintf "%s.(fun (%s) -> { %s })" ns tuple fields ]);
                   }
                 ::
                 List.map
@@ -1133,7 +1141,7 @@ and intros_vernac lwt_module aliases features models m vernacs =
                         constant_qualid = f.field_name;
                         constant_type_vars = [];
                         constant_target =
-                          asprintf "(fun x -> x.%s)" f.field_name;
+                          asprintf "%s.(fun x -> x.%s)" ns f.field_name;
                       })
                   r
             | _ ->

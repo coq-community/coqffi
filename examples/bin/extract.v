@@ -6,7 +6,8 @@ Open Scope monad_scope.
 From CoqFFI Require Import Extraction.
 Open Scope i63_scope.
 
-From Examples Require Import File Sleep.
+From Examples Require Import File Sleep Records.
+Import M.
 From CoqFFI Require Import String.
 
 Generalizable All Variables.
@@ -21,13 +22,15 @@ Definition cat_main : io_unit := IO.unsafe_run cat.
 
 Extraction "cat.ml" cat_main.
 
-Definition sleep_plenty `{Monad m, MonadFile m, MonadSleep m}
+Definition sleep_plenty `{Monad m, MonadFile m, MonadSleep m} (d : i63)
   : m unit :=
   write std_out "Hello...";;
-  let x := (5 * 1 + 1 - 3) / 3 in
+  let x := (5 * 1 + 1 - 3) / d in
   sleep x;;
   write std_out " sleepy world!\n".
 
-Definition sleep_plenty_main : io_unit := IO.unsafe_run sleep_plenty.
+Definition sleep_plenty_main : io_unit :=
+  let x := {| f1 := 1; f2 := 2 |} in
+  IO.unsafe_run (sleep_plenty (x.(f1) + x.(f2))).
 
 Extraction "sleep_plenty.ml" sleep_plenty_main.
