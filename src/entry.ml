@@ -26,6 +26,10 @@ type function_entry = {
   func_loc : Location.t;
 }
 
+type field_entry = { field_name : string; field_type : mono_type_repr }
+
+type record_entry = field_entry list
+
 type variant_entry = {
   variant_name : string;
   variant_prototype : prototype_repr;
@@ -33,6 +37,7 @@ type variant_entry = {
 
 type type_value =
   | Variant of variant_entry list
+  | Record of record_entry
   | Alias of mono_type_repr
   | Opaque
 
@@ -314,6 +319,16 @@ let entry_of_type lf ident decl rec_status loc =
         | None, Type_variant v ->
             let l = List.map (to_variant_entry params) v in
             if List.for_all unify l then Some (Variant l) else None
+        | None, Type_record (fields, _) ->
+            let record_fields =
+              List.map
+                (fun f ->
+                  let field_name = Ident.name f.ld_id in
+                  let field_type = mono_type_repr_of_type_expr f.ld_type in
+                  { field_name; field_type })
+                fields
+            in
+            Some (Record record_fields)
         | _ -> Some Opaque
       with _ -> Some Opaque
     else Some Opaque
@@ -487,6 +502,9 @@ let dependencies t =
              in
              Compat.concat_map dependencies typs)
            l)
+  | Record r ->
+      let typs = List.map (fun x -> x.field_type) r in
+      Compat.concat_map mono_dependencies typs
   | Alias mono -> mono_dependencies mono
   | Opaque -> []
 
@@ -587,8 +605,16 @@ let translate_variant ~rev_namespace tbl v =
       translate_prototype ~rev_namespace tbl v.variant_prototype;
   }
 
+let translate_record ~rev_namespace tbl r =
+  let translate_field f =
+    let field_type = translate_mono_type_repr ~rev_namespace tbl f.field_type in
+    { f with field_type }
+  in
+  List.map translate_field r
+
 let translate_type_value ~rev_namespace tbl = function
   | Variant l -> Variant (List.map (translate_variant ~rev_namespace tbl) l)
+  | Record r -> Record (translate_record ~rev_namespace tbl r)
   | Alias mono -> Alias (translate_mono_type_repr ~rev_namespace tbl mono)
   | Opaque -> Opaque
 

@@ -24,6 +24,10 @@ type function_entry = {
   func_loc : Location.t;
 }
 
+type field_entry = { field_name : string; field_type : mono_type_repr }
+
+type record_entry = field_entry list
+
 type variant_entry = {
   variant_name : string;
   variant_prototype : prototype_repr;
@@ -31,6 +35,7 @@ type variant_entry = {
 
 type type_value =
   | Variant of variant_entry list
+  | Record of record_entry
   | Alias of mono_type_repr
   | Opaque
 

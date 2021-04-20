@@ -16,6 +16,12 @@ type inductive = {
   inductive_constructors : constructor list;
 }
 
+type record = {
+  record_name : string;
+  record_type_args : string list;
+  record_fields : Entry.field_entry list;
+}
+
 type definition = {
   def_name : string;
   def_typeclass_args : string list;
@@ -73,6 +79,7 @@ and t =
   | Inductive of inductive list
   | Typeclass of typeclass
   | Instance of instance
+  | Record of record
   | Axiom of axiom
   | ExtractConstant of extract_constant
   | ExtractInductive of extract_inductive

@@ -63,6 +63,23 @@ let pp_inductive fmt = function
            pp_inductive_aux)
         lind
 
+type record = {
+  record_name : string;
+  record_type_args : string list;
+  record_fields : field_entry list;
+}
+
+let pp_record fmt r =
+  let pp_field fmt f =
+    fprintf fmt "%s : %a" f.field_name pp_mono_type_repr f.field_type
+  in
+
+  fprintf fmt "@[<hov 2>Record %s%a%a :=@ @[<hov>{@ %a@ }.@]@]" r.record_name
+    (pp_if_not_empty (fun fmt _ -> pp_print_text fmt " "))
+    r.record_type_args pp_type_args_list r.record_type_args
+    (pp_list ~pp_sep:(fun fmt _ -> fprintf fmt "@ ; ") pp_field)
+    r.record_fields
+
 type definition = {
   def_name : string;
   def_typeclass_args : string list;
@@ -204,6 +221,7 @@ and t =
   | Inductive of inductive list
   | Typeclass of typeclass
   | Instance of instance
+  | Record of record
   | Axiom of axiom
   | ExtractConstant of extract_constant
   | ExtractInductive of extract_inductive
@@ -253,6 +271,7 @@ let rec pp_vernac fmt = function
   | Require req -> pp_require fmt req
   | Definition def -> pp_definition fmt def
   | Inductive ind -> pp_inductive fmt ind
+  | Record rc -> pp_record fmt rc
   | Typeclass cls -> pp_typeclass fmt cls
   | Instance inst -> pp_instance fmt inst
   | Axiom ax -> pp_axiom fmt ax
@@ -409,6 +428,13 @@ let type_entry_to_vernac features (t : type_entry) : t =
             inductive_type = TMono (ind_type t.type_arity);
           };
         ]
+  | Entry.Record r, None, true ->
+      Record
+        {
+          record_name = t.type_name;
+          record_type_args = t.type_params;
+          record_fields = r;
+        }
   | Alias mono, None, true ->
       Definition
         {
@@ -1071,29 +1097,59 @@ and intros_vernac lwt_module aliases features models m vernacs =
 
   let to_extract = function
     | Right t ->
-        List.map
+        Compat.concat_map
           (fun t ->
             match (t.type_value, t.type_model, transparent) with
             | Variant l, None, true ->
+                [
+                  ExtractInductive
+                    {
+                      inductive_qualid = t.type_name;
+                      inductive_target = qualified_name m t.type_name;
+                      inductive_variants_target =
+                        List.map (fun x -> qualified_name m x.variant_name) l;
+                    };
+                ]
+            | Record r, None, true ->
                 ExtractInductive
                   {
                     inductive_qualid = t.type_name;
                     inductive_target = qualified_name m t.type_name;
                     inductive_variants_target =
-                      List.map (fun x -> qualified_name m x.variant_name) l;
+                      (let tuple =
+                         asprintf "%a"
+                           (pp_list
+                              ~pp_sep:(fun fmt _ -> fprintf fmt ", ")
+                              (fun fmt f -> pp_print_text fmt f.field_name))
+                           r
+                       in
+                       [ asprintf "(fun (%s) -> { %s })" tuple tuple ]);
                   }
+                ::
+                List.map
+                  (fun f ->
+                    ExtractConstant
+                      {
+                        constant_qualid = f.field_name;
+                        constant_type_vars = [];
+                        constant_target =
+                          asprintf "(fun x -> x.%s)" f.field_name;
+                      })
+                  r
             | _ ->
                 let type_params =
                   fst
                     (pick_params t.type_arity (make_params_pool t.type_params))
                   @ t.type_params
                 in
-                ExtractConstant
-                  {
-                    constant_qualid = t.type_name;
-                    constant_type_vars = type_params;
-                    constant_target = qualified_name m t.type_name;
-                  })
+                [
+                  ExtractConstant
+                    {
+                      constant_qualid = t.type_name;
+                      constant_type_vars = type_params;
+                      constant_target = qualified_name m t.type_name;
+                    };
+                ])
           t
     | _ -> []
   in

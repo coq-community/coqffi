@@ -10,6 +10,9 @@ This will be the initial release of `coqffi`.
   but also in their arguments for instance— more smoothly (`-flwt`)
 - **Feature:** Support primitive floats
 - **Feature:** Support 32bits signed integers
+- **Feature:** `coqffi` can now generate equivalent Coq types for
+  OCaml records.  However, it still does not support inline records
+  (`ftransparent-types`)
 - **Fix:** `coqffi` now generates typeclass instances that Coq can
   better typecheck. The previous generation was mostly correct, but
   there were some erroneous cases that were hard to characterize. This
