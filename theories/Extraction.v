@@ -3,6 +3,10 @@
 From CoqFFI Require Export Int.
 Import IntExtraction.
 
+
+(** * Float *)
+
+From Coq Require Export PrimFloat.
 (** ** Strings *)
 
 From Coq Require Export Ascii String.

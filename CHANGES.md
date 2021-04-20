@@ -8,6 +8,7 @@ This will be the initial release of `coqffi`.
   now handles “higher-order primitives” —that is, primitives where the
   `Lwt.t` not only appaers in the head position of the return type,
   but also in their arguments for instance— more smoothly (`-flwt`)
+- **Feature:** Support primitive floats
 - **Fix:** `coqffi` now generates typeclass instances that Coq can
   better typecheck. The previous generation was mostly correct, but
   there were some erroneous cases that were hard to characterize. This
