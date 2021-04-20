@@ -1,12 +1,14 @@
-(** ** Primitive Signed Integers *)
+(** ** Integers *)
 
 From CoqFFI Require Export Int.
 Import IntExtraction.
 
+From CoqFFI Require Export Int32.
 
 (** * Float *)
 
 From Coq Require Export PrimFloat.
+
 (** ** Strings *)
 
 From Coq Require Export Ascii String.

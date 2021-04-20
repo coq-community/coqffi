@@ -9,6 +9,7 @@ This will be the initial release of `coqffi`.
   `Lwt.t` not only appaers in the head position of the return type,
   but also in their arguments for instance— more smoothly (`-flwt`)
 - **Feature:** Support primitive floats
+- **Feature:** Support 32bits signed integers
 - **Fix:** `coqffi` now generates typeclass instances that Coq can
   better typecheck. The previous generation was mostly correct, but
   there were some erroneous cases that were hard to characterize. This

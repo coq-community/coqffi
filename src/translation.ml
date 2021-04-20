@@ -52,6 +52,7 @@ let types_table =
     |> Namespace.translate ~ocaml:"int" ~coq:"i63"
     |> Namespace.translate ~ocaml:"Stdlib.Seq.t" ~coq:"Seq.t"
     |> Namespace.translate ~ocaml:"Stdlib.result" ~coq:"sum"
+    |> Namespace.translate ~ocaml:"int32" ~coq:"i32"
     |> Namespace.preserve "float" |> Namespace.preserve "list"
     |> Namespace.preserve "option"
     |> Namespace.preserve "string"
