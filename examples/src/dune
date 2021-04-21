@@ -110,6 +110,11 @@
  (action
   (run coqffi -ftransparent-types %{cmi:records} -o %{target})))
 
+(rule
+ (target Conflicts.v)
+ (action
+  (run coqffi -ftransparent-types %{cmi:conflicts} -o %{target})))
+
 (coq.theory
  (name Examples)
  (theories CoqFFI))

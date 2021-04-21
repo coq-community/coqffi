@@ -2,20 +2,11 @@ open Sexplib
 open Coqffi
 open Coqffi.Mod
 open Coqffi.Entry
+open Coqffi.Conflict
 
 let str s = Sexp.Atom s
 
 let list l = Sexp.List l
-
-let ns_expend ns m = match ns with "" -> m | ns -> ns ^ "." ^ m
-
-let type_to_sexp ocamlns coqns typ =
-  let ocamlt = ocamlns ^ "." ^ typ.type_name in
-  let coqt = ns_expend coqns typ.type_name in
-  list [ str ocamlt; str "."; str coqt ]
-
-let mutually_recursive_type_to_sexp ocamlns coqns mt =
-  List.map (type_to_sexp ocamlns coqns) mt
 
 let ns_to_string = function
   | [ base ] -> [ base ]
@@ -24,18 +15,50 @@ let ns_to_string = function
       List.map (fun sep -> base ^ sep ^ String.concat "." rst) seps
   | _ -> assert false
 
-let rec intro_to_sexp ocamlns coqns aliases = function
-  | Right mt -> mutually_recursive_type_to_sexp ocamlns coqns mt
+let ns_expend ns m =
+  let m = of_coq_name m in
+  match ns with "" -> m | ns -> ns ^ "." ^ m
+
+let type_to_sexp ~libname ~rev_namespace ~coqns conflicts typ =
+  let coqt =
+    ns_expend coqns
+      (Conflict.get_coq_type rev_namespace conflicts ~ty:typ.type_name)
+  in
+
+  List.map
+    (fun sep ->
+      list
+        [
+          str
+            (libname ^ sep
+            ^ String.concat "." (List.rev (typ.type_name :: rev_namespace)));
+          str ".";
+          str coqt;
+        ])
+    [ "."; "__" ]
+
+let mutually_recursive_type_to_sexp ~libname ~rev_namespace ~coqns conflicts mt
+    =
+  Compat.concat_map (type_to_sexp ~libname ~rev_namespace ~coqns conflicts) mt
+
+let rec intro_to_sexp ~libname ~rev_namespace ~coqns conflicts = function
+  | Right mt ->
+      mutually_recursive_type_to_sexp ~libname ~rev_namespace ~coqns conflicts
+        mt
   | Left m ->
-      let coqns = ns_expend coqns (Alias.coq_name aliases m.mod_name) in
-      from_mod ~coqns aliases m
+      let rev_namespace = m.mod_name :: rev_namespace in
+      let coqmod = Conflict.get_coq_module conflicts ~m:m.mod_name in
+      let coqns = ns_expend coqns coqmod in
+      mod_to_sexp ~libname ~rev_namespace ~coqns conflicts m
 
-and from_mod ~coqns aliases (m : Mod.t) =
-  let ocamlns = ns_to_string m.mod_namespace in
+and mod_to_sexp ~libname ~rev_namespace ~coqns conflicts m =
+  Compat.concat_map
+    (intro_to_sexp ~libname ~rev_namespace ~coqns conflicts)
+    m.mod_intro
 
-  let aux ns = Compat.concat_map (intro_to_sexp ns coqns aliases) m.mod_intro in
-
-  Compat.concat_map aux ocamlns
+let of_mod ~coqns conflicts m =
+  mod_to_sexp ~libname:(List.hd m.mod_namespace) ~rev_namespace:[ m.mod_name ]
+    ~coqns conflicts m
 
 let pp fmt witness =
   let open Format in

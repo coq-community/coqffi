@@ -13,6 +13,10 @@ This will be the initial release of `coqffi`.
 - **Feature:** `coqffi` can now generate equivalent Coq types for
   OCaml records.  However, it still does not support inline records
   (`ftransparent-types`)
+- **Fix:** Improve `coqffi` resilience against unfortunate shadowing
+  of Coq definitions. `coqffi` will now deal correctly with several
+  fields having the same name, or several types having the same
+  constructors, etc.
 - **Fix:** `coqffi` now generates typeclass instances that Coq can
   better typecheck. The previous generation was mostly correct, but
   there were some erroneous cases that were hard to characterize. This

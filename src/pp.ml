@@ -1,5 +1,6 @@
 open Format
 open Repr
+open Conflict
 
 let print_prefix_suffix = function _ :: _ -> true | [] -> false
 
@@ -32,9 +33,9 @@ let pp_try_with pp fmt _ =
   fprintf fmt "try Stdlib.Result.ok %a with e -> Stdlib.Result.error e" pp ()
 
 let pp_fun_call ?(paren = true) fn_name args fmt _ =
-  fprintf fmt "%a%s%a%a"
+  fprintf fmt "%a%a%a%a"
     (fun fmt l -> if not_empty l && paren then pp_print_string fmt "(")
-    args fn_name
+    args pp_ocaml_name fn_name
     (pp_list
        ~pp_prefix:(fun fmt _ -> pp_print_string fmt " ")
        ~pp_sep:(fun fmt _ -> pp_print_string fmt " ")

@@ -21,7 +21,7 @@ val of_cmi_infos :
   Cmi_format.cmi_infos ->
   t
 
-val qualified_name : t -> string -> string
+val compute_conflicts : Conflict.t -> t -> Conflict.t
 
 val map_intro_list :
   (mutually_recursive_types_entry -> 'a) -> (t -> 'a) -> intro list -> 'a list

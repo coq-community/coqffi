@@ -1,4 +1,5 @@
 open Format
+open Conflict
 
 val pp_if_not_empty :
   (formatter -> unit -> unit) -> formatter -> 'a list -> unit
@@ -20,4 +21,4 @@ val pp_type_args_list : formatter -> string list -> unit
 val pp_try_with : (formatter -> unit -> unit) -> formatter -> unit -> unit
 
 val pp_fun_call :
-  ?paren:bool -> string -> string list -> formatter -> unit -> unit
+  ?paren:bool -> ocaml_name -> string list -> formatter -> unit -> unit

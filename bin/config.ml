@@ -1,7 +1,7 @@
 open Coqffi
 open Sexplib
 
-type t = { config_aliases : Alias.table; config_translations : Translation.t }
+type t = { config_conflicts : Conflict.t; config_translations : Translation.t }
 
 type lang = Sexp.t list
 
@@ -21,7 +21,7 @@ let sexpl_fold_left f acc = function
 
 let empty =
   {
-    config_aliases = Alias.default;
+    config_conflicts = Conflict.default;
     config_translations = Translation.types_table;
   }
 
@@ -40,34 +40,15 @@ let get_optional_section name lang =
 
 let from_path path : lang = open_in path |> Sexp.input_sexps
 
-let get_field name fields =
-  let rec get_field : section -> section = function
-    | Sexp.List (Sexp.Atom atom :: value :: _) when atom = name -> value
-    | Sexp.List (Sexp.Atom _ :: _ :: rst) -> get_field (Sexp.List rst)
-    | _ -> raise (MissingField (name, fields))
-  in
-  get_field fields
-
-let get_string_field name fields =
-  match get_field name fields with
-  | Sexp.Atom str -> str
-  | _ -> raise (FieldShouldBeString (name, fields))
-
 let feed_aliases (l : lang) (c : t) : t =
   let add_operator aliases = function
-    | Sexp.List [ Sexp.Atom ocaml; Sexp.Atom coq ] ->
-        Alias.add_operator ~ocaml ~coq aliases
+    | Sexp.List [ Sexp.Atom op; Sexp.Atom coq ] ->
+        Conflict.add_operator op ~coq aliases
     | u -> raise (IllFormedAliasesEntry u)
   in
 
-  let add_alias aliases op_spec =
-    let ocaml = get_string_field ":ocaml" op_spec
-    and coq = get_string_field ":coq" op_spec in
-    Alias.add_alias ~ocaml ~coq aliases
-  in
-
   let add_keyword aliases = function
-    | Sexp.Atom kw -> Alias.add_keyword aliases ~coq:kw
+    | Sexp.Atom kw -> Conflict.add_keyword kw aliases
     | _ -> assert false
   in
 
@@ -75,13 +56,12 @@ let feed_aliases (l : lang) (c : t) : t =
     sexpl_fold_left f acc (get_optional_section secname l)
   in
 
-  let config_aliases =
-    feed_section "operators" add_operator c.config_aliases
-    |> feed_section "aliases" add_alias
+  let config_conflicts =
+    feed_section "operators" add_operator c.config_conflicts
     |> feed_section "keywords" add_keyword
   in
 
-  { c with config_aliases }
+  { c with config_conflicts }
 
 let feed_translations (c : t) (l : lang) =
   let translations = get_optional_section "translations" l in

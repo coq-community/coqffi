@@ -70,8 +70,6 @@ let namespace_and_path modname =
 
   namespace_and_path [] (Str.split (Str.regexp "__") modname)
 
-let qualified_name m name = String.concat "." (m.mod_namespace @ [ name ])
-
 let error_function f e =
   {
     error_loc = f.func_loc;
@@ -198,3 +196,110 @@ let of_cmi_infos ~translations ~features ~lwt_module (info : cmi_infos) =
   module_of_signatures features lwt_module namespace name info.cmi_sign
   |> of_module_entry translations
   |> snd
+
+let compute_conflicts =
+  (* always call with [rev_namesace], which is never empty *)
+  let modname = List.hd in
+
+  let cc_variant ~rev_namespace owner conflicts v =
+    Conflict.add_constructor rev_namespace ~owner v.variant_name conflicts
+  in
+
+  let cc_field ~rev_namespace owner conflicts f =
+    Conflict.add_field rev_namespace ~owner f.field_name conflicts
+  in
+
+  let cc_type ~rev_namespace conflicts t =
+    let conflicts = Conflict.add_type rev_namespace t.type_name conflicts in
+
+    match t.type_value with
+    | Variant vs ->
+        List.fold_left (cc_variant ~rev_namespace t.type_name) conflicts vs
+    | Record fs ->
+        List.fold_left (cc_field ~rev_namespace t.type_name) conflicts fs
+    | _ -> conflicts
+  in
+
+  let cc_types ~rev_namespace conflicts typs =
+    List.fold_left (cc_type ~rev_namespace) conflicts typs
+  in
+
+  let cc_functions ~rev_namespace funcs conflicts =
+    List.fold_left
+      (fun conflicts func ->
+        Conflict.add_value rev_namespace func.func_name conflicts)
+      conflicts funcs
+  in
+
+  let cc_prim ~rev_namespace conflicts prim =
+    let modname = modname rev_namespace in
+    let owner = prim.prim_name in
+
+    Conflict.add_value rev_namespace owner conflicts
+    |> Conflict.add_helper rev_namespace owner Name.io_helper
+    |> Conflict.add_helper rev_namespace owner Name.lwt_sync_helper
+    |> Conflict.add_helper rev_namespace ~owner:modname owner
+         Name.interface_cstr
+    |> Conflict.add_helper rev_namespace owner Name.inject_helper
+    |> Conflict.add_helper rev_namespace owner Name.semantics_helper
+  in
+
+  let cc_prims ~rev_namespace prims conflicts =
+    let owner = modname rev_namespace in
+
+    List.fold_left (cc_prim ~rev_namespace) conflicts prims
+    |> Conflict.add_helper rev_namespace owner Name.prim_monad
+    |> Conflict.add_helper rev_namespace owner Name.io_instance
+    |> Conflict.add_helper rev_namespace owner Name.lwt_sync_instance
+    |> Conflict.add_helper rev_namespace owner Name.interface_type
+    |> Conflict.add_helper rev_namespace owner Name.inject_instance
+    |> Conflict.add_helper rev_namespace owner Name.semantics
+  in
+
+  let cc_lwt ~rev_namespace conflicts lwt =
+    let modname = modname rev_namespace in
+    let owner = lwt.lwt_name in
+
+    Conflict.add_value rev_namespace lwt.lwt_name conflicts
+    |> Conflict.add_helper rev_namespace owner Name.lwt_async_helper
+    |> Conflict.add_helper rev_namespace ~owner:modname owner
+         Name.interface_cstr
+    |> Conflict.add_helper rev_namespace owner Name.inject_helper
+    |> Conflict.add_helper rev_namespace owner Name.inject_instance
+  in
+
+  let cc_lwts ~rev_namespace lwts conflicts =
+    let owner = modname rev_namespace in
+
+    List.fold_left (cc_lwt ~rev_namespace) conflicts lwts
+    |> Conflict.add_helper rev_namespace owner Name.async_monad
+    |> Conflict.add_helper rev_namespace owner Name.lwt_async_instance
+    |> Conflict.add_helper rev_namespace owner Name.async_interface_type
+    |> Conflict.add_helper rev_namespace owner Name.async_inject_instance
+  in
+
+  let cc_exn ~rev_namespace conflicts exn =
+    let owner = exn.exception_name in
+    Conflict.add_helper rev_namespace owner Name.to_exn conflicts
+    |> Conflict.add_helper rev_namespace owner Name.of_exn
+    |> Conflict.add_helper rev_namespace owner Name.exn_proxy_type
+    |> Conflict.add_helper rev_namespace owner Name.exn_proxy_cstr
+    |> Conflict.add_helper rev_namespace owner Name.exn_instance
+  in
+
+  let cc_exns ~rev_namespace exns conflicts =
+    List.fold_left (cc_exn ~rev_namespace) conflicts exns
+  in
+
+  let rec cc_module ~rev_namespace conflicts m =
+    let rev_namespace = m.mod_name :: rev_namespace in
+
+    fold_intro_list (cc_types ~rev_namespace) (cc_module ~rev_namespace)
+      conflicts m.mod_intro
+    |> cc_functions ~rev_namespace m.mod_functions
+    |> cc_prims ~rev_namespace m.mod_primitives
+    |> cc_lwts ~rev_namespace m.mod_lwt
+    |> cc_exns ~rev_namespace m.mod_exceptions
+  in
+
+  cc_module ~rev_namespace:[]

@@ -4,6 +4,13 @@ open Cmdliner
 open Config
 open Format
 
+let compute_conflicts_table conflicts m = (m, Mod.compute_conflicts conflicts m)
+
+let vernac_of_mod lwt_module features models (m, conflicts) =
+  Vernac.of_mod lwt_module features models conflicts m
+
+let witness_of_mod coqns (m, conflicts) = Witness.of_mod ~coqns conflicts m
+
 let process coqns models lwt_module config features input ochannel
     (wchannel : formatter option) =
   let open Flow in
@@ -12,10 +19,10 @@ let process coqns models lwt_module config features input ochannel
   read_cmi input
   |> Mod.of_cmi_infos ~features ~translations:config.config_translations
        ~lwt_module
-  |> (Vernac.of_mod lwt_module config.config_aliases features models
+  |> compute_conflicts_table config.config_conflicts
+  |> (vernac_of_mod lwt_module features models
       @> flush ochannel Vernac.pp_vernac
-     || wchannel @? fun wc ->
-        Witness.from_mod ~coqns config.config_aliases @> flush wc Witness.pp)
+     || wchannel @? fun wc -> witness_of_mod coqns @> flush wc Witness.pp)
   |> qed
 
 exception TooManyArguments
@@ -61,9 +68,10 @@ let rec print_error fmt = function
       print_error fmt e'
   | Flow.LeftSideFailed e | Flow.RightSideFailed e -> print_error fmt e
   | Failure msg -> Format.fprintf fmt "Error: %s" msg
-  | _ ->
+  | e ->
       Format.fprintf fmt
-        "Error: Something went wrong, and we are not sure what exactly"
+        "Error: Something went wrong, and we are not sure what exactly\n\n%s"
+        (Printexc.to_string e)
 
 let input_cmi_arg =
   let doc =

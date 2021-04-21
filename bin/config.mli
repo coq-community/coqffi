@@ -1,7 +1,7 @@
 open Coqffi
 open Sexplib
 
-type t = { config_aliases : Alias.table; config_translations : Translation.t }
+type t = { config_conflicts : Conflict.t; config_translations : Translation.t }
 
 val empty : t
 
