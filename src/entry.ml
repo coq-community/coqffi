@@ -323,6 +323,7 @@ let entry_of_type lf ident decl rec_status loc =
             let record_fields =
               List.map
                 (fun f ->
+                  assert (f.ld_mutable = Immutable);
                   let field_name = Ident.name f.ld_id in
                   let field_type = mono_type_repr_of_type_expr f.ld_type in
                   { field_name; field_type })
