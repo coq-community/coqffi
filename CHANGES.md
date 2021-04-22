@@ -22,6 +22,9 @@ This will be the initial release of `coqffi`.
   there were some erroneous cases that were hard to characterize. This
   is why the new generation is systematically used for polymorphic
   primitives, instead of only when required
+- **Fix:** `coqffi` now handles correctly the translation of types
+  within successive inner modules, whereas it was only considering the
+  first one previously
 
 ## `coqffi.1.0.0~beta5`
 

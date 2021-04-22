@@ -144,8 +144,9 @@ and segment_module_intro ~rev_namespace tbl :
     intro_entry list -> Translation.t * intro list = function
   | [] -> (tbl, [])
   | IntroMod m :: rst ->
-      let rev_namespace = m.module_name :: rev_namespace in
-      let tbl, m = of_module_entry ~rev_namespace tbl m in
+      let tbl, m =
+        of_module_entry ~rev_namespace:(m.module_name :: rev_namespace) tbl m
+      in
       let tbl, rst = segment_module_intro ~rev_namespace tbl rst in
       (tbl, Left m :: rst)
   | l -> segment_module_intro_aux ~rev_namespace tbl [] l
