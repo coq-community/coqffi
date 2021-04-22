@@ -25,3 +25,9 @@ module Parent = struct
 end
 
 let t : Parent.t = 1
+
+module Kw = struct
+  let set _ = ()
+
+  type t = Set
+end

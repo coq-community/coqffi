@@ -25,3 +25,9 @@ module Parent : sig
 end
 
 val t : Parent.t
+
+module Kw : sig
+  val set : int -> unit
+
+  type t = Set
+end

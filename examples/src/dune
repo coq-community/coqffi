@@ -113,7 +113,7 @@
 (rule
  (target Conflicts.v)
  (action
-  (run coqffi -ftransparent-types %{cmi:conflicts} -o %{target})))
+  (run coqffi -finterface -ftransparent-types %{cmi:conflicts} -o %{target})))
 
 (coq.theory
  (name Examples)
