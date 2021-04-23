@@ -8,6 +8,7 @@ This will be the initial release of `coqffi`.
   now handles “higher-order primitives” —that is, primitives where the
   `Lwt.t` not only appaers in the head position of the return type,
   but also in their arguments for instance— more smoothly (`-flwt`)
+- **Feature:** Support labelled arguments
 - **Feature:** Support primitive floats
 - **Feature:** Support 32bits signed integers
 - **Feature:** `coqffi` can now generate equivalent Coq types for

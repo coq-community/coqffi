@@ -14,7 +14,7 @@ val pp_list :
   'a list ->
   unit
 
-val pp_args_list : formatter -> Repr.type_repr list -> unit
+val pp_args_list : formatter -> (string option * Repr.type_repr) list -> unit
 
 val pp_type_args_list : formatter -> string list -> unit
 

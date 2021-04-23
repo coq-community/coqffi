@@ -166,8 +166,8 @@ let rec exclude cmp l1 l2 =
 let prototype_of_constructor params_type args ret =
   let typify acc t =
     match type_repr_of_type_expr t with
-    | TPoly (p, t) -> (p @ acc, TMono t)
-    | t -> (acc, t)
+    | TPoly (p, t) -> (p @ acc, (None, TMono t))
+    | t -> (acc, (None, t))
   in
 
   let monoify = function TPoly (p, t) -> (p, TMono t) | t -> ([], t) in
@@ -499,7 +499,7 @@ let dependencies t =
            (fun e ->
              let typs =
                e.variant_prototype.prototype_ret_type
-               :: e.variant_prototype.prototype_args
+               :: List.map snd e.variant_prototype.prototype_args
              in
              Compat.concat_map dependencies typs)
            l)
@@ -587,7 +587,9 @@ let translate_prototype ~rev_namespace tbl p =
   {
     p with
     prototype_args =
-      List.map (translate_type_repr ~rev_namespace tbl) p.prototype_args;
+      List.map
+        (fun (label, t) -> (label, translate_type_repr ~rev_namespace tbl t))
+        p.prototype_args;
     prototype_ret_type =
       translate_type_repr ~rev_namespace tbl p.prototype_ret_type;
   }

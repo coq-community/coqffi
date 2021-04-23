@@ -298,12 +298,18 @@ let empty = function [] -> true | _ -> false
 
 let ( @? ) cond f = if cond then f else fun x -> x
 
-let call_vars proto =
+let proto_vars proto =
   List.mapi (fun i _ -> sprintf "x%d" i) proto.prototype_args
+
+let call_vars proto =
+  List.mapi
+    (fun i (l, _) ->
+      sprintf "%sx%d" (Option.fold ~some:(fun x -> x ^ ":") ~none:"" l) i)
+    proto.prototype_args
 
 let instance_member_body proto name =
   let tvars = proto.prototype_type_args in
-  let vars = call_vars proto in
+  let vars = proto_vars proto in
   if 0 < List.length tvars then
     asprintf "@[<h 2>fun%a%a@ => %a%a@]"
       (pp_list
@@ -393,13 +399,25 @@ let functions_vernac ~rev_namespace conflicts m =
     let func_extract f =
       if f.func_may_raise then
         let proto = type_repr_to_prototype_repr f.func_type in
-        let args = call_vars proto in
+        let pargs = proto_vars proto in
+        let cargs = call_vars proto in
         asprintf "(fun %a -> %a)"
           (pp_print_list
              ~pp_sep:(fun fmt _ -> pp_print_string fmt " ")
              pp_print_string)
-          args
-          (pp_try_with (pp_fun_call target args))
+          pargs
+          (pp_try_with (pp_fun_call target cargs))
+          ()
+      else if has_labelled_arg f.func_type then
+        let proto = type_repr_to_prototype_repr f.func_type in
+        let pargs = proto_vars proto in
+        let cargs = call_vars proto in
+        asprintf "(fun %a -> %a)"
+          (pp_print_list
+             ~pp_sep:(fun fmt _ -> pp_print_string fmt " ")
+             pp_print_string)
+          pargs
+          (pp_fun_call ~paren:false target cargs)
           ()
       else asprintf "%a" pp_ocaml_name target
     in
@@ -435,7 +453,9 @@ let field_entry_to_field ~rev_namespace owner conflicts (r : field_entry) =
 
 let rec ind_type arity =
   if arity == 0 then type_sort_mono
-  else TLambda (type_sort_mono, ind_type (arity - 1))
+  else
+    TLambda
+      { label = None; domain = type_sort_mono; codomain = ind_type (arity - 1) }
 
 let type_entry_to_vernac ~rev_namespace conflicts features t =
   let transparent = is_enabled features TransparentTypes in
@@ -523,8 +543,9 @@ let io_primitives_vernac ~rev_namespace conflicts m =
       Conflict.get_ocaml_value rev_namespace conflicts ~value:prim.prim_name
     in
     let proto = type_repr_to_prototype_repr prim.prim_type in
-    let args = call_vars proto in
-    let pp_call = pp_fun_call ~paren:false (qualified_name m ocaml_name) args in
+    let pargs = proto_vars proto in
+    let cargs = call_vars proto in
+    let pp_call = pp_fun_call (qualified_name m ocaml_name) cargs in
     let body =
       asprintf "(%a)"
         (if prim.prim_may_raise then pp_try_with pp_call else pp_call)
@@ -540,7 +561,7 @@ let io_primitives_vernac ~rev_namespace conflicts m =
             (pp_list
                ~pp_prefix:(fun fmt _ -> pp_print_string fmt " ")
                ~pp_sep:pp_print_space pp_print_string)
-            args body;
+            pargs body;
       }
   in
 
@@ -636,7 +657,7 @@ let interface_vernac ~rev_namespace conflicts mod_name interface_name class_name
           (fun fmt _ ->
             fprintf fmt "inject (%a %a)" pp_coq_name cstr
               (pp_print_list ~pp_sep:pp_print_space pp_print_string)
-              (call_vars proto));
+              (proto_vars proto));
       }
   in
 
@@ -730,13 +751,14 @@ let lwt_primitives_vernac ~rev_namespace conflicts lwt_module m vernacs =
 
   let to_extract_target prim =
     let proto = type_repr_to_prototype_repr prim.prim_type in
-    let vars = call_vars proto in
+    let pvars = proto_vars proto in
+    let cvars = call_vars proto in
     let target =
       Conflict.get_ocaml_value rev_namespace conflicts ~value:prim.prim_name
     in
     asprintf "(fun %a => %a %a)"
       (pp_list ~pp_sep:(fun fmt _ -> pp_print_string fmt " ") pp_print_string)
-      vars pp_lwt_return lwt_module (pp_fun_call target vars) ()
+      pvars pp_lwt_return lwt_module (pp_fun_call target cvars) ()
   in
 
   let to_extract prim =
@@ -859,7 +881,7 @@ let semantics_vernac ~rev_namespace conflicts m vernacs =
                   mod_name
                   (pp_print_list ~pp_sep:pp_print_space (fun fmt prim ->
                        let proto = type_repr_to_prototype_repr prim.prim_type in
-                       let args = call_vars proto in
+                       let args = proto_vars proto in
                        fprintf fmt "@[<hov 2>| @[<h>%a %a@]@ => @[<h>%a %a@]@]"
                          pp_coq_name
                          (interface_constructor_name rev_namespace conflicts
@@ -922,7 +944,10 @@ let exceptions_vernac ~rev_namespace conflicts m vernacs =
         {
           axiom_typeclass_args = [];
           axiom_name = to_exn;
-          axiom_type = TMono (TLambda (proxy_type, exn_type));
+          axiom_type =
+            TMono
+              (TLambda
+                 { label = None; domain = proxy_type; codomain = exn_type });
         }
     in
     let of_exn_axiom =
@@ -931,11 +956,17 @@ let exceptions_vernac ~rev_namespace conflicts m vernacs =
           axiom_typeclass_args = [];
           axiom_name = of_exn;
           axiom_type =
-            TMono (TLambda (exn_type, TParam (CName "option", [ proxy_type ])));
+            TMono
+              (TLambda
+                 {
+                   label = None;
+                   domain = exn_type;
+                   codomain = TParam (CName "option", [ proxy_type ]);
+                 });
         }
     in
 
-    let vars = call_vars proxy_proto in
+    let vars = proto_vars proxy_proto in
 
     let enclose = function _ :: _ :: _ -> true | _ -> false in
 

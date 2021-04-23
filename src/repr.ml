@@ -4,7 +4,11 @@ open Error
 type constant_repr = CPlaceholder of int | CName of string
 
 type mono_type_repr =
-  | TLambda of (mono_type_repr * mono_type_repr)
+  | TLambda of {
+      label : string option;
+      domain : mono_type_repr;
+      codomain : mono_type_repr;
+    }
   | TProd of mono_type_repr list
   | TParam of (constant_repr * mono_type_repr list)
 
@@ -18,13 +22,13 @@ let of_mono_type_repr params mono =
   match params with [] -> TMono mono | params -> TPoly (params, mono)
 
 let supposedly_pure t =
-  match to_mono_type_repr t with TLambda (_, _) -> false | _ -> true
+  match to_mono_type_repr t with TLambda _ -> false | _ -> true
 
 let asynchronous ~lwt_module typ =
   let lwt = Option.map (fun x -> x ^ ".t") lwt_module in
 
   let rec mono_asynchronous = function
-    | TLambda (_, r) -> mono_asynchronous r
+    | TLambda { codomain; _ } -> mono_asynchronous codomain
     | TParam (CName type_name, [ _ ]) -> lwt = Some type_name
     | _ -> false
   in
@@ -128,10 +132,16 @@ let rec mono_type_repr_of_type_expr_with_params params (t : Types.type_expr) :
       (params, TParam (CName p, []))
   | Tvar (Some x) ->
       (params, TParam (CName x, [])) (* FIXME: Support labeled arguments *)
-  | Tarrow (Nolabel, t1, t2, _) ->
-      let params, i1 = mono_type_repr_of_type_expr_with_params params t1 in
-      let params, i2 = mono_type_repr_of_type_expr_with_params params t2 in
-      (params, TLambda (i1, i2))
+  | Tarrow (label, t1, t2, _) ->
+      let label =
+        match label with Optional opt | Labelled opt -> Some opt | _ -> None
+      in
+
+      let params, domain = mono_type_repr_of_type_expr_with_params params t1 in
+      let params, codomain =
+        mono_type_repr_of_type_expr_with_params params t2
+      in
+      (params, TLambda { label; domain; codomain })
   | Ttuple l ->
       let params, l =
         Compat.fold_left_map mono_type_repr_of_type_expr_with_params params l
@@ -151,8 +161,25 @@ let rec fill_placeholder_mono i name = function
   | TParam (constant, params) ->
       TParam (constant, List.map (fill_placeholder_mono i name) params)
   | TProd typs -> TProd (List.map (fill_placeholder_mono i name) typs)
-  | TLambda (t1, t2) ->
-      TLambda (fill_placeholder_mono i name t1, fill_placeholder_mono i name t2)
+  | TLambda lambda ->
+      TLambda
+        {
+          lambda with
+          domain = fill_placeholder_mono i name lambda.domain;
+          codomain = fill_placeholder_mono i name lambda.codomain;
+        }
+
+let rec mono_has_labelled_arg = function
+  | TLambda { label = Some _; _ } -> true
+  | TLambda { codomain; _ } -> mono_has_labelled_arg codomain
+  | _ -> false
+
+let has_labelled_arg t = to_mono_type_repr t |> mono_has_labelled_arg
+
+let rec mono_has_labelled_arg = function
+  | TLambda { label = Some _; _ } -> true
+  | TLambda { codomain; _ } -> mono_has_labelled_arg codomain
+  | _ -> false
 
 (* [monadic {m} t] returns [true] when [t] features a subpart of the
    form {m _}. For instance, [monadic {m} {m bool}] and [monadic {m}
@@ -161,7 +188,7 @@ let rec monadic m = function
   | TParam (m', _) when m = m' -> true
   | TParam (_, typs) -> List.exists (monadic m) typs
   | TProd typs -> List.exists (monadic m) typs
-  | TLambda (t1, t2) -> monadic m t1 || monadic m t2
+  | TLambda { domain; codomain; _ } -> monadic m domain || monadic m codomain
 
 (* [higher_order_monadic {m} t] returns [true] when [t] features a
    subpart of the form {m _}, more precisely
@@ -172,7 +199,8 @@ let rec monadic m = function
        [{list (m a)}] is true *)
 let rec higher_order_monadic_mono m = function
   | TParam (_, typs) -> List.exists (monadic m) typs
-  | TLambda (t1, t2) -> monadic m t1 || higher_order_monadic_mono m t2
+  | TLambda { domain; codomain; _ } ->
+      monadic m domain || higher_order_monadic_mono m codomain
   | t -> monadic m t
 
 let higher_order_monadic m = function
@@ -190,8 +218,8 @@ let rec fresh_placeholder_mono = function
         (fun i x -> max i (fresh_placeholder_mono x))
         (next_placeholder constant)
         params
-  | TLambda (t1, t2) ->
-      max (fresh_placeholder_mono t1) (fresh_placeholder_mono t2)
+  | TLambda { domain; codomain; _ } ->
+      max (fresh_placeholder_mono domain) (fresh_placeholder_mono codomain)
   | TProd typs ->
       List.fold_left (fun i x -> max i (fresh_placeholder_mono x)) 0 typs
 
@@ -208,9 +236,13 @@ let rec place_placeholder_mono i name = function
         ( place_placeholder_constant i name constant,
           List.map (place_placeholder_mono i name) params )
   | TProd typs -> TProd (List.map (place_placeholder_mono i name) typs)
-  | TLambda (t1, t2) ->
+  | TLambda lambda ->
       TLambda
-        (place_placeholder_mono i name t1, place_placeholder_mono i name t2)
+        {
+          lambda with
+          domain = place_placeholder_mono i name lambda.domain;
+          codomain = place_placeholder_mono i name lambda.codomain;
+        }
 
 let place_placeholder name = function
   | TMono t ->
@@ -262,7 +294,7 @@ let type_repr_of_type_expr (t : Types.type_expr) : type_repr =
 let map_codomain (f : mono_type_repr -> mono_type_repr) (t : type_repr) :
     type_repr =
   let rec aux = function
-    | TLambda (t1, t2) -> TLambda (t1, aux t2)
+    | TLambda lambda -> TLambda { lambda with codomain = aux lambda.codomain }
     | t -> f t
   in
 
@@ -274,7 +306,9 @@ let type_lift t_name ?(args = []) : type_repr -> type_repr =
   map_codomain (fun t -> TParam (CName t_name, args @ [ t ]))
 
 let rec tlambda lx r =
-  match lx with x :: rst -> TLambda (x, tlambda rst r) | [] -> r
+  match lx with
+  | domain :: rst -> TLambda { label = None; domain; codomain = tlambda rst r }
+  | [] -> r
 
 let translate_constant_repr ~rev_namespace tbl = function
   | CName ocaml -> (
@@ -284,10 +318,12 @@ let translate_constant_repr ~rev_namespace tbl = function
   | x -> x
 
 let rec translate_mono_type_repr ~rev_namespace (tbl : Translation.t) = function
-  | TLambda (t1, t2) ->
-      let t1' = translate_mono_type_repr ~rev_namespace tbl t1 in
-      let t2' = translate_mono_type_repr ~rev_namespace tbl t2 in
-      TLambda (t1', t2')
+  | TLambda lambda ->
+      let domain = translate_mono_type_repr ~rev_namespace tbl lambda.domain in
+      let codomain =
+        translate_mono_type_repr ~rev_namespace tbl lambda.codomain
+      in
+      TLambda { lambda with domain; codomain }
   | TProd typ_list ->
       TProd (List.map (translate_mono_type_repr ~rev_namespace tbl) typ_list)
   | TParam (ocaml, typ_list) ->
@@ -315,7 +351,8 @@ let rec mono_dependencies (t : mono_type_repr) : string list =
     Compat.concat_map (fun t -> mono_dependencies t)
   in
   match t with
-  | TLambda (t1, t2) -> merge (mono_dependencies t1) (mono_dependencies t2)
+  | TLambda { domain; codomain; _ } ->
+      merge (mono_dependencies domain) (mono_dependencies codomain)
   | TProd tl -> fold_mono_list tl
   | TParam (CName t, params) -> merge [ t ] (fold_mono_list params)
   | TParam (_, params) -> fold_mono_list params
@@ -345,12 +382,12 @@ let pp_mono_type_repr (fmt : formatter) mono =
   let close_paren pos constr = if paren pos constr then ")" else "" in
 
   let rec pp_mono_type_repr_aux ~(pos : type_pos) (fmt : formatter) = function
-    | TLambda (t1, t2) ->
+    | TLambda { domain; codomain; _ } ->
         fprintf fmt "%s@[<hov>%a@ -> %a@]%s" (open_paren pos CArrow)
           (pp_mono_type_repr_aux ~pos:PArrowLeft)
-          t1
+          domain
           (pp_mono_type_repr_aux ~pos:PArrowRight)
-          t2 (close_paren pos CArrow)
+          codomain (close_paren pos CArrow)
     | TProd typ_list ->
         fprintf fmt "%s@[%a@]%s" (open_paren pos CProd)
           (pp_print_list
@@ -382,13 +419,14 @@ let type_sort = TMono type_sort_mono
 
 type prototype_repr = {
   prototype_type_args : string list;
-  prototype_args : type_repr list;
+  prototype_args : (string option * type_repr) list;
   prototype_ret_type : type_repr;
 }
 
 let type_repr_to_prototype_repr =
   let rec split_mono_type args acc = function
-    | TLambda (x, rst) -> split_mono_type args (TMono x :: acc) rst
+    | TLambda { domain; codomain; label } ->
+        split_mono_type args ((label, TMono domain) :: acc) codomain
     | t ->
         {
           prototype_type_args = args;

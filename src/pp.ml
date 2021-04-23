@@ -18,7 +18,7 @@ let pp_if_not_empty pp fmt l = if not_empty l then pp fmt ()
 let pp_args_list fmt args_list =
   let idx = ref 0 in
   pp_print_list ~pp_sep:pp_print_space
-    (fun fmt arg ->
+    (fun fmt (_, arg) ->
       let x = !idx in
       fprintf fmt "(x%d : %a)" x pp_type_repr arg;
       idx := x + 1)

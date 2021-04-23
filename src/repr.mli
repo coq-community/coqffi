@@ -10,8 +10,13 @@
 type constant_repr = CPlaceholder of int | CName of string
 
 type mono_type_repr =
-  | TLambda of (mono_type_repr * mono_type_repr)
-      (** [TLambda (u, v)] ≡ [u -> v] *)
+  | TLambda of {
+      label : string option;
+      domain : mono_type_repr;
+      codomain : mono_type_repr;
+    }
+      (** [TLambda { None, u, v }] ≡ [u -> v],
+          [TLambda { Some "x", u, v }] ≡ [x:u -> v] *)
   | TProd of mono_type_repr list  (** [TProd [t0; ..; tn]] ≡ [(t0, .., tn)] *)
   | TParam of (constant_repr * mono_type_repr list)
       (** [TParam ("t", [t0; ..; tn])] ≡ [(t0, .., tn) t] *)
@@ -60,6 +65,10 @@ val type_repr_of_type_expr : Types.type_expr -> type_repr
 (** {2 Heplers Functions} *)
 
 val mono_type_repr_of_type_expr : Types.type_expr -> mono_type_repr
+
+val mono_has_labelled_arg : mono_type_repr -> bool
+
+val has_labelled_arg : type_repr -> bool
 
 val tlambda : mono_type_repr list -> mono_type_repr -> mono_type_repr
 (** Create a function type, {e i.e.}, [tlambda [a; b; c] d ≡ a -> b ->
@@ -112,7 +121,7 @@ val type_sort : type_repr
 
 type prototype_repr = {
   prototype_type_args : string list;
-  prototype_args : type_repr list;
+  prototype_args : (string option * type_repr) list;
   prototype_ret_type : type_repr;
 }
 

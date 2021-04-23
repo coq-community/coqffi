@@ -115,6 +115,11 @@
  (action
   (run coqffi -finterface -ftransparent-types %{cmi:conflicts} -o %{target})))
 
+(rule
+ (target Labelarg.v)
+ (action
+  (run coqffi -finterface -ftransparent-types %{cmi:labelarg} -o %{target})))
+
 (coq.theory
  (name Examples)
  (theories CoqFFI))
