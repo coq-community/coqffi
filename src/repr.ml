@@ -3,9 +3,14 @@ open Error
 
 type constant_repr = CPlaceholder of int | CName of string
 
+type argument_type =
+  | PositionedArg of int
+  | LabeledArg of string
+  | OptionalArg of string
+
 type mono_type_repr =
   | TLambda of {
-      label : string option;
+      argtype : argument_type;
       domain : mono_type_repr;
       codomain : mono_type_repr;
     }
@@ -124,36 +129,36 @@ let named_poly_vars (t : Types.type_expr) : string list =
 
   minimize (named_poly_vars t)
 
-let rec mono_type_repr_of_type_expr_with_params params (t : Types.type_expr) :
+let mono_type_repr_of_type_expr_with_params params t :
     params_pool * mono_type_repr =
-  match t.desc with
-  | Tvar (Some "_") | Tvar None ->
-      let p, params = pick_param params in
-      (params, TParam (CName p, []))
-  | Tvar (Some x) ->
-      (params, TParam (CName x, [])) (* FIXME: Support labeled arguments *)
-  | Tarrow (label, t1, t2, _) ->
-      let label =
-        match label with Optional opt | Labelled opt -> Some opt | _ -> None
-      in
+  let initial_pos = 1 in
+  let rec aux pos params (t : Types.type_expr) =
+    match t.desc with
+    | Tvar (Some "_") | Tvar None ->
+        let p, params = pick_param params in
+        (params, TParam (CName p, []))
+    | Tvar (Some x) ->
+        (params, TParam (CName x, [])) (* FIXME: Support labeled arguments *)
+    | Tarrow (label, t1, t2, _) ->
+        let argtype =
+          match label with
+          | Optional opt -> OptionalArg opt
+          | Labelled opt -> LabeledArg opt
+          | _ -> PositionedArg pos
+        in
 
-      let params, domain = mono_type_repr_of_type_expr_with_params params t1 in
-      let params, codomain =
-        mono_type_repr_of_type_expr_with_params params t2
-      in
-      (params, TLambda { label; domain; codomain })
-  | Ttuple l ->
-      let params, l =
-        Compat.fold_left_map mono_type_repr_of_type_expr_with_params params l
-      in
-      (params, TProd l)
-  | Tconstr (name, types, _) ->
-      let params, t =
-        Compat.fold_left_map mono_type_repr_of_type_expr_with_params params
-          types
-      in
-      (params, TParam (CName (Path.name name), t))
-  | _ -> raise_error (UnsupportedOCamlType t)
+        let params, domain = aux initial_pos params t1 in
+        let params, codomain = aux (pos + 1) params t2 in
+        (params, TLambda { argtype; domain; codomain })
+    | Ttuple l ->
+        let params, l = Compat.fold_left_map (aux initial_pos) params l in
+        (params, TProd l)
+    | Tconstr (name, types, _) ->
+        let params, t = Compat.fold_left_map (aux initial_pos) params types in
+        (params, TParam (CName (Path.name name), t))
+    | _ -> raise_error (UnsupportedOCamlType t)
+  in
+  aux initial_pos params t
 
 let rec fill_placeholder_mono i name = function
   | TParam (CPlaceholder i', params) when i = i' ->
@@ -170,16 +175,13 @@ let rec fill_placeholder_mono i name = function
         }
 
 let rec mono_has_labelled_arg = function
-  | TLambda { label = Some _; _ } -> true
+  | TLambda { argtype = OptionalArg _; _ }
+  | TLambda { argtype = LabeledArg _; _ } ->
+      true
   | TLambda { codomain; _ } -> mono_has_labelled_arg codomain
   | _ -> false
 
 let has_labelled_arg t = to_mono_type_repr t |> mono_has_labelled_arg
-
-let rec mono_has_labelled_arg = function
-  | TLambda { label = Some _; _ } -> true
-  | TLambda { codomain; _ } -> mono_has_labelled_arg codomain
-  | _ -> false
 
 (* [monadic {m} t] returns [true] when [t] features a subpart of the
    form {m _}. For instance, [monadic {m} {m bool}] and [monadic {m}
@@ -305,10 +307,19 @@ let map_codomain (f : mono_type_repr -> mono_type_repr) (t : type_repr) :
 let type_lift t_name ?(args = []) : type_repr -> type_repr =
   map_codomain (fun t -> TParam (CName t_name, args @ [ t ]))
 
-let rec tlambda lx r =
-  match lx with
-  | domain :: rst -> TLambda { label = None; domain; codomain = tlambda rst r }
-  | [] -> r
+let tlambda =
+  let rec aux pos lx r =
+    match lx with
+    | domain :: rst ->
+        TLambda
+          {
+            argtype = PositionedArg pos;
+            domain;
+            codomain = aux (pos + 1) rst r;
+          }
+    | [] -> r
+  in
+  aux 0
 
 let translate_constant_repr ~rev_namespace tbl = function
   | CName ocaml -> (
@@ -419,14 +430,14 @@ let type_sort = TMono type_sort_mono
 
 type prototype_repr = {
   prototype_type_args : string list;
-  prototype_args : (string option * type_repr) list;
+  prototype_args : (argument_type * type_repr) list;
   prototype_ret_type : type_repr;
 }
 
 let type_repr_to_prototype_repr =
   let rec split_mono_type args acc = function
-    | TLambda { domain; codomain; label } ->
-        split_mono_type args ((label, TMono domain) :: acc) codomain
+    | TLambda { domain; codomain; argtype } ->
+        split_mono_type args ((argtype, TMono domain) :: acc) codomain
     | t ->
         {
           prototype_type_args = args;

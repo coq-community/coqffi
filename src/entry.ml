@@ -166,8 +166,8 @@ let rec exclude cmp l1 l2 =
 let prototype_of_constructor params_type args ret =
   let typify acc t =
     match type_repr_of_type_expr t with
-    | TPoly (p, t) -> (p @ acc, (None, TMono t))
-    | t -> (acc, (None, t))
+    | TPoly (p, t) -> (p @ acc, (PositionedArg 0, TMono t))
+    | t -> (acc, (PositionedArg 0, t))
   in
 
   let monoify = function TPoly (p, t) -> (p, TMono t) | t -> ([], t) in

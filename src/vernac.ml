@@ -299,13 +299,10 @@ let empty = function [] -> true | _ -> false
 let ( @? ) cond f = if cond then f else fun x -> x
 
 let proto_vars proto =
-  List.mapi (fun i _ -> sprintf "x%d" i) proto.prototype_args
+  List.map (fun (l, _) -> asprintf "%a" pp_arg_name l) proto.prototype_args
 
 let call_vars proto =
-  List.mapi
-    (fun i (l, _) ->
-      sprintf "%sx%d" (Option.fold ~some:(fun x -> x ^ ":") ~none:"" l) i)
-    proto.prototype_args
+  List.map (fun (l, _) -> asprintf "%a" pp_arg_call l) proto.prototype_args
 
 let instance_member_body proto name =
   let tvars = proto.prototype_type_args in
@@ -451,11 +448,18 @@ let field_entry_to_field ~rev_namespace owner conflicts (r : field_entry) =
   in
   { field_name; field_type = r.field_type }
 
-let rec ind_type arity =
-  if arity == 0 then type_sort_mono
-  else
-    TLambda
-      { label = None; domain = type_sort_mono; codomain = ind_type (arity - 1) }
+let ind_type =
+  let rec aux pos arity =
+    if arity == 0 then type_sort_mono
+    else
+      TLambda
+        {
+          argtype = PositionedArg pos;
+          domain = type_sort_mono;
+          codomain = aux (pos + 1) (arity - 1);
+        }
+  in
+  aux 0
 
 let type_entry_to_vernac ~rev_namespace conflicts features t =
   let transparent = is_enabled features TransparentTypes in
@@ -947,7 +951,11 @@ let exceptions_vernac ~rev_namespace conflicts m vernacs =
           axiom_type =
             TMono
               (TLambda
-                 { label = None; domain = proxy_type; codomain = exn_type });
+                 {
+                   argtype = PositionedArg 0;
+                   domain = proxy_type;
+                   codomain = exn_type;
+                 });
         }
     in
     let of_exn_axiom =
@@ -959,7 +967,7 @@ let exceptions_vernac ~rev_namespace conflicts m vernacs =
             TMono
               (TLambda
                  {
-                   label = None;
+                   argtype = PositionedArg 0;
                    domain = exn_type;
                    codomain = TParam (CName "option", [ proxy_type ]);
                  });
