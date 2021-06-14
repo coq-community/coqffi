@@ -11,7 +11,7 @@ case "${ocaml_version}" in
 esac
 
 case "${coq_version}" in
-    8.14) true ;; # this is the dev version of coq
+    8.15 | 8.14) true ;; # dev versions
     8.13) true ;;
     8.12) patch -p1 -u < patches/coq.8.12.patch ;;
     *) echo "unsupported Coq version ${coq_version}"; exit 1 ;;
