@@ -2,7 +2,7 @@
 
 This will be the initial release of `coqffi`.
 
-## Unreleased
+## `coqffi.1.0.0~beta6`
 
 - **Breaking Change:** `coqffi` support of `Lwt` has been improved. It
   now handles “higher-order primitives” —that is, primitives where the
