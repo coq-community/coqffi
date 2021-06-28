@@ -9,14 +9,16 @@
 
 type constant_repr = CPlaceholder of int | CName of string
 
-type argument_type =
-  | PositionedArg of int
+type argument_kind =
+  | PositionedArg
   | LabeledArg of string
   | OptionalArg of string
 
+type argument = { position : int; kind : argument_kind }
+
 type mono_type_repr =
   | TLambda of {
-      argtype : argument_type;
+      argtype : argument;
       domain : mono_type_repr;
       codomain : mono_type_repr;
     }
@@ -126,7 +128,7 @@ val type_sort : type_repr
 
 type prototype_repr = {
   prototype_type_args : string list;
-  prototype_args : (argument_type * type_repr) list;
+  prototype_args : (argument * type_repr) list;
   prototype_ret_type : type_repr;
 }
 

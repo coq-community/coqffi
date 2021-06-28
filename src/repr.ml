@@ -3,14 +3,16 @@ open Error
 
 type constant_repr = CPlaceholder of int | CName of string
 
-type argument_type =
-  | PositionedArg of int
+type argument_kind =
+  | PositionedArg
   | LabeledArg of string
   | OptionalArg of string
 
+type argument = { position : int; kind : argument_kind }
+
 type mono_type_repr =
   | TLambda of {
-      argtype : argument_type;
+      argtype : argument;
       domain : mono_type_repr;
       codomain : mono_type_repr;
     }
@@ -141,10 +143,14 @@ let mono_type_repr_of_type_expr_with_params params t :
         (params, TParam (CName x, [])) (* FIXME: Support labeled arguments *)
     | Tarrow (label, t1, t2, _) ->
         let argtype =
-          match label with
-          | Optional opt -> OptionalArg opt
-          | Labelled opt -> LabeledArg opt
-          | _ -> PositionedArg pos
+          {
+            position = pos;
+            kind =
+              (match label with
+              | Optional opt -> OptionalArg opt
+              | Labelled opt -> LabeledArg opt
+              | _ -> PositionedArg);
+          }
         in
 
         let params, domain = aux initial_pos params t1 in
@@ -175,8 +181,8 @@ let rec fill_placeholder_mono i name = function
         }
 
 let rec mono_has_labelled_arg = function
-  | TLambda { argtype = OptionalArg _; _ }
-  | TLambda { argtype = LabeledArg _; _ } ->
+  | TLambda { argtype = { kind = OptionalArg _; _ }; _ }
+  | TLambda { argtype = { kind = LabeledArg _; _ }; _ } ->
       true
   | TLambda { codomain; _ } -> mono_has_labelled_arg codomain
   | _ -> false
@@ -313,7 +319,7 @@ let tlambda =
     | domain :: rst ->
         TLambda
           {
-            argtype = PositionedArg pos;
+            argtype = { position = pos; kind = PositionedArg };
             domain;
             codomain = aux (pos + 1) rst r;
           }
@@ -430,7 +436,7 @@ let type_sort = TMono type_sort_mono
 
 type prototype_repr = {
   prototype_type_args : string list;
-  prototype_args : (argument_type * type_repr) list;
+  prototype_args : (argument * type_repr) list;
   prototype_ret_type : type_repr;
 }
 

@@ -5,6 +5,9 @@ This will be the initial release of `coqffi`.
 ## Unreleased
 
 - **Dependencies:** Support OCaml 4.12
+- **Fix:** Name functions arguments in Coq based on their position
+  alone, to reduce the risk to have a naming clash between polymorphic
+  type name and labeled arguments.
 
 ## `coqffi.1.0.0~beta6`
 

@@ -454,7 +454,7 @@ let ind_type =
     else
       TLambda
         {
-          argtype = PositionedArg pos;
+          argtype = { position = pos; kind = PositionedArg };
           domain = type_sort_mono;
           codomain = aux (pos + 1) (arity - 1);
         }
@@ -952,7 +952,7 @@ let exceptions_vernac ~rev_namespace conflicts m vernacs =
             TMono
               (TLambda
                  {
-                   argtype = PositionedArg 0;
+                   argtype = { position = 0; kind = PositionedArg };
                    domain = proxy_type;
                    codomain = exn_type;
                  });
@@ -967,7 +967,7 @@ let exceptions_vernac ~rev_namespace conflicts m vernacs =
             TMono
               (TLambda
                  {
-                   argtype = PositionedArg 0;
+                   argtype = { position = 0; kind = PositionedArg };
                    domain = exn_type;
                    codomain = TParam (CName "option", [ proxy_type ]);
                  });

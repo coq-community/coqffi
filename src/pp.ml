@@ -15,14 +15,13 @@ let not_empty = function _ :: _ -> true | _ -> false
 
 let pp_if_not_empty pp fmt l = if not_empty l then pp fmt ()
 
-let pp_arg_name fmt = function
-  | PositionedArg pos -> fprintf fmt "x%d" pos
-  | LabeledArg name | OptionalArg name -> fprintf fmt "%s" name
+let pp_arg_name fmt { position; _ } = fprintf fmt "x%d" position
 
-let pp_arg_call fmt = function
-  | PositionedArg pos -> fprintf fmt "x%d" pos
-  | LabeledArg name -> fprintf fmt "~%s" name
-  | OptionalArg name -> fprintf fmt "?%s" name
+let pp_arg_call fmt { position; kind } =
+  match kind with
+  | PositionedArg -> fprintf fmt "x%d" position
+  | LabeledArg name -> fprintf fmt "~%s:x%d" name position
+  | OptionalArg name -> fprintf fmt "?%s:x%d" name position
 
 let pp_args_list fmt args_list =
   pp_print_list ~pp_sep:pp_print_space
