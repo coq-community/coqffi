@@ -18,6 +18,7 @@ val of_cmi_infos :
   translations:Translation.t ->
   features:features ->
   lwt_module:string option ->
+  tezos_types:string list ->
   Cmi_format.cmi_infos ->
   t
 

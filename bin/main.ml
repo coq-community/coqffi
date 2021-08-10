@@ -11,14 +11,14 @@ let vernac_of_mod lwt_module features models (m, conflicts) =
 
 let witness_of_mod coqns (m, conflicts) = Witness.of_mod ~coqns conflicts m
 
-let process coqns models lwt_module config features input ochannel
+let process coqns models lwt_module tezos_types config features input ochannel
     (wchannel : formatter option) =
   let open Flow in
   let flush fmt pp = fprintf fmt "%a@?" pp in
 
   read_cmi input
   |> Mod.of_cmi_infos ~features ~translations:config.config_translations
-       ~lwt_module
+       ~lwt_module ~tezos_types
   |> compute_conflicts_table config.config_conflicts
   |> (vernac_of_mod lwt_module features models
       @> flush ochannel Vernac.pp_vernac
@@ -97,6 +97,20 @@ let lwt_module_arg =
   Arg.(
     value & opt (some string) None & info [ "lwt-alias" ] ~docv:"LWT ALIAS" ~doc)
 
+let tezos_ctxt_arg =
+  let doc =
+    "Names of the context types to consider for impurity when the $(b,tezos) \
+     feature is enabled."
+  in
+  Arg.(
+    value
+    & opt_all string
+        [
+          "Tezos_raw_protocol_alpha.Raw_context.t";
+          "Tezos_raw_protocol_alpha.Alpha_context.t";
+        ]
+    & info [ "tezos-contexts" ] ~docv:"TEZOS TYPES" ~doc)
+
 let output_arg =
   let doc = "The path of the Coq module to generate" in
   Arg.(
@@ -149,6 +163,7 @@ let features_opt =
            feature_enum SimpleIO;
            feature_enum FreeSpec;
            feature_enum Lwt;
+           feature_enum Tezos;
          ])
   in
 
@@ -225,6 +240,14 @@ let coqffi_info =
            feature. The $(b,-r) option is expected to be use to make a type \
            $(i,Lwt.t) available to the generated Coq module. It is disabled by \
            default." );
+      `P "$(b,tezos)";
+      `Noblank;
+      `I
+        ( "$(b,no-tezos)",
+          "When the $(b,tezos) feature is enabled, $(b,coqffi) assumes that \
+           functions which takes an argument of type $(i,Raw_context.t) and \
+           $(i,Alpha_context.t) are impure, even if the $(b,pure-module) \
+           feature is enabled. It is disabled by default" );
       `S "SUPPORTED TYPES";
       `P
         "In addition to tuples and types introduced in the input module, \
@@ -261,8 +284,8 @@ let coqffi_info =
 
 let run_coqffi (input : string) (aliases : string option)
     (includes : string list) (lwt_module : string option)
-    (output_path : string option) (features : Feature.features)
-    (models : string list) (witness : bool) =
+    (tezos_types : string list) (output_path : string option)
+    (features : Feature.features) (models : string list) (witness : bool) =
   let witness_path =
     match output_path with
     | Some output -> Some (Filename.remove_extension output ^ ".ffi")
@@ -299,12 +322,14 @@ let run_coqffi (input : string) (aliases : string option)
       Feature.check_features_consistency lwt_module features ~wduplicate:true
     in
 
-    process coqns models lwt_module config features input ochannel wchannel
+    process coqns models lwt_module tezos_types config features input ochannel
+      wchannel
   with e -> print_error Format.err_formatter e
 
 let coqffi_t =
   Term.(
     const run_coqffi $ input_cmi_arg $ aliases_arg $ include_arg
-    $ lwt_module_arg $ output_arg $ features_opt $ models_opt $ witness_flag)
+    $ lwt_module_arg $ tezos_ctxt_arg $ output_arg $ features_opt $ models_opt
+    $ witness_flag)
 
 let _ = Term.(exit @@ eval (coqffi_t, coqffi_info))

@@ -4,6 +4,9 @@ This will be the initial release of `coqffi`.
 
 ## Unreleased
 
+- **Feature:** Add a new feature called `tezos` that implements a
+  ad-hoc heuristic for distinguishing between pure and impure
+  functions in Tezos protocols.
 - **Dependencies:** Support OCaml 4.12
 - **Fix:** Name functions arguments in Coq based on their position
   alone, to reduce the risk to have a naming clash between polymorphic

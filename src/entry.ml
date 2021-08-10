@@ -189,11 +189,20 @@ let prototype_of_constructor params_type args ret =
       }
   | _ -> assert false
 
-let entry_of_value lf lwt_module ident desc loc =
+let entry_of_value lf lwt_module tezos_types ident desc loc =
+  let is_tezos_function t =
+    Repr.is_function t && Repr.depends_on_types t tezos_types
+  in
+
   let is_pure attrs model t =
     (not (asynchronous ~lwt_module t))
-    && (is_enabled lf PureModule || Repr.supposedly_pure t
-      || Option.is_some model || has_attr "pure" attrs)
+    &&
+    match (is_enabled lf PureModule, is_enabled lf Tezos) with
+    | true, false -> true
+    | _, true -> not (is_tezos_function t)
+    | false, false ->
+        (not (Repr.is_function t))
+        || Option.is_some model || has_attr "pure" attrs
   in
 
   let name = Ident.name ident in
@@ -427,12 +436,12 @@ let empty_module loc namespace name =
     module_loc = loc;
   }
 
-let rec entry_of_signature namespace lf lwt_module (s : Types.signature_item) :
-    entry =
+let rec entry_of_signature namespace lf lwt_module tezos_types
+    (s : Types.signature_item) : entry =
   let loc = signature_loc s in
   match s with
   | Sig_value (ident, desc, Exported) ->
-      entry_of_value lf lwt_module ident desc loc
+      entry_of_value lf lwt_module tezos_types ident desc loc
   | Sig_type (ident, decl, rstatus, Exported) ->
       (* FIXME: provide a stronger support for OCaml object system. *)
       if String.get (Ident.name ident) 0 = '#' then
@@ -441,26 +450,27 @@ let rec entry_of_signature namespace lf lwt_module (s : Types.signature_item) :
   | Sig_typext (ident, cst, Text_exception, Exported) ->
       entry_of_exn ident cst loc
   | Sig_module (name, _, decl, _, Exported) -> (
-      match entry_of_module lf lwt_module namespace name decl with
+      match entry_of_module lf lwt_module tezos_types namespace name decl with
       | Some x -> x
       | _ -> raise_error (UnsupportedOCamlSignature s))
   | _ ->
       (* FIXME: this looks like it is a bit too strong *)
       raise_error (UnsupportedOCamlSignature s)
 
-and entry_of_module lf lwt_module namespace name decl =
+and entry_of_module lf lwt_module tezos_types namespace name decl =
   match decl.md_type with
   | Mty_signature sigs ->
       Some
         (EMod
-           (module_of_signatures ~loc:(Some decl.md_loc) lf lwt_module namespace
-              (Ident.name name) sigs))
+           (module_of_signatures ~loc:(Some decl.md_loc) lf lwt_module
+              tezos_types namespace (Ident.name name) sigs))
   | _ -> None
 
-and module_of_signatures ?(loc = None) lf lwt_module namespace name sigs =
+and module_of_signatures ?(loc = None) lf lwt_module tezos_types namespace name
+    sigs =
   let namespace = namespace @ [ name ] in
   let foldf m s =
-    try entry_of_signature namespace lf lwt_module s |> add_entry m
+    try entry_of_signature namespace lf lwt_module tezos_types s |> add_entry m
     with e ->
       pp_error Format.err_formatter (error_of_signature s e);
       m

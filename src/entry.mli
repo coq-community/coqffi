@@ -83,6 +83,7 @@ val module_of_signatures :
   features ->
   string option ->
   string list ->
+  string list ->
   string ->
   Types.signature ->
   module_entry

@@ -59,7 +59,9 @@ val fill_placeholder : int -> string -> type_repr -> type_repr
 
 val higher_order_monadic : constant_repr -> type_repr -> bool
 
-val supposedly_pure : type_repr -> bool
+val is_function : type_repr -> bool
+
+val depends_on_types : type_repr -> string list -> bool
 
 val asynchronous : lwt_module:string option -> type_repr -> bool
 
