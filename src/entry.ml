@@ -190,10 +190,24 @@ let prototype_of_constructor params_type args ret =
   | _ -> assert false
 
 let entry_of_value lf lwt_module ident desc loc =
+  let is_tezos_function t =
+    Repr.is_function t
+    && Repr.depends_on_types t
+         [
+           "Tezos_raw_protocol_alpha.Raw_context.t";
+           "Tezos_raw_protocol_alpha.Alpha_context.t";
+         ]
+  in
+
   let is_pure attrs model t =
     (not (asynchronous ~lwt_module t))
-    && (is_enabled lf PureModule || Repr.supposedly_pure t
-      || Option.is_some model || has_attr "pure" attrs)
+    &&
+    match (is_enabled lf PureModule, is_enabled lf Tezos) with
+    | true, false -> true
+    | _, true -> not (is_tezos_function t)
+    | false, false ->
+        (not (Repr.is_function t))
+        || Option.is_some model || has_attr "pure" attrs
   in
 
   let name = Ident.name ident in

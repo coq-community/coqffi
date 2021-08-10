@@ -149,6 +149,7 @@ let features_opt =
            feature_enum SimpleIO;
            feature_enum FreeSpec;
            feature_enum Lwt;
+           feature_enum Tezos;
          ])
   in
 
@@ -225,6 +226,14 @@ let coqffi_info =
            feature. The $(b,-r) option is expected to be use to make a type \
            $(i,Lwt.t) available to the generated Coq module. It is disabled by \
            default." );
+      `P "$(b,tezos)";
+      `Noblank;
+      `I
+        ( "$(b,no-tezos)",
+          "When the $(b,tezos) feature is enabled, $(b,coqffi) assumes that \
+           functions which takes an argument of type $(i,Raw_context.t) and \
+           $(i,Alpha_context.t) are impure, even if the $(b,pure-module) \
+           feature is enabled. It is disabled by default" );
       `S "SUPPORTED TYPES";
       `P
         "In addition to tuples and types introduced in the input module, \

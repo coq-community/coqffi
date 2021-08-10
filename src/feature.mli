@@ -1,4 +1,11 @@
-type t = TransparentTypes | PureModule | Interface | SimpleIO | FreeSpec | Lwt
+type t =
+  | TransparentTypes
+  | PureModule
+  | Interface
+  | SimpleIO
+  | FreeSpec
+  | Lwt
+  | Tezos
 
 type feature = t
 

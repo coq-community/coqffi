@@ -28,8 +28,19 @@ let to_mono_type_repr = function TMono mono -> mono | TPoly (_, mono) -> mono
 let of_mono_type_repr params mono =
   match params with [] -> TMono mono | params -> TPoly (params, mono)
 
-let supposedly_pure t =
-  match to_mono_type_repr t with TLambda _ -> false | _ -> true
+let is_function t =
+  match to_mono_type_repr t with TLambda _ -> true | _ -> false
+
+let depends_on_types t names =
+  let rec depends_on_type_mono m =
+    match m with
+    | TLambda { domain; codomain; _ } ->
+        depends_on_type_mono domain || depends_on_type_mono codomain
+    | TParam (CName const, _) when List.exists (String.equal const) names ->
+        true
+    | TParam (_, ms) | TProd ms -> List.exists depends_on_type_mono ms
+  in
+  depends_on_type_mono (to_mono_type_repr t)
 
 let asynchronous ~lwt_module typ =
   let lwt = Option.map (fun x -> x ^ ".t") lwt_module in

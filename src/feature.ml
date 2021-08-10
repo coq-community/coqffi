@@ -1,4 +1,11 @@
-type t = TransparentTypes | PureModule | Interface | SimpleIO | FreeSpec | Lwt
+type t =
+  | TransparentTypes
+  | PureModule
+  | Interface
+  | SimpleIO
+  | FreeSpec
+  | Lwt
+  | Tezos
 
 type feature = t
 
@@ -12,6 +19,7 @@ let name = function
   | Interface -> "interface"
   | SimpleIO -> "simple-io"
   | FreeSpec -> "freespec"
+  | Tezos -> "tezos"
   | Lwt -> "lwt"
 
 let find_duplicates : features -> feature list =
