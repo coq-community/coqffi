@@ -2,7 +2,7 @@
 
 This will be the initial release of `coqffi`.
 
-## Unreleased
+## `coqffi.1.0.0~beta7`
 
 - **Feature:** Add a new feature called `tezos` that implements a
   ad-hoc heuristic for distinguishing between pure and impure

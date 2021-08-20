@@ -25,7 +25,7 @@ maintainers:
 
 opam-file-maintainer: lthms@soap.coffee
 
-opam-file-version: dev
+opam-file-version: 1.0.0~beta7
 
 license:
   fullname: MIT License

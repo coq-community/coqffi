@@ -1,5 +1,5 @@
 opam-version: "2.0"
-version: "dev"
+version: "1.0.0~beta7"
 maintainer: "lthms@soap.coffee"
 
 homepage: "https://github.com/coq-community/coqffi"
