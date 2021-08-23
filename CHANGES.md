@@ -5,6 +5,8 @@ This will be the initial release of `coqffi`.
 # Unreleased
 
 - **Fix:** Extraction commands for asynchronous primitives were not
+  handling labelled arguments correctly.
+- **Fix:** Extraction commands for asynchronous primitives were not
   fully qualifying OCaml values.
 - **Fix:** `coqffi` was sometimes using the Coq arrow `=>` instead of
   the OCaml arrow `->`.

@@ -1198,11 +1198,25 @@ let lwt_vernac ~rev_namespace conflicts features m vernacs =
   in
 
   let to_extract lwt =
+    let constant_target =
+      if has_labelled_arg lwt.lwt_type then
+        let proto = type_repr_to_prototype_repr lwt.lwt_type in
+        let pargs = proto_vars proto in
+        let cargs = call_vars proto in
+        asprintf "(fun %a -> %a)"
+          (pp_print_list
+             ~pp_sep:(fun fmt _ -> pp_print_string fmt " ")
+             pp_print_string)
+          pargs
+          (pp_fun_call ~paren:false (target_name lwt) cargs)
+          ()
+      else of_ocaml_name @@ target_name lwt
+    in
     ExtractConstant
       {
         constant_qualid = axiom_name lwt;
         constant_type_vars = [];
-        constant_target = of_ocaml_name @@ target_name lwt;
+        constant_target;
       }
   in
 
