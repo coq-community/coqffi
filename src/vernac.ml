@@ -760,7 +760,7 @@ let lwt_primitives_vernac ~rev_namespace conflicts lwt_module m vernacs =
     let target =
       Conflict.get_ocaml_value rev_namespace conflicts ~value:prim.prim_name
     in
-    asprintf "(fun %a => %a %a)"
+    asprintf "(fun %a -> %a %a)"
       (pp_list ~pp_sep:(fun fmt _ -> pp_print_string fmt " ") pp_print_string)
       pvars pp_lwt_return lwt_module (pp_fun_call target cvars) ()
   in
@@ -984,7 +984,7 @@ let exceptions_vernac ~rev_namespace conflicts m vernacs =
           constant_qualid = to_exn;
           constant_type_vars = [];
           constant_target =
-            asprintf "@[<h>(function | %a%a => %s%a)@]" pp_coq_name
+            asprintf "@[<h>(function | %a%a -> %s%a)@]" pp_coq_name
               proxy_constructor_name
               (pp_list ~pp_prefix:pp_print_space ~pp_sep:pp_print_space
                  pp_print_string)
@@ -1004,7 +1004,7 @@ let exceptions_vernac ~rev_namespace conflicts m vernacs =
           constant_qualid = of_exn;
           constant_type_vars = [];
           constant_target =
-            asprintf "@[<h>(function | %s%a => Some (%a%a) | _ => None)@]"
+            asprintf "@[<h>(function | %s%a -> Some (%a%a) | _ -> None)@]"
               exn_name
               (pp_list ~enclose
                  ~pp_prefix:(fun fmt _ -> pp_print_string fmt " (")

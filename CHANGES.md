@@ -2,6 +2,11 @@
 
 This will be the initial release of `coqffi`.
 
+# Unreleased
+
+- **Fix:** `coqffi` was sometimes using the Coq arrow `=>` instead of
+  the OCaml arrow `->`.
+
 ## `coqffi.1.0.0~beta7`
 
 - **Feature:** Add a new feature called `tezos` that implements a
