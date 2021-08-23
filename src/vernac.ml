@@ -762,7 +762,9 @@ let lwt_primitives_vernac ~rev_namespace conflicts lwt_module m vernacs =
     in
     asprintf "(fun %a -> %a %a)"
       (pp_list ~pp_sep:(fun fmt _ -> pp_print_string fmt " ") pp_print_string)
-      pvars pp_lwt_return lwt_module (pp_fun_call target cvars) ()
+      pvars pp_lwt_return lwt_module
+      (pp_fun_call (qualified_name m target) cvars)
+      ()
   in
 
   let to_extract prim =
