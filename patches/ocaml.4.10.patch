@@ -30,10 +30,10 @@ index 36c5cbc..7d21e94 100644
      | _ -> None
    in
  
-diff --git a/theories/Data/Seq.v b/theories/Data/Seq.v
+diff --git a/theories/Seq.v b/theories/Seq.v
 index 8b58040..5a79184 100644
---- a/theories/Data/Seq.v
-+++ b/theories/Data/Seq.v
+--- a/theories/Seq.v
++++ b/theories/Seq.v
 @@ -80,10 +80,6 @@ Module SeqExtraction.
      [ "Stdlib.Seq.Nil" "Stdlib.Seq.Cons" ].
    Extract Constant empty => "Stdlib.Seq.empty".

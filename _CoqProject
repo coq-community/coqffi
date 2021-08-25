@@ -2,11 +2,10 @@
 
 _build/default/theories/Interface.v
 _build/default/theories/Exn.v
-
-_build/default/theories/Data/Int.v
-_build/default/theories/Data/IntFacts.v
-_build/default/theories/Data/Result.v
-_build/default/theories/Data/Seq.v
-_build/default/theories/Data/String.v
-
+_build/default/theories/Int.v
+_build/default/theories/IntFacts.v
+_build/default/theories/Result.v
+_build/default/theories/Seq.v
+_build/default/theories/String.v
+_build/default/theories/Tuple.v
 _build/default/theories/Extraction.v

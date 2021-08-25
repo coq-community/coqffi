@@ -1,7 +1,7 @@
-diff --git a/theories/Data/Int.v b/theories/Data/Int.v
+diff --git a/theories/Int.v b/theories/Int.v
 index 2118513..1ce3fdf 100644
---- a/theories/Data/Int.v
-+++ b/theories/Data/Int.v
+--- a/theories/Int.v
++++ b/theories/Int.v
 @@ -37,7 +37,7 @@ Definition to_Z (x : i63) : Z :=
    then x
    else x - max_uint 63.

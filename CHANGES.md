@@ -4,6 +4,8 @@ This will be the initial release of `coqffi`.
 
 # Unreleased
 
+- **Breaking Change:** The `CoqFFI` theory has been flattened, *i.e.*,
+  the `CoqFFI.Data.*` modules has been moved to `CoqFFI.*`.
 - **Breaking Change:** `coqffi` now correctly handles tuples, whereas
   in previous versions the extraction of tuples of more than 2
   elements was broken.  Unfortunately, only tuples up to 5 elements

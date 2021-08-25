@@ -2,5 +2,3 @@
  (name CoqFFI)
  (package coq-coqffi)
  (synopsis "Tool for generating Coq FFI bindings to OCaml libraries"))
-
-(include_subdirs qualified)
