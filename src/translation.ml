@@ -46,6 +46,15 @@ let rec find ?(rev_namespace = []) ~ocaml t =
       | _ -> None)
 
 let types_table =
+  let rec ( -- ) x y = if x < y then x :: (x + 1 -- y) else [] in
+  let translate_tuples l ns =
+    List.fold_left
+      (fun ns x ->
+        Namespace.translate
+          ~ocaml:(Format.sprintf "Coq_coqffi.Shim.tup%d" x)
+          ~coq:(Format.sprintf "tup%d" x) ns)
+      ns l
+  in
   let ns =
     Namespace.empty |> Namespace.preserve "bool"
     |> Namespace.translate ~ocaml:"char" ~coq:"ascii"
@@ -53,6 +62,7 @@ let types_table =
     |> Namespace.translate ~ocaml:"Stdlib.Seq.t" ~coq:"Seq.t"
     |> Namespace.translate ~ocaml:"Stdlib.result" ~coq:"sum"
     |> Namespace.translate ~ocaml:"int32" ~coq:"i32"
+    |> translate_tuples (3 -- 5)
     |> Namespace.preserve "float" |> Namespace.preserve "list"
     |> Namespace.preserve "option"
     |> Namespace.preserve "string"

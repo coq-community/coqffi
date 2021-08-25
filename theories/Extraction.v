@@ -32,6 +32,9 @@ Extract Inductive unit => unit [ "()" ].
 
 Extract Inductive prod => "( * )" [ "" ].
 
+From CoqFFI Require Export Tuple.
+Import Tuple.TupleExtraction.
+
 (** ** Lists *)
 
 Extract Inductive list => "list" [ "[]" "( :: )" ].

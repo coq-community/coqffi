@@ -1,0 +1,3 @@
+(library
+  (name shim)
+  (public_name coq-coqffi.shim))

@@ -120,6 +120,11 @@
  (action
   (run coqffi -finterface -ftransparent-types %{cmi:labelarg} -o %{target})))
 
+(rule
+ (target Tup.v)
+ (action
+  (run coqffi %{cmi:tup} -o %{target})))
+
 (coq.theory
  (name Examples)
  (theories CoqFFI))

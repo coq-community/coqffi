@@ -4,6 +4,10 @@ This will be the initial release of `coqffi`.
 
 # Unreleased
 
+- **Breaking Change:** `coqffi` now correctly handles tuples, whereas
+  in previous versions the extraction of tuples of more than 2
+  elements was broken.  Unfortunately, only tuples up to 5 elements
+  are supported.
 - **Fix:** Extraction commands for asynchronous primitives were not
   handling labelled arguments correctly.
 - **Fix:** Extraction commands for asynchronous primitives were not

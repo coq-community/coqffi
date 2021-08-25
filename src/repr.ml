@@ -16,7 +16,7 @@ type mono_type_repr =
       domain : mono_type_repr;
       codomain : mono_type_repr;
     }
-  | TProd of mono_type_repr list
+  | TProd of mono_type_repr * mono_type_repr
   | TParam of (constant_repr * mono_type_repr list)
 
 type type_repr =
@@ -38,7 +38,8 @@ let depends_on_types t names =
         depends_on_type_mono domain || depends_on_type_mono codomain
     | TParam (CName const, _) when List.exists (String.equal const) names ->
         true
-    | TParam (_, ms) | TProd ms -> List.exists depends_on_type_mono ms
+    | TProd (m1, m2) -> depends_on_type_mono m1 || depends_on_type_mono m2
+    | TParam (_, ms) -> List.exists depends_on_type_mono ms
   in
   depends_on_type_mono (to_mono_type_repr t)
 
@@ -167,9 +168,16 @@ let mono_type_repr_of_type_expr_with_params params t :
         let params, domain = aux initial_pos params t1 in
         let params, codomain = aux (pos + 1) params t2 in
         (params, TLambda { argtype; domain; codomain })
+    | Ttuple [ l1; l2 ] ->
+        let params, t1 = aux initial_pos params l1 in
+        let params, t2 = aux initial_pos params l2 in
+        (params, TProd (t1, t2))
     | Ttuple l ->
-        let params, l = Compat.fold_left_map (aux initial_pos) params l in
-        (params, TProd l)
+        let len = List.length l in
+        if len < 6 then
+          let params, t = Compat.fold_left_map (aux initial_pos) params l in
+          (params, TParam (CName (sprintf "Coq_coqffi.Shim.tup%d" len), t))
+        else assert false
     | Tconstr (name, types, _) ->
         let params, t = Compat.fold_left_map (aux initial_pos) params types in
         (params, TParam (CName (Path.name name), t))
@@ -182,7 +190,8 @@ let rec fill_placeholder_mono i name = function
       TParam (CName name, List.map (fill_placeholder_mono i name) params)
   | TParam (constant, params) ->
       TParam (constant, List.map (fill_placeholder_mono i name) params)
-  | TProd typs -> TProd (List.map (fill_placeholder_mono i name) typs)
+  | TProd (t1, t2) ->
+      TProd (fill_placeholder_mono i name t1, fill_placeholder_mono i name t2)
   | TLambda lambda ->
       TLambda
         {
@@ -206,7 +215,7 @@ let has_labelled_arg t = to_mono_type_repr t |> mono_has_labelled_arg
 let rec monadic m = function
   | TParam (m', _) when m = m' -> true
   | TParam (_, typs) -> List.exists (monadic m) typs
-  | TProd typs -> List.exists (monadic m) typs
+  | TProd (t1, t2) -> List.exists (monadic m) [ t1; t2 ]
   | TLambda { domain; codomain; _ } -> monadic m domain || monadic m codomain
 
 (* [higher_order_monadic {m} t] returns [true] when [t] features a
@@ -239,8 +248,8 @@ let rec fresh_placeholder_mono = function
         params
   | TLambda { domain; codomain; _ } ->
       max (fresh_placeholder_mono domain) (fresh_placeholder_mono codomain)
-  | TProd typs ->
-      List.fold_left (fun i x -> max i (fresh_placeholder_mono x)) 0 typs
+  | TProd (t1, t2) ->
+      List.fold_left (fun i x -> max i (fresh_placeholder_mono x)) 0 [ t1; t2 ]
 
 let fresh_placeholder = function
   | TMono t | TPoly (_, t) -> fresh_placeholder_mono t
@@ -254,7 +263,8 @@ let rec place_placeholder_mono i name = function
       TParam
         ( place_placeholder_constant i name constant,
           List.map (place_placeholder_mono i name) params )
-  | TProd typs -> TProd (List.map (place_placeholder_mono i name) typs)
+  | TProd (t1, t2) ->
+      TProd (place_placeholder_mono i name t1, place_placeholder_mono i name t2)
   | TLambda lambda ->
       TLambda
         {
@@ -352,8 +362,10 @@ let rec translate_mono_type_repr ~rev_namespace (tbl : Translation.t) = function
         translate_mono_type_repr ~rev_namespace tbl lambda.codomain
       in
       TLambda { lambda with domain; codomain }
-  | TProd typ_list ->
-      TProd (List.map (translate_mono_type_repr ~rev_namespace tbl) typ_list)
+  | TProd (t1, t2) ->
+      TProd
+        ( translate_mono_type_repr ~rev_namespace tbl t1,
+          translate_mono_type_repr ~rev_namespace tbl t2 )
   | TParam (ocaml, typ_list) ->
       let name' = translate_constant_repr ~rev_namespace tbl ocaml in
       let typ_list' =
@@ -381,7 +393,7 @@ let rec mono_dependencies (t : mono_type_repr) : string list =
   match t with
   | TLambda { domain; codomain; _ } ->
       merge (mono_dependencies domain) (mono_dependencies codomain)
-  | TProd tl -> fold_mono_list tl
+  | TProd (t1, t2) -> fold_mono_list [ t1; t2 ]
   | TParam (CName t, params) -> merge [ t ] (fold_mono_list params)
   | TParam (_, params) -> fold_mono_list params
 
@@ -390,7 +402,13 @@ let dependencies : type_repr -> string list = function
   | TPoly (params, t) ->
       List.filter (fun t -> not (List.mem t params)) (mono_dependencies t)
 
-type type_pos = PTop | PArrowLeft | PArrowRight | PProd | PParam
+type type_pos =
+  | PTop
+  | PArrowLeft
+  | PArrowRight
+  | PProdLeft
+  | PProdRight
+  | PParam
 
 type pos_constr = CArrow | CProd | CParam
 
@@ -401,7 +419,12 @@ let pp_constant_repr fmt = function
 let pp_mono_type_repr (fmt : formatter) mono =
   let paren pos constr =
     match (pos, constr) with
-    | PArrowLeft, CArrow | PProd, CArrow | PParam, _ -> true
+    | PArrowLeft, CArrow
+    | PProdRight, CArrow
+    | PProdLeft, CArrow
+    | PProdRight, CProd
+    | PParam, _ ->
+        true
     | _, _ -> false
   in
 
@@ -416,12 +439,12 @@ let pp_mono_type_repr (fmt : formatter) mono =
           domain
           (pp_mono_type_repr_aux ~pos:PArrowRight)
           codomain (close_paren pos CArrow)
-    | TProd typ_list ->
-        fprintf fmt "%s@[%a@]%s" (open_paren pos CProd)
-          (pp_print_list
-             ~pp_sep:(fun fmt _ -> pp_print_text fmt " * ")
-             (pp_mono_type_repr_aux ~pos:PProd))
-          typ_list (close_paren pos CProd)
+    | TProd (t1, t2) ->
+        fprintf fmt "%s@[%a * %a@]%s" (open_paren pos CProd)
+          (pp_mono_type_repr_aux ~pos:PProdLeft)
+          t1
+          (pp_mono_type_repr_aux ~pos:PProdRight)
+          t2 (close_paren pos CProd)
     | TParam (name, []) -> pp_constant_repr fmt name
     | TParam (name, args) ->
         fprintf fmt "%s@[<hv 2>%a@ %a@]%s" (open_paren pos CParam)

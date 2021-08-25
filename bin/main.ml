@@ -250,13 +250,15 @@ let coqffi_info =
            feature is enabled. It is disabled by default" );
       `S "SUPPORTED TYPES";
       `P
-        "In addition to tuples and types introduced in the input module, \
-         $(b,coqffi) supports the following base types:";
+        "In addition to types introduced in the input module, $(b,coqffi) \
+         supports the following base types:";
       `Pre "  - $(b,bool)";
       `Noblank;
       `Pre "  - $(b,char)";
       `Noblank;
       `Pre "  - $(b,int)";
+      `Noblank;
+      `Pre "  - $(i,'a1) * .. * $(i, 'an) with $(i, n) <= 5";
       `Noblank;
       `Pre "  - $(i,'a) $(b,list)";
       `Noblank;

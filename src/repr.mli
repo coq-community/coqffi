@@ -24,7 +24,8 @@ type mono_type_repr =
     }
       (** [TLambda { None, u, v }] ≡ [u -> v],
           [TLambda { Some "x", u, v }] ≡ [x:u -> v] *)
-  | TProd of mono_type_repr list  (** [TProd [t0; ..; tn]] ≡ [(t0, .., tn)] *)
+  | TProd of mono_type_repr * mono_type_repr
+      (** [TProd (t1, t2)] ≡ [(t1, t2)] *)
   | TParam of (constant_repr * mono_type_repr list)
       (** [TParam ("t", [t0; ..; tn])] ≡ [(t0, .., tn) t] *)
 
