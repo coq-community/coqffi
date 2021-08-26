@@ -258,7 +258,9 @@ let coqffi_info =
       `Noblank;
       `Pre "  - $(b,int)";
       `Noblank;
-      `Pre "  - $(i,'a1) * .. * $(i, 'an) with $(i, n) <= 5";
+      `Pre
+        (sprintf "  - $(i,'a1) * .. * $(i, 'an) with $(i, n) <= %d"
+           Translation.max_tuple_size);
       `Noblank;
       `Pre "  - $(i,'a) $(b,list)";
       `Noblank;

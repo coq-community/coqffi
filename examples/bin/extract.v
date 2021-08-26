@@ -25,9 +25,13 @@ Extraction "cat.ml" cat_main.
 Definition sleep_plenty `{Monad m, MonadFile m, MonadSleep m} (d : i63)
   : m unit :=
   write std_out "Hello...";;
-  let x := (5 * 1 + 1 - 3) / d in
-  sleep x;;
-  write std_out " sleepy world!\n".
+  let y : tup4 i63 i63 i63 i63 := mktup4 1 2 3 4 in
+  match y with
+  | mktup4 a b c d =>
+    let x := (a * b + c - d) / d in
+    sleep x;;
+    write std_out " sleepy world!\n"
+  end.
 
 Definition sleep_plenty_main : io_unit :=
   let x := {| f1 := 1; f2 := 2 |} in

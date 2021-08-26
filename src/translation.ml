@@ -1,3 +1,5 @@
+let max_tuple_size = 20
+
 module Table = Map.Make (String)
 
 module Namespace = struct
@@ -46,7 +48,7 @@ let rec find ?(rev_namespace = []) ~ocaml t =
       | _ -> None)
 
 let types_table =
-  let rec ( -- ) x y = if x < y then x :: (x + 1 -- y) else [] in
+  let rec ( -- ) x y = if x < y then x :: (x + 1 -- y) else [ y ] in
   let translate_tuples l ns =
     List.fold_left
       (fun ns x ->
@@ -62,7 +64,7 @@ let types_table =
     |> Namespace.translate ~ocaml:"Stdlib.Seq.t" ~coq:"Seq.t"
     |> Namespace.translate ~ocaml:"Stdlib.result" ~coq:"sum"
     |> Namespace.translate ~ocaml:"int32" ~coq:"i32"
-    |> translate_tuples (3 -- 5)
+    |> translate_tuples (3 -- max_tuple_size)
     |> Namespace.preserve "float" |> Namespace.preserve "list"
     |> Namespace.preserve "option"
     |> Namespace.preserve "string"

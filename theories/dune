@@ -1,3 +1,9 @@
+(rule (with-stdout-to Tuple.v (run ./gen_tuple.exe)))
+
+(executable
+ (libraries coqffi)
+ (name gen_tuple))
+
 (coq.theory
  (name CoqFFI)
  (package coq-coqffi)

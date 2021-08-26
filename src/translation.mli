@@ -16,6 +16,8 @@ type t
     module level. If not, we search for [t] in [M1.M2], then [M1],
     etc. *)
 
+val max_tuple_size : int
+
 val translate :
   ?rev_namespace:string list -> ocaml:string -> coq:string -> t -> t
 
