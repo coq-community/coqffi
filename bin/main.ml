@@ -200,8 +200,8 @@ let coqffi_info =
       `I
         ( "$(b,no-pure-module)",
           "By default, $(b,coqffi) considers OCaml functions are impure, and \
-           let users marked “pure functions” with the $(i,pure) attribute. \
-           If $(b,-ftransparent-types) is used, then $(b,coqffi) will consider \
+           let users marked “pure functions” with the $(i,pure) attribute. If \
+           $(b,-ftransparent-types) is used, then $(b,coqffi) will consider \
            all OCaml values listed in the $(i,INPUT) module are pure." );
       `P "$(b,simple-io)";
       `Noblank;
@@ -278,8 +278,8 @@ let coqffi_info =
       `P
         "Besides, $(b,coqffi) also supports extending the $(b,exn) type, using \
          the $(i,exception )$(b,Foo)$(i, of ) $(b,bar) construction. In such a \
-         case, $(b,coqffi) will generate a “proxy” inductive type \
-         $(b,FooExn), along with conversion functions from and to $(b,exn).";
+         case, $(b,coqffi) will generate a “proxy” inductive type $(b,FooExn), \
+         along with conversion functions from and to $(b,exn).";
       `S Manpage.s_bugs;
       `P "Email bug reports to <lthms at soap.coffee>.";
     ]

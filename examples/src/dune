@@ -103,7 +103,8 @@
 (rule
  (target Infer.v)
  (action
-  (run coqffi -flwt -r Examples.Lwt -ftransparent-types %{cmi:infer} -o %{target})))
+  (run coqffi -flwt -r Examples.Lwt -ftransparent-types %{cmi:infer} -o
+    %{target})))
 
 (rule
  (target Records.v)

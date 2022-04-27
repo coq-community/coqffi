@@ -1365,21 +1365,20 @@ and intros_vernac ~rev_namespace conflicts lwt_module features models m vernacs
                        in
                        [ sprintf "%s.(fun (%s) -> { %s })" ns tuple fields ]);
                   }
-                ::
-                List.map
-                  (fun (f : field_entry) ->
-                    let constant_qualid =
-                      Conflict.get_coq_field rev_namespace conflicts
-                        ~owner:t.type_name ~field:f.field_name
-                    in
-                    ExtractConstant
-                      {
-                        constant_qualid;
-                        constant_type_vars = [];
-                        constant_target =
-                          asprintf "%s.(fun x -> x.%s)" ns f.field_name;
-                      })
-                  r
+                :: List.map
+                     (fun (f : field_entry) ->
+                       let constant_qualid =
+                         Conflict.get_coq_field rev_namespace conflicts
+                           ~owner:t.type_name ~field:f.field_name
+                       in
+                       ExtractConstant
+                         {
+                           constant_qualid;
+                           constant_type_vars = [];
+                           constant_target =
+                             asprintf "%s.(fun x -> x.%s)" ns f.field_name;
+                         })
+                     r
             | _ ->
                 let type_params =
                   fst

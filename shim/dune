@@ -1,11 +1,14 @@
 (executable
-  (libraries coqffi)
-  (name gen_shim)
-  (modules gen_shim))
+ (libraries coqffi)
+ (name gen_shim)
+ (modules gen_shim))
 
-(rule (with-stdout-to shim.ml (run ./gen_shim.exe)))
+(rule
+ (with-stdout-to
+  shim.ml
+  (run ./gen_shim.exe)))
 
 (library
-  (name shim)
-  (public_name coq-coqffi.shim)
-  (modules shim))
+ (name shim)
+ (public_name coq-coqffi.shim)
+ (modules shim))
