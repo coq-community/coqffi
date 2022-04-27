@@ -284,7 +284,7 @@ let coqffi_info =
       `P "Email bug reports to <lthms at soap.coffee>.";
     ]
   in
-  Term.(info "coqffi" ~exits:default_exits ~doc ~man ~version:"coqffi.dev")
+  Cmd.(info "coqffi" ~exits:Exit.defaults ~doc ~man ~version:"coqffi.dev")
 
 let run_coqffi (input : string) (aliases : string option)
     (includes : string list) (lwt_module : string option)
@@ -336,4 +336,4 @@ let coqffi_t =
     $ lwt_module_arg $ tezos_ctxt_arg $ output_arg $ features_opt $ models_opt
     $ witness_flag)
 
-let _ = Term.(exit @@ eval (coqffi_t, coqffi_info))
+let _ = Cmd.(v coqffi_info coqffi_t |> eval |> exit)
