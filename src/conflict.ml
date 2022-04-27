@@ -161,14 +161,21 @@ let pp_coq_name = Format.pp_print_text
 let of_coq_name x = x
 
 let local_find_fresh_coq_name coq conflicts_table =
-  let rec select_candidate cds =
-    let c = Stream.next cds in
-    if Table.mem c conflicts_table then select_candidate cds else c
+  let cds = ref 0 in
+
+  let next () =
+    let i = !cds in
+    let res = if 0 < i then Format.sprintf "%s%d" coq i else coq in
+    cds := i + 1;
+    res
   in
 
-  select_candidate
-    (Stream.from (fun i ->
-         if 0 < i then Some (Format.sprintf "%s%d" coq i) else Some coq))
+  let rec select_candidate () =
+    let c = next () in
+    if Table.mem c conflicts_table then select_candidate () else c
+  in
+
+  select_candidate ()
 
 let resolve_coq_conflict kind conflicts conflicts_table =
   let coq = List.assoc kind conflicts |> snd in

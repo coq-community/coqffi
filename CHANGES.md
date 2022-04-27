@@ -9,7 +9,7 @@ This will be the initial release of `coqffi`.
 - **Breaking Change:** `coqffi` now correctly handles tuples, whereas
   in previous versions the extraction of tuples of more than 2
   elements was broken.  Only tuples up to 20 elements are supported.
-- **Dependencies:** Support OCaml 4.13
+- **Dependencies:** Support OCaml 4.13 and 4.14
 - **Fix:** Extraction commands for asynchronous primitives were not
   handling labelled arguments correctly.
 - **Fix:** Extraction commands for asynchronous primitives were not
