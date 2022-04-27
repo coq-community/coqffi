@@ -1,0 +1,22 @@
+diff --git a/src/entry.ml b/src/entry.ml
+index 3b4e4f2..d826a48 100644
+--- a/src/entry.ml
++++ b/src/entry.ml
+@@ -326,7 +326,7 @@ let entry_of_type lf ident decl rec_status loc =
+            of the form [type t = u]. *)
+         | Some expr, _ -> Some (Alias (mono_type_repr_of_type_expr expr))
+         (* For variant types, we need to have a look at variants *)
+-        | None, Type_variant (v, _) ->
++        | None, Type_variant v ->
+             let l = List.map (to_variant_entry params) v in
+             if List.for_all unify l then Some (Variant l) else None
+         | None, Type_record (fields, _) ->
+@@ -353,7 +353,7 @@ let entry_of_type lf ident decl rec_status loc =
+     if is_enabled lf TransparentTypes then
+       try
+         match decl.type_kind with
+-        | Type_variant (v, _) -> Variant (List.map (to_variant_entry []) v)
++        | Type_variant v -> Variant (List.map (to_variant_entry []) v)
+         | _ -> Opaque
+       with _ -> Opaque
+     else Opaque

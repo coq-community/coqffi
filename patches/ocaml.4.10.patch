@@ -18,10 +18,10 @@ index 69d5a72..4c36938 100644
  let rec sorted_intersect cmp l1 l2 =
    match (l1, l2) with
 diff --git a/src/entry.ml b/src/entry.ml
-index 36c5cbc..7d21e94 100644
+index 3b4e4f2..b2d3497 100644
 --- a/src/entry.ml
 +++ b/src/entry.ml
-@@ -108,7 +108,7 @@ let has_attr name : attributes -> bool =
+@@ -113,7 +113,7 @@ let has_attr name : attributes -> bool =
  
  let get_attr_string name : attributes -> string option =
    let expr_to_string = function
@@ -30,6 +30,24 @@ index 36c5cbc..7d21e94 100644
      | _ -> None
    in
  
+@@ -326,7 +326,7 @@ let entry_of_type lf ident decl rec_status loc =
+            of the form [type t = u]. *)
+         | Some expr, _ -> Some (Alias (mono_type_repr_of_type_expr expr))
+         (* For variant types, we need to have a look at variants *)
+-        | None, Type_variant (v, _) ->
++        | None, Type_variant v ->
+             let l = List.map (to_variant_entry params) v in
+             if List.for_all unify l then Some (Variant l) else None
+         | None, Type_record (fields, _) ->
+@@ -353,7 +353,7 @@ let entry_of_type lf ident decl rec_status loc =
+     if is_enabled lf TransparentTypes then
+       try
+         match decl.type_kind with
+-        | Type_variant (v, _) -> Variant (List.map (to_variant_entry []) v)
++        | Type_variant v -> Variant (List.map (to_variant_entry []) v)
+         | _ -> Opaque
+       with _ -> Opaque
+     else Opaque
 diff --git a/theories/Seq.v b/theories/Seq.v
 index 8b58040..5a79184 100644
 --- a/theories/Seq.v
