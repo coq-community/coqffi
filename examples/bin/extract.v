@@ -25,9 +25,9 @@ Extraction "cat.ml" cat_main.
 Definition sleep_plenty `{Monad m, MonadFile m, MonadSleep m} (d : i63)
   : m unit :=
   write std_out "Hello...";;
-  let y : tupl4 i63 i63 i63 i63 := mktupl4 1 2 3 4 in
+  let y : tuple4 i63 i63 i63 i63 := mktuple4 1 2 3 4 in
   match y with
-  | mktupl4 a b c d =>
+  | mktuple4 a b c d =>
     let x := (a * b + c - d) / d in
     sleep x;;
     write std_out " sleepy world!\n"

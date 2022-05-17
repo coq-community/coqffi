@@ -37,7 +37,7 @@ let pp_term_args fmt l =
 
 let pp_inductive fmt n =
   fprintf fmt
-    "@[<v>Inductive tupl%d (%a : Type) :=@ @[<v 2>| mktupl%d %a@ : tupl%d \
+    "@[<v>Inductive tuple%d (%a : Type) :=@ @[<v 2>| mktuple%d %a@ : tuple%d \
      %a.@]@]"
     n pp_poly_args (1 -- n) n
     (pp_print_list
@@ -46,7 +46,7 @@ let pp_inductive fmt n =
     (1 -- n) n pp_poly_args (1 -- n)
 
 let pp_arguments fmt n =
-  fprintf fmt "@[<v>Arguments mktupl%d [%a] (%a).@]" n pp_poly_args (1 -- n)
+  fprintf fmt "@[<v>Arguments mktuple%d [%a] (%a).@]" n pp_poly_args (1 -- n)
     pp_term_args (1 -- n)
 
 let pp_prod_arg fmt n =
@@ -58,13 +58,13 @@ let pp_prod_arg fmt n =
 
 let pp_instance fmt n =
   fprintf fmt
-    "@[<v 2>Instance tupl%d_of_prod {%a}@ : _OfProd (%a) (tupl%d %a) := @ %a.@]"
+    "@[<v 2>Instance tuple%d_of_prod {%a}@ : _OfProd (%a) (tuple%d %a) := @ %a.@]"
     n pp_poly_args (1 -- n)
     (pp_print_list ~pp_sep:(fun fmt _ -> pp_print_string fmt " * ") pp_poly_arg)
     (1 -- n) n pp_poly_args (1 -- n)
     (fun fmt _ ->
       fprintf fmt
-        "@[<v>{ of_prod := fun '%a => mktupl%d %a@ ; to_prod := fun '(mktupl%d \
+        "@[<v>{ of_prod := fun '%a => mktuple%d %a@ ; to_prod := fun '(mktuple%d \
          %a) => %a }@]"
         pp_prod_arg n n pp_term_args (1 -- n) n pp_term_args (1 -- n)
         pp_prod_arg n)
@@ -77,7 +77,7 @@ let pp_extraction fmt n =
     (pp_print_list
        ~pp_sep:(fun fmt _ -> fprintf fmt "@ @ ")
        (fun fmt n ->
-         fprintf fmt "Extract Inductive tupl%d => \"Shim.tupl%d\" [ \"\" ]." n n))
+         fprintf fmt "Extract Inductive tuple%d => \"Shim.tuple%d\" [ \"\" ]." n n))
     (3 -- n)
 
 let _ =

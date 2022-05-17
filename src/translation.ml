@@ -53,8 +53,8 @@ let types_table =
     List.fold_left
       (fun ns x ->
         Namespace.translate
-          ~ocaml:(Format.sprintf "Coq_coqffi.Shim.tupl%d" x)
-          ~coq:(Format.sprintf "tupl%d" x)
+          ~ocaml:(Format.sprintf "Coq_coqffi.Shim.tuple%d" x)
+          ~coq:(Format.sprintf "tuple%d" x)
           ns)
       ns l
   in
