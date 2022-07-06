@@ -130,7 +130,7 @@ let pick_params =
 let named_poly_vars (t : Types.type_expr) : string list =
   let minimize = List.sort_uniq String.compare in
   let rec named_poly_vars (t : Types.type_expr) =
-    match t.desc with
+    match Types.get_desc t with
     | Tvar (Some "_") | Tvar None -> []
     | Tvar (Some x) -> [ x ]
     | Tarrow (_, t1, t2, _) ->
@@ -147,7 +147,7 @@ let mono_type_repr_of_type_expr_with_params params t :
     params_pool * mono_type_repr =
   let initial_pos = 1 in
   let rec aux pos params (t : Types.type_expr) =
-    match t.desc with
+    match Types.get_desc t with
     | Tvar (Some "_") | Tvar None ->
         let p, params = pick_param params in
         (params, TParam (CName p, []))
@@ -289,7 +289,7 @@ let all_poly_vars params t : string list =
   let minimize = List.sort_uniq String.compare in
 
   let rec poly_vars params (t : Types.type_expr) : params_pool * string list =
-    match t.desc with
+    match Types.get_desc t with
     | Tvar (Some "_") | Tvar None ->
         let x, params = pick_param params in
         (params, [ x ])

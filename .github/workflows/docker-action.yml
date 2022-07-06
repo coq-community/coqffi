@@ -17,8 +17,8 @@ jobs:
     strategy:
       matrix:
         image:
+          - 'coqorg/coq:8.13-ocaml-4.14-flambda'
           - 'coqorg/coq:8.13-ocaml-4.13-flambda'
-          - 'coqorg/coq:8.13-ocaml-4.12-flambda'
           - 'coqorg/coq:8.12-ocaml-4.11-flambda'
           - 'coqorg/coq:8.12-ocaml-4.10-flambda'
       fail-fast: false

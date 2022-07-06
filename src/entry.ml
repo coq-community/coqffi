@@ -85,7 +85,7 @@ let polymorphic_params (decl : type_declaration) : string list =
 
   let existing_params params =
     let polymorphic_param (t : type_expr) : string option =
-      match t.desc with
+      match Types.get_desc t with
       | Tvar (Some "_") | Tvar None -> None
       | Tvar (Some x) -> Some x
       | _ ->
@@ -97,6 +97,7 @@ let polymorphic_params (decl : type_declaration) : string list =
 
   Compat.fold_left_map
     (fun params t ->
+      let t = Types.Transient_expr.coerce t in
       match t.desc with
       | Tvar (Some "_") | Tvar None ->
           let x, params = pick_param params in
