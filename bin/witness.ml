@@ -57,8 +57,9 @@ and mod_to_sexp ~libname ~rev_namespace ~coqns conflicts m =
     m.mod_intro
 
 let of_mod ~coqns conflicts m =
-  mod_to_sexp ~libname:(List.hd m.mod_namespace) ~rev_namespace:[ m.mod_name ]
-    ~coqns conflicts m
+  let libname = List.hd m.mod_namespace in
+  let rev_namespace = if m.mod_name = libname then [] else [ m.mod_name ] in
+  mod_to_sexp ~libname ~rev_namespace ~coqns conflicts m
 
 let pp fmt witness =
   let open Format in

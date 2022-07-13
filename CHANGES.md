@@ -18,6 +18,9 @@ This will be the initial release of `coqffi`.
   fully qualifying OCaml values.
 - **Fix:** `coqffi` was sometimes using the Coq arrow `=>` instead of
   the OCaml arrow `->`.
+- **Fix:** `coqffi` now behaves correctly when a library contains a
+    module named after it. In that case, `dune` uses this module to
+    set the public interface of the library.
 
 ## `coqffi.1.0.0~beta7`
 
