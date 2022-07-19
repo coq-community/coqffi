@@ -176,7 +176,7 @@ let mono_type_repr_of_type_expr_with_params params t :
         let len = List.length l in
         if len < 6 then
           let params, t = Compat.fold_left_map (aux initial_pos) params l in
-          (params, TParam (CName (sprintf "Coq_coqffi.Shim.tup%d" len), t))
+          (params, TParam (CName (sprintf "Coq_coqffi.Shim.tuple%d" len), t))
         else assert false
     | Tconstr (name, types, _) ->
         let params, t = Compat.fold_left_map (aux initial_pos) params types in
