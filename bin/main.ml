@@ -108,6 +108,7 @@ let tezos_ctxt_arg =
         [
           "Tezos_raw_protocol_alpha.Raw_context.t";
           "Tezos_raw_protocol_alpha.Alpha_context.t";
+          "Tezos_raw_protocol_alpha.Alpha_context.context";
         ]
     & info [ "tezos-contexts" ] ~docv:"TEZOS TYPES" ~doc)
 
