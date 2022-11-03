@@ -1,7 +1,7 @@
 #!/bin/sh
 
-ocaml_version="$(ocamlc --version|sed - -e 's/\(4\.[0-9][0-9]\)\..*/\1/')"
-coq_version="$(coqc --version|head -n1|sed - -e 's/.*\(8\.[0-9][0-9]\).*/\1/')"
+ocaml_version="$(ocamlc --version|sed -e 's/\(4\.[0-9][0-9]\)\..*/\1/')"
+coq_version="$(coqc --version|head -n1|sed -e 's/.*\(8\.[0-9][0-9]\).*/\1/')"
 
 case "${ocaml_version}" in
     4.14) true ;;
