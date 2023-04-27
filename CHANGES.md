@@ -2,7 +2,7 @@
 
 This will be the initial release of `coqffi`.
 
-# Unreleased
+# `coqffi.1.0.0~beta8`
 
 - **Breaking Change:** The `CoqFFI` theory has been flattened, *i.e.*,
   the `CoqFFI.Data.*` modules has been moved to `CoqFFI.*`.
