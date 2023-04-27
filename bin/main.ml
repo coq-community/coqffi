@@ -285,7 +285,7 @@ let coqffi_info =
       `P "Email bug reports to <lthms at soap.coffee>.";
     ]
   in
-  Cmd.(info "coqffi" ~exits:Exit.defaults ~doc ~man ~version:"coqffi.1.0.0~beta8")
+  Cmd.(info "coqffi" ~exits:Exit.defaults ~doc ~man ~version:"coqffi.dev")
 
 let run_coqffi (input : string) (aliases : string option)
     (includes : string list) (lwt_module : string option)
